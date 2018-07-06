@@ -13,30 +13,34 @@ By default this wrapper (as well as C API) operates with byte keys and values (n
 
 Ahem. Where was I? OK so you can use this package as library (`FDB`) or you can just clone this repo and play with `FDBTestDrive` product, I've done some tests there. Now, about library API.
 
-    // import, duh
+    // Import, duh
     import FDB
 
-    // default path, wouldn't really like to hardcode it as default value
+    // Default path, wouldn't really like to hardcode it as default value
     let fdb = FDB(cluster: "/usr/local/etc/foundationdb/fdb.cluster")
 
-    // plz don't forget to wrap it with 'docatch' block and don't you dare to force 'try!' it
-    // always catch errors, you might get 'TransactionRetry' error which tells you that something went slightly wrong, but you can still get things done if you just replay all work within the same transaction (obviously, it works if you need to manage the transaction by yourself)
-    // by the way, this method may return 'Transaction' object, but only if you explicitly passed 'commit: false' argument, just in case you would want to do things within that transaction, but in that case you must commit it by yourself (see below), or it will rollback
+    // Plz don't forget to wrap it with 'docatch' block and don't you dare to force 'try!' it.
+    // Always catch errors, you might get 'TransactionRetry' error which tells you that something went
+    // slightly wrong, but you can still get things done if you just replay all work within the same
+    // transaction (obviously, it works if you need to manage the transaction by yourself).
+    // By the way, this method may return 'Transaction' object, but only if you explicitly passed
+    // 'commit: false' argument, just in case you would want to do things within that transaction,
+    // but in that case you must commit it by yourself (see below), or it will rollback
     try fdb.set(key: "somekey", value: someBytes)
 
-    // value is optional, unwrap it before usage
+    // Value is optional, unwrap it before usage
     let value = try fdb.get(key: "someKey")
 
     try fdb.remove(key: "someKey")
 
-    // or you can manually manage transactions (it gives you insane performance boost since transaction per operation is quite expensive)
+    // Or you can manually manage transactions (it gives you insane performance boost since transaction per operation is quite expensive)
     let transaction = try fdb.begin()
 
     try fdb.set(key: "someKey", value: someBytes, transaction: transaction, commit: false)
     //                                                                      ^^^^^^^^^^^^^  notice this plz
 
     try transaction.commit()
-    // no explicit rollback yet, but you can just leave transaction object in place and it rollbacks itself on `deinit`
+    // No explicit rollback yet, but you can just leave transaction object in place and it rollbacks itself on `deinit`
 
 
 ## Warning
