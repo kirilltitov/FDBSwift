@@ -47,7 +47,6 @@ public class FDB {
         guard apiErrno == 0 else {
             throw Error.ApiError(getErrorInfo(for: apiErrno), apiErrno)
         }
-        self.semaphore.signal()
     }
 
     private func initNetwork() throws {
@@ -61,6 +60,7 @@ public class FDB {
             guard networkErrno == 0 else {
                 fatalError("Could not setup FoundationDB network: [\(networkErrno)] \(getErrorInfo(for: networkErrno))")
             }
+            self.semaphore.signal()
         }
     }
 
