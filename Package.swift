@@ -1,5 +1,4 @@
 // swift-tools-version:4.2
-// The swift-tools-version declares the minimum version of Swift required to build this package.
 
 import PackageDescription
 
@@ -13,8 +12,8 @@ let package = Package(
         .package(url: "../CFDBSwift", .branch("master")),
     ],
     targets: [
-        .target(name: "FDB", dependencies: ["CFDB"]),
-        .target(name: "FDBTestDrive", dependencies: ["CFDB", "FDB"]),
+        .target(name: "FDB", dependencies: ["CFDBSwift"]),
+        .target(name: "FDBTestDrive", dependencies: ["FDB"]),
         .testTarget(name: "FDBTests", dependencies: ["FDB"]),
     ]
 )
