@@ -50,3 +50,15 @@ try transaction.commit()
 ## Warning
 
 This package is on extremely early stage. Though I did some RW-tests on my machine, I do not recommend to use it in real production.
+
+## TODOs
+
+* Asynchronous methods
+* Network options
+* Proper errors
+* The rest of C API
+* There is a memory leak somewhere, find@eliminate
+* Enterprise support, vendor WSDL
+* Drop enterprise support, rewrite on react-native
+* Blockchain? ICO? VR? AR?
+* Transaction rollback
