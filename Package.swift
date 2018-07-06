@@ -4,13 +4,13 @@
 import PackageDescription
 
 let package = Package(
-    name: "FDB",
+    name: "FDBSwift",
     products: [
         .library(name: "FDB", targets: ["FDB"]),
         .executable(name: "FDBTestDrive", targets: ["FDBTestDrive"])
     ],
     dependencies: [
-        .package(url: "../CFDB", .branch("master")),
+        .package(url: "../CFDBSwift", .branch("master")),
     ],
     targets: [
         .target(name: "FDB", dependencies: ["CFDB"]),

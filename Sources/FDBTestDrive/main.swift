@@ -29,6 +29,14 @@ func waitAndCheckError(_ future: FDBFuture!) {
     checkError(fdb_future_get_error(future))
 }
 
+func convert<T>(length: Int, data: UnsafePointer<UInt8>) -> [T] {
+    let numItems = length / MemoryLayout<T>.stride
+    let buffer = data.withMemoryRebound(to: T.self, capacity: numItems) {
+        UnsafeBufferPointer(start: $0, count: numItems)
+    }
+    return Array(buffer)
+}
+
 let queue = DispatchQueue(label: "com.lgnkit.fdb", qos: .userInitiated, attributes: .concurrent)
 
 let clusterPath = "/usr/local/etc/foundationdb/fdb.cluster"
@@ -55,15 +63,6 @@ var db: OpaquePointer!
 checkError(fdb_future_get_database(DBFuture, &db))
 fdb_future_destroy(DBFuture)
 print("Got database")
-
-defer {
-    checkError(fdb_stop_network())
-    print("Network stopped")
-    fdb_database_destroy(db)
-    print("Database resource destroyed")
-    fdb_cluster_destroy(cluster)
-    print("Cluster resource destroyed")
-}
 
 // write
 
@@ -108,6 +107,19 @@ checkError(fdb_future_get_value(
     &readVal,
     &readValLength
 ))
+
+let readValBytes: Bytes = convert(length: Int(readValLength), data: readVal!)
+dump(readValBytes)
+
 print("Got value for '\(key)': '\(String(cString: readVal))' (length: \(String(describing: readValLength)))")
 fdb_transaction_destroy(readTransaction)
 fdb_future_destroy(readFuture)
+
+checkError(fdb_stop_network())
+print("Network stopped")
+fdb_database_destroy(db)
+print("Database resource destroyed")
+fdb_cluster_destroy(cluster)
+print("Cluster resource destroyed")
+
+print("Goodbye")
