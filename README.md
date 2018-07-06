@@ -1,5 +1,5 @@
 # FDBSwift
-### It should definitely be better than Python bindings :D
+#### It should definitely be better than Python bindings in Swift :D
 
 This is FoundationDB wrapper for Swift. It's quite low-level, `Foundation`less (almost) and synchronous.
 
