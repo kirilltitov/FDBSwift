@@ -23,7 +23,7 @@ let fdb = FDB(cluster: "/usr/local/etc/foundationdb/fdb.cluster")
 // Plz don't forget to wrap it with 'docatch' block and don't you dare to force 'try!' it.
 // Always catch errors, you might get 'TransactionRetry' error which tells you that something went
 // slightly wrong, but you can still get things done if you just replay all work within the same
-// transaction (obviously, it works if you need to manage the transaction by yourself).
+// transaction (obviously, it works only if you manage the transaction by yourself).
 // By the way, this method may return 'Transaction' object, but only if you explicitly passed
 // 'commit: false' argument, just in case you would want to do things within that transaction,
 // but in that case you must commit it by yourself (see below), or it will rollback
