@@ -61,4 +61,5 @@ This package is on extremely early stage. Though I did some RW-tests on my machi
 * Enterprise support, vendor WSDL, rewrite on Java
 * Drop enterprise support, rewrite on golang using react-native (pretty sure it will be a thing by that time)
 * Blockchain? ICO? VR? AR?
+* Rehab
 * Transaction rollback
