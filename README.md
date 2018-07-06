@@ -5,7 +5,7 @@ This is FoundationDB wrapper for Swift. It's quite low-level, `Foundation`less (
 
 ## Installation
 
-Obviously, you need to install `FoundationDB` first. Download it from [official website](https://www.foundationdb.org/download/). Next part is tricky because subpackage [CFDBSwift](https://github.com/kirilltitov/CFDBSwift) (C bindings) won't link with `libfdb_c` library on its own, and FoundationDB for some reason doesn't ship `pkg-config` during installation. Therefore you must install it yourself. Run `scripts/install_pkgconfig.sh` or copy `scripts/libfdb.pc` (choose your platform) to `/usr/local/lib/pkgconfig/` on macOS or `/usr/lib/pkgconfig/libfdb.pc` on Linux.
+Obviously, you need to install `FoundationDB` first. Download it from [official website](https://www.foundationdb.org/download/). Next part is tricky because subpackage [CFDBSwift](https://github.com/kirilltitov/CFDBSwift) (C bindings) won't link `libfdb_c` library on its own, and FoundationDB doesn't yet ship `pkg-config` during installation. Therefore you must install it yourself. Run `scripts/install_pkgconfig.sh` or copy `scripts/libfdb.pc` (choose your platform) to `/usr/local/lib/pkgconfig/` on macOS or `/usr/lib/pkgconfig/libfdb.pc` on Linux.
 
 ## Usage
 
