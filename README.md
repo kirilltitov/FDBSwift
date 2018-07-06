@@ -33,14 +33,16 @@ Ahem. Where was I? OK so you can use this package as library (`FDB`) or you can 
 
     try fdb.remove(key: "someKey")
 
-    // Or you can manually manage transactions (it gives you insane performance boost since transaction per operation is quite expensive)
+    // Or you can manually manage transactions (it gives you insane performance boost since transaction
+    // per operation is quite expensive)
     let transaction = try fdb.begin()
 
     try fdb.set(key: "someKey", value: someBytes, transaction: transaction, commit: false)
     //                                                                      ^^^^^^^^^^^^^  notice this plz
 
     try transaction.commit()
-    // No explicit rollback yet, but you can just leave transaction object in place and it rollbacks itself on `deinit`
+    // No explicit rollback yet, but you can just leave transaction object in place and it rollbacks itself
+    // on `deinit`
 
 
 ## Warning
