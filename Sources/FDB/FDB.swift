@@ -146,4 +146,12 @@ public class FDB {
     ) throws -> Bytes? {
         return try self.get(key: key.bytes, transaction: transaction, snapshot: snapshot, commit: commit)
     }
+
+    public func remove(key: Bytes, transaction: Transaction? = nil, commit: Bool = true) throws {
+        return try (transaction ?? self.begin()).clear(key: key, commit: commit)
+    }
+
+    public func remove(key: String, transaction: Transaction? = nil, commit: Bool = true) throws {
+        return try self.remove(key: key.bytes, transaction: transaction, commit: commit)
+    }
 }

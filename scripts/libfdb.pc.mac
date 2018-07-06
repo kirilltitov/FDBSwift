@@ -1,0 +1,11 @@
+prefix=/usr/local
+exec_prefix=${prefix}
+includedir=${prefix}/include
+libdir=${exec_prefix}/lib
+
+Name: fdb
+Description: FoundationDB macOS library
+Version: 5.2.5
+Cflags: -I${includedir}
+Libs: -L${libdir} -lfdb_c
+

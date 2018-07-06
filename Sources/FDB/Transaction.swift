@@ -57,4 +57,11 @@ public class Transaction {
         }
         return readValue.getBytes(length: readValueLength)
     }
+
+    public func clear(key: Bytes, commit: Bool = true) throws {
+        fdb_transaction_clear(self.pointer, key, Int32(key.count))
+        if commit {
+            try self.commit()
+        }
+    }
 }

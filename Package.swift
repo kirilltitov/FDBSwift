@@ -9,7 +9,7 @@ let package = Package(
         .executable(name: "FDBTestDrive", targets: ["FDBTestDrive"])
     ],
     dependencies: [
-        .package(url: "../CFDBSwift", .branch("master")),
+        .package(url: "https://github.com/kirilltitov/CFDBSwift", .branch("master")),
     ],
     targets: [
         .target(name: "FDB", dependencies: ["CFDBSwift"]),

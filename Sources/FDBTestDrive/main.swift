@@ -27,6 +27,7 @@ func main() {
     let clusterPath = "/usr/local/etc/foundationdb/fdb.cluster"
     let fdb = FDB(cluster: clusterPath)
     let key = "lul"
+    let keyBytes = [UInt8](key.utf8)
 
     typealias Bytes = [UInt8]
     var bytes = Bytes()
@@ -46,17 +47,21 @@ func main() {
     print("Connected: \(connectProfiler.end().rounded(toPlaces: 5))s")
 
     do {
-        var i = 0
-        while true {
-            i += 1
-            let writeProfiler = Profiler.begin()
-            try fdb.set(key: key, value: bytes)
-            let writeTime = writeProfiler.end().rounded(toPlaces: 5)
-            let readProfiler = Profiler.begin()
-            let _ = try fdb.get(key: key)
-            let readTime = readProfiler.end().rounded(toPlaces: 5)
-            print("Iteration #\(i), w: \(writeTime), r: \(readTime)")
+        let transaction = try fdb.begin()
+        for i in 0...100000 {
+//            let writeProfiler = Profiler.begin()
+            try fdb.set(key: keyBytes, value: bytes, transaction: transaction, commit: false)
+//            let writeTime = writeProfiler.end().rounded(toPlaces: 5)
+//            let readProfiler = Profiler.begin()
+//            try fdb.remove(key: key)
+            let _ = try fdb.get(key: keyBytes, transaction: transaction, commit: false)
+//            dump(value)
+//            let readTime = readProfiler.end().rounded(toPlaces: 5)
+//            print("Iteration #\(i), w: \(writeTime), r: \(readTime)")
+            print("Iteration #\(i)")
         }
+        try transaction.commit()
+        sleep(60)
     } catch {
         dump(error)
     }
