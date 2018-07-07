@@ -11,7 +11,7 @@ public class Transaction {
         let transaction = Transaction()
         let transactionErrno = fdb_database_create_transaction(db, &transaction.pointer)
         guard transactionErrno == 0 else {
-            throw Error.TransactionBeginError(getErrorInfo(for: errno), errno)
+            throw Error.BeginError(getErrorInfo(for: errno), errno)
         }
         return transaction
     }
@@ -27,9 +27,9 @@ public class Transaction {
             let retryFuture = try fdb_transaction_on_error(self.pointer, commitError).waitForFuture()
             let retryError = fdb_future_get_error(retryFuture.pointer)
             guard retryError == 0 else {
-                throw Error.TransactionCommitError(getErrorInfo(for: retryError), retryError)
+                throw Error.CommitError(getErrorInfo(for: retryError), retryError)
             }
-            throw Error.TransactionRetry("Retry this transaction")
+            throw Error.Retry("Retry this transaction")
         }
     }
 
@@ -47,7 +47,7 @@ public class Transaction {
         var readValueLength: Int32 = 0
         let getErrno = fdb_future_get_value(future.pointer, &readValueFound, &readValue, &readValueLength)
         guard getErrno == 0 else {
-            throw Error.TransactionGetError(getErrorInfo(for: getErrno), getErrno)
+            throw Error.GetError(getErrorInfo(for: getErrno), getErrno)
         }
         if commit {
             try self.commit()

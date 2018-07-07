@@ -34,9 +34,24 @@ extension UnsafePointer where Pointee == Byte {
     }
 }
 
+public extension DispatchSemaphore {
+    /// Blocks current thread until semaphore is released or timeout of given seconds is exceed
+    ///
+    /// - Parameters:
+    ///   - for: Seconds to wait before unblocking
+    /// - Returns: Wait result. Can be `.success` if semaphore succesfully released or `.timedOut` if else
+    public func wait(for seconds: Int) -> DispatchTimeoutResult {
+        return self.wait(timeout: .secondsFromNow(seconds))
+    }
+}
+
 public extension DispatchTime {
     public static func seconds(_ seconds: Int) -> DispatchTime {
         return self.init(uptimeNanoseconds: UInt64(seconds) * 1_000_000_000)
+    }
+
+    public static func secondsFromNow(_ seconds: Int) -> DispatchTime {
+        return self.init(secondsFromNow: seconds)
     }
 
     public init(secondsFromNow seconds: Int) {

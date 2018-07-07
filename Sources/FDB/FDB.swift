@@ -31,7 +31,7 @@ public class FDB {
             print("Stop network error: [\(networkErrno)] \(getErrorInfo(for: networkErrno))")
             exit(1)
         }
-        if self.semaphore.wait(timeout: .init(secondsFromNow: self.networkStopTimeout)) == .timedOut {
+        if self.semaphore.wait(for: self.networkStopTimeout) == .timedOut {
             print("Stop network timeout (\(self.networkStopTimeout) seconds)")
             exit(1)
         }
@@ -45,7 +45,7 @@ public class FDB {
         self.debug("API version is \(self.version)")
         let apiErrno = fdb_select_api_version_impl(self.version, FDB_API_VERSION)
         guard apiErrno == 0 else {
-            throw Error.ApiError(getErrorInfo(for: apiErrno), apiErrno)
+            throw Error.APIError(getErrorInfo(for: apiErrno), apiErrno)
         }
     }
 

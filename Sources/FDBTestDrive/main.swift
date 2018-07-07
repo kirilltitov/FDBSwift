@@ -48,9 +48,9 @@ func main() {
 
     do {
         let transaction = try fdb.begin()
-        for i in 0...100000 {
+        for i in 0...300000 {
 //            let writeProfiler = Profiler.begin()
-            try fdb.set(key: keyBytes, value: bytes, transaction: transaction, commit: false)
+//            try fdb.set(key: keyBytes, value: bytes, transaction: transaction, commit: false)
 //            let writeTime = writeProfiler.end().rounded(toPlaces: 5)
 //            let readProfiler = Profiler.begin()
 //            try fdb.remove(key: key)
