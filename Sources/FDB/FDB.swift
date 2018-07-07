@@ -15,16 +15,22 @@ public class FDB {
     let clusterFile: String
     var cluster: Cluster? = nil
     var db: Database? = nil
+    let queue: DispatchQueue
 
     public var verbose = false
 
-    let queue = DispatchQueue(label: "fdb", qos: .userInitiated, attributes: .concurrent)
     let semaphore = DispatchSemaphore(value: 0)
 
-    public required init(cluster: String, networkStopTimeout: Int = 10, version: Int32 = FDB_API_VERSION) {
+    public required init(
+        cluster: String,
+        networkStopTimeout: Int = 10,
+        version: Int32 = FDB_API_VERSION,
+        queue: DispatchQueue = DispatchQueue(label: "fdb", qos: .userInitiated, attributes: .concurrent)
+    ) {
         self.clusterFile = cluster
         self.networkStopTimeout = networkStopTimeout
         self.version = version
+        self.queue = queue
     }
 
     deinit {
