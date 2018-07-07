@@ -1,6 +1,9 @@
 import CFDB
 import Dispatch
 
+public typealias Byte = UInt8
+public typealias Bytes = [Byte]
+
 public class FDB {
     public typealias Cluster = OpaquePointer
     public typealias Database = OpaquePointer
@@ -26,11 +29,7 @@ public class FDB {
 
     deinit {
         self.debug("Deinit started")
-        let networkErrno = fdb_stop_network()
-        guard networkErrno == 0 else {
-            print("Stop network error: [\(networkErrno)] \(getErrorInfo(for: networkErrno))")
-            exit(1)
-        }
+        fdb_stop_network().orDie()
         if self.semaphore.wait(for: self.networkStopTimeout) == .timedOut {
             print("Stop network timeout (\(self.networkStopTimeout) seconds)")
             exit(1)
@@ -41,35 +40,26 @@ public class FDB {
         self.debug("Cluster and database destroyed")
     }
 
-    private func selectApiVersion() throws {
+    private func selectApiVersion() throws -> FDB {
         self.debug("API version is \(self.version)")
-        let apiErrno = fdb_select_api_version_impl(self.version, FDB_API_VERSION)
-        guard apiErrno == 0 else {
-            throw Error.APIError(getErrorInfo(for: apiErrno), apiErrno)
-        }
+        try fdb_select_api_version_impl(self.version, FDB_API_VERSION).orThrow()
+        return self
     }
 
-    private func initNetwork() throws {
-        let setupErrno = fdb_setup_network()
-        guard setupErrno == 0 else {
-            throw Error.NetworkError(getErrorInfo(for: setupErrno), setupErrno)
-        }
+    private func initNetwork() throws -> FDB {
+        try fdb_setup_network().orThrow()
         self.debug("Network ready")
         self.queue.async {
-            let networkErrno = fdb_run_network()
-            guard networkErrno == 0 else {
-                fatalError("Could not setup FoundationDB network: [\(networkErrno)] \(getErrorInfo(for: networkErrno))")
-            }
+            fdb_run_network().orDie()
             self.semaphore.signal()
         }
+        return self
     }
 
-    private func initCluster() throws {
+    private func initCluster() throws -> FDB {
         let clusterFuture = try fdb_create_cluster(self.clusterFile).waitForFuture()
-        let clusterErrno = fdb_future_get_cluster(clusterFuture.pointer, &self.cluster)
-        guard clusterErrno == 0 else {
-            throw Error.ClusterError(getErrorInfo(for: clusterErrno), clusterErrno)
-        }
+        try fdb_future_get_cluster(clusterFuture.pointer, &self.cluster).orThrow()
+        return self
     }
 
     private func initDB() throws {
@@ -78,20 +68,18 @@ public class FDB {
             FDB.dbName.utf8Start,
             Int32(FDB.dbName.utf8CodeUnitCount)
         ).waitForFuture()
-        let dbErrno = fdb_future_get_database(dbFuture.pointer, &self.db)
-        guard dbErrno == 0 else {
-            throw Error.DBError(getErrorInfo(for: dbErrno), dbErrno)
-        }
+        try fdb_future_get_database(dbFuture.pointer, &self.db).orThrow()
     }
 
     private func getDB() throws -> Database {
         if let db = self.db {
             return db
         }
-        try self.selectApiVersion()
-        try self.initNetwork()
-        try self.initCluster()
-        try self.initDB()
+        try self
+            .selectApiVersion()
+            .initNetwork()
+            .initCluster()
+            .initDB()
         return try self.getDB()
     }
 

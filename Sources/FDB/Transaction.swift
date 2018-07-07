@@ -7,12 +7,9 @@ public class Transaction {
         self.pointer = pointer
     }
 
-    class func begin(_ db: FDB.Database) throws -> Transaction {
+    public class func begin(_ db: FDB.Database) throws -> Transaction {
         let transaction = Transaction()
-        let transactionErrno = fdb_database_create_transaction(db, &transaction.pointer)
-        guard transactionErrno == 0 else {
-            throw Error.BeginError(getErrorInfo(for: errno), errno)
-        }
+        try fdb_database_create_transaction(db, &transaction.pointer).orThrow()
         return transaction
     }
 
@@ -25,11 +22,8 @@ public class Transaction {
         let commitError = fdb_future_get_error(commitFuture.pointer)
         guard commitError == 0 else {
             let retryFuture = try fdb_transaction_on_error(self.pointer, commitError).waitForFuture()
-            let retryError = fdb_future_get_error(retryFuture.pointer)
-            guard retryError == 0 else {
-                throw Error.CommitError(getErrorInfo(for: retryError), retryError)
-            }
-            throw Error.Retry("Retry this transaction")
+            try fdb_future_get_error(retryFuture.pointer).orThrow()
+            throw FDB.Error.TransactionRetry
         }
     }
 
@@ -45,10 +39,7 @@ public class Transaction {
         var readValueFound: Int32 = 0
         var readValue: UnsafePointer<Byte>!
         var readValueLength: Int32 = 0
-        let getErrno = fdb_future_get_value(future.pointer, &readValueFound, &readValue, &readValueLength)
-        guard getErrno == 0 else {
-            throw Error.GetError(getErrorInfo(for: getErrno), getErrno)
-        }
+        try fdb_future_get_value(future.pointer, &readValueFound, &readValue, &readValueLength).orThrow()
         if commit {
             try self.commit()
         }

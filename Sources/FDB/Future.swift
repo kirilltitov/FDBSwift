@@ -1,11 +1,6 @@
 import CFDB
 
-public class Future {
-    public enum Error: Swift.Error {
-        case WaitError(String, Int32)
-        case ResultError(String, Int32)
-    }
-
+internal class Future {
     let pointer: OpaquePointer
 
     init(_ pointer: OpaquePointer) {
@@ -17,18 +12,12 @@ public class Future {
     }
 
     func wait() throws -> Future {
-        let errno = fdb_future_block_until_ready(self.pointer)
-        guard errno == 0 else {
-            throw Error.WaitError(getErrorInfo(for: errno), errno)
-        }
+        try fdb_future_block_until_ready(self.pointer).orThrow()
         return self
     }
 
     func checkError() throws -> Future {
-        let errno = fdb_future_get_error(self.pointer)
-        guard errno == 0 else {
-            throw Error.ResultError(getErrorInfo(for: errno), errno)
-        }
+        try fdb_future_get_error(self.pointer).orThrow()
         return self
     }
 
