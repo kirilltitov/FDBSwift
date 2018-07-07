@@ -49,7 +49,7 @@ try transaction.commit()
 
 ## Warning
 
-This package is on extremely early stage. Though I did some RW-tests on my machine, I do not recommend to use it in real production.
+This package is on extremely early stage. Though I did some RW-tests on my machine (macOS), I do not recommend to use it in real production.
 
 ## TODOs
 
