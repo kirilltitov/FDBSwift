@@ -55,11 +55,12 @@ This package is on extremely early stage. Though I did some RW-tests on my machi
 
 * Asynchronous methods
 * Network options
-* Proper errors
+* ~Proper errors~
 * The rest of C API
 * There is a memory leak somewhere, find@eliminate
 * Enterprise support, vendor WSDL, rewrite on Java
 * Drop enterprise support, rewrite on golang using react-native (pretty sure it will be a thing by that time)
 * Blockchain? ICO? VR? AR?
 * Rehab
-* Transaction rollback
+* Transactions rollback
+* Tuples, subspaces, directories
