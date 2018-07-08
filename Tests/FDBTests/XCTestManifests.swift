@@ -4,6 +4,7 @@ import XCTest
 public func allTests() -> [XCTestCaseEntry] {
     return [
         testCase(FDBTests.allTests),
+        testCase(TupleTests.allTests),
     ]
 }
 #endif

@@ -1,9 +1,15 @@
 import Dispatch
 import CFDB
 
-internal extension String {
+public /* TODO: make it internal */ extension String {
     var bytes: Bytes {
         return Bytes(self.utf8)
+    }
+}
+
+extension Bool {
+    var int: fdb_bool_t {
+        return self ? 1 : 0
     }
 }
 
@@ -17,13 +23,30 @@ internal extension OpaquePointer {
     }
 }
 
-internal extension UnsafePointer where Pointee == Byte {
-    func getBytes(length: Int32) -> Bytes {
-        let numItems = Int(length) / MemoryLayout<Byte>.stride
-        let buffer = self.withMemoryRebound(to: Byte.self, capacity: numItems) {
-            UnsafeBufferPointer(start: $0, count: numItems)
+internal extension UnsafePointer {
+    func unwrapPointee(count: Int32) -> [Pointee] {
+        let items = Int(count)
+        let buffer = self.withMemoryRebound(to: Pointee.self, capacity: items) {
+            UnsafeBufferPointer(start: $0, count: items)
         }
         return Array(buffer)
+    }
+}
+
+internal extension UnsafePointer where Pointee == Byte {
+    func getBytes(count: Int32) -> Bytes {
+        let items = Int(count) / MemoryLayout<Byte>.stride
+        let buffer = self.withMemoryRebound(to: Byte.self, capacity: items) {
+            UnsafeBufferPointer(start: $0, count: items)
+        }
+        return Array(buffer)
+    }
+}
+
+internal extension UnsafeRawPointer {
+    // Boy this is unsafe :D
+    func getBytes(count: Int32) -> Bytes {
+        return self.assumingMemoryBound(to: Byte.self).getBytes(count: count)
     }
 }
 

@@ -8,6 +8,7 @@ internal class Future {
     }
 
     deinit {
+        fdb_future_release_memory(self.pointer)
         fdb_future_destroy(self.pointer)
     }
 

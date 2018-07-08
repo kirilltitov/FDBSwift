@@ -15,6 +15,12 @@ public struct Profiler {
     }
 }
 
+extension Array where Element == Byte {
+    var string: String {
+        return String(bytes: self, encoding: .ascii)!
+    }
+}
+
 extension Float {
     /// Rounds the double to decimal places value
     func rounded(toPlaces places:Int) -> Float {
@@ -35,8 +41,8 @@ func main() {
         bytes.append(UInt8.random(in: 0..<UInt8.max))
     }
 
-    print("etalon")
-    print(bytes)
+//    print("etalon")
+//    print(bytes)
 
     let connectProfiler = Profiler.begin()
     do {
@@ -47,21 +53,38 @@ func main() {
     print("Connected: \(connectProfiler.end().rounded(toPlaces: 5))s")
 
     do {
-        let transaction = try fdb.begin()
-        for i in 0...300000 {
-//            let writeProfiler = Profiler.begin()
-//            try fdb.set(key: keyBytes, value: bytes, transaction: transaction, commit: false)
-//            let writeTime = writeProfiler.end().rounded(toPlaces: 5)
-//            let readProfiler = Profiler.begin()
-//            try fdb.remove(key: key)
-            let _ = try fdb.get(key: keyBytes, transaction: transaction, commit: false)
-//            dump(value)
-//            let readTime = readProfiler.end().rounded(toPlaces: 5)
-//            print("Iteration #\(i), w: \(writeTime), r: \(readTime)")
-            print("Iteration #\(i)")
+//        try fdb.set(key: "lull", value: "sas".bytes)
+//        let transaction = try fdb.begin()
+//        let tuple = Tuple("foo", "bar", nil, Tuple(), "sas")
+//        let tupleKey = tuple.pack()
+//        try fdb.set(key: tupleKey, value: bytes)
+//        dump(tupleKey.string)
+//        dump(try fdb.get(key: tupleKey)?.string)
+        //try transaction.set(key: "lull".bytes, value: "sas".bytes)
+//        dump(try transaction.get(key: "lull".bytes)?.string)
+        let value = try fdb.get(
+            begin: "k".bytes,
+            end: "m".bytes
+        )
+        value.forEach {
+            dump("\($0.key.string) - \($0.value.string)")
+            return
         }
-        try transaction.commit()
-        sleep(60)
+//        try transaction.commit()
+//        for i in 0...300000 {
+////            let writeProfiler = Profiler.begin()
+////            try fdb.set(key: keyBytes, value: bytes, transaction: transaction, commit: false)
+////            let writeTime = writeProfiler.end().rounded(toPlaces: 5)
+////            let readProfiler = Profiler.begin()
+////            try fdb.remove(key: key)
+//            let _ = try fdb.get(key: keyBytes, transaction: transaction, commit: false)
+////            dump(value)
+////            let readTime = readProfiler.end().rounded(toPlaces: 5)
+////            print("Iteration #\(i), w: \(writeTime), r: \(readTime)")
+//            print("Iteration #\(i)")
+//        }
+//        try transaction.commit()
+//        sleep(60)
     } catch {
         dump(error)
     }

@@ -8,6 +8,16 @@ public class FDB {
     public typealias Cluster = OpaquePointer
     public typealias Database = OpaquePointer
 
+    public enum StreamingMode: Int32 {
+        case WantAll  = -2 // FDB_STREAMING_MODE_WANT_ALL
+        case Iterator = -1 // FDB_STREAMING_MODE_ITERATOR
+        case Exact    =  0 // FDB_STREAMING_MODE_EXACT
+        case Small    =  1 // FDB_STREAMING_MODE_SMALL
+        case Medium   =  2 // FDB_STREAMING_MODE_MEDIUM
+        case Large    =  3 // FDB_STREAMING_MODE_LARGE
+        case Serial   =  4 // FDB_STREAMING_MODE_SERIAL
+    }
+
     static let dbName: StaticString = "DB"
 
     let version: Int32
@@ -147,5 +157,38 @@ public class FDB {
 
     public func remove(key: String, transaction: Transaction? = nil, commit: Bool = true) throws {
         return try self.remove(key: key.bytes, transaction: transaction, commit: commit)
+    }
+
+    public func get(
+        begin: Bytes,
+        end: Bytes,
+        transaction: Transaction? = nil,
+        beginEqual: Bool = false,
+        beginOffset: Int32 = 1,
+        endEqual: Bool = false,
+        endOffset: Int32 = 1,
+        limit: Int32 = 0,
+        targetBytes: Int32 = 0,
+        mode: FDB.StreamingMode = .WantAll,
+        iteration: Int32 = 1,
+        snapshot: Int32 = 0,
+        reverse: Bool = false,
+        commit: Bool = true
+    ) throws -> [KeyValue] {
+        return try (transaction ?? self.begin()).get(
+            begin: begin,
+            end: end,
+            beginEqual: beginEqual,
+            beginOffset: beginOffset,
+            endEqual: endEqual,
+            endOffset: endOffset,
+            limit: limit,
+            targetBytes: targetBytes,
+            mode: mode,
+            iteration: iteration,
+            snapshot: snapshot,
+            reverse: reverse,
+            commit: commit
+        )
     }
 }

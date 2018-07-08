@@ -1,5 +1,10 @@
 import CFDB
 
+public struct KeyValue {
+    public let key: Bytes
+    public let value: Bytes
+}
+
 public class Transaction {
     public var pointer: OpaquePointer!
 
@@ -27,14 +32,55 @@ public class Transaction {
         }
     }
 
-    public func set(key: Bytes, value: Bytes, commit: Bool = true) throws {
+    public func set(key: Bytes, value: Bytes, commit: Bool = false) throws {
         fdb_transaction_set(self.pointer, key, Int32(key.count), value, Int32(value.count))
         if commit {
             try self.commit()
         }
     }
 
-    public func get(key: Bytes, snapshot: Int32 = 0, commit: Bool = true) throws -> Bytes? {
+    public func get(
+        begin: Bytes,
+        end: Bytes,
+        beginEqual: Bool = false,
+        beginOffset: Int32 = 1,
+        endEqual: Bool = false,
+        endOffset: Int32 = 1,
+        limit: Int32 = 0,
+        targetBytes: Int32 = 0,
+        mode: FDB.StreamingMode = .WantAll,
+        iteration: Int32 = 1,
+        snapshot: Int32 = 0,
+        reverse: Bool = false,
+        commit: Bool = false
+    ) throws -> [KeyValue] {
+        let future = try fdb_transaction_get_range(
+            self.pointer,
+            begin, Int32(begin.count), beginEqual.int, beginOffset,
+            end, Int32(end.count), endEqual.int, endOffset,
+            limit,
+            targetBytes,
+            FDBStreamingMode(mode.rawValue),
+            iteration,
+            snapshot,
+            reverse.int
+        ).waitForFuture()
+
+        var outRawValues: UnsafePointer<FDBKeyValue>!
+        var outCount: Int32 = 0
+        var outMore: Int32 = 0
+
+        try fdb_future_get_keyvalue_array(future.pointer, &outRawValues, &outCount, &outMore).orThrow()
+
+        return outCount == 0 ? [] : outRawValues.unwrapPointee(count: outCount).map {
+            return KeyValue(
+                key: $0.key.getBytes(count: $0.key_length),
+                value: $0.value.getBytes(count: $0.value_length)
+            )
+        }
+    }
+
+    public func get(key: Bytes, snapshot: Int32 = 0, commit: Bool = false) throws -> Bytes? {
         let future = try fdb_transaction_get(self.pointer, key, Int32(key.count), snapshot).waitForFuture()
         var readValueFound: Int32 = 0
         var readValue: UnsafePointer<Byte>!
@@ -46,7 +92,7 @@ public class Transaction {
         guard readValueFound > 0 else {
             return nil
         }
-        return readValue.getBytes(length: readValueLength)
+        return readValue.getBytes(count: readValueLength)
     }
 
     public func clear(key: Bytes, commit: Bool = true) throws {
