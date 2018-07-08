@@ -63,4 +63,5 @@ This package is on extremely early stage. Though I did some RW-tests on my machi
 * Blockchain? ICO? VR? AR?
 * Rehab
 * Transactions rollback
-* Tuples, subspaces, directories
+* ~Tuples~ (including ~pack~ and unpack)
+* ~Ranges~, subspaces, directories
