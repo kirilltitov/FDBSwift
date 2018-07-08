@@ -28,8 +28,9 @@ class TupleTests: XCTestCase {
     }
 
     func testPackNestedTuple() {
-        let tuple = Tuple("foo\u{00}bar", nil, Tuple())
+        let tuple = Tuple(Tuple("foo\u{00}bar", nil, Tuple()))
         var expected = Bytes()
+        expected.append(0x05)
 
         // This should be `0x01` according to tuple dock
         // (see https://github.com/apple/foundationdb/blob/master/design/tuple.md#nested-tuple)
@@ -43,10 +44,10 @@ class TupleTests: XCTestCase {
         expected.append(contentsOf: "bar".bytes)
         expected.append(0x00)
         expected.append(0x00)
+        expected.append(0xff)
         expected.append(0x05)
         expected.append(0x00)
-        print(tuple.pack())
-        print(expected)
+        expected.append(0x00)
         XCTAssertEqual(tuple.pack(), expected)
     }
 

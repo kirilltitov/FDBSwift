@@ -81,7 +81,7 @@ public struct Tuple: TuplePackable {
                 result.append(contentsOf: NULL_ESCAPE_SEQUENCE)
                 return
             }
-            result.append(contentsOf: value.pack())
+            result.append(contentsOf: value._pack())
         }
         result.append(NULL)
         return result
