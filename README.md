@@ -71,8 +71,13 @@ try fdb.set(key: "someKey", value: someBytes, transaction: transaction, commit: 
 //                                                                      ^^^^^^^^^^^^^  notice this plz
 
 try transaction.commit()
-// No explicit rollback yet, but you can just leave transaction object in place and it rollbacks itself
-// on `deinit`
+// OR
+transaction.reset()
+// OR
+transaction.cancel()
+// Or you can just leave transaction object in place and it resets & cancels itself on `deinit`.
+// Consider it auto-rollback.
+// (please refer to official docs on reset and cancel behaviour: https://apple.github.io/foundationdb/api-c.html#c.fdb_transaction_reset)
 ```
 
 ## Warning
@@ -90,6 +95,6 @@ This package is on ~extremely~ quite early stage. Though I did some RW-tests on 
 * Drop enterprise support, rewrite on golang using react-native (pretty sure it will be a thing by that time)
 * Blockchain? ICO? VR? AR?
 * Rehab
-* Transactions rollback
+* ~Transactions rollback~
 * ~Tuples~ (including ~pack~ and unpack)
 * ~Ranges~, ~subspaces~, directories

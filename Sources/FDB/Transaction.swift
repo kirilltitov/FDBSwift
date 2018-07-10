@@ -154,4 +154,12 @@ public class Transaction {
     public func clear(range: RangeFDBKey, commit: Bool = false) throws {
         try self.clear(begin: range.begin, end: range.end, commit: commit)
     }
+
+    public func cancel() {
+        fdb_transaction_cancel(self.pointer)
+    }
+
+    public func reset() {
+        fdb_transaction_reset(self.pointer)
+    }
 }
