@@ -71,12 +71,13 @@ try fdb.set(key: "someKey", value: someBytes, transaction: transaction, commit: 
 //                                                                      ^^^^^^^^^^^^^  notice this plz
 
 try transaction.commit()
-// No explicit rollback yet, but you can just leave transaction object in place and it rollbacks itself on `deinit`
+// No explicit rollback yet, but you can just leave transaction object in place and it rollbacks itself
+// on `deinit`
 ```
 
 ## Warning
 
-This package is on extremely early stage. Though I did some RW-tests on my machine (macOS), I do not recommend to use it in real production (yet) (soon tho).
+This package is on ~extremely~ quite early stage. Though I did some RW-tests on my machine (macOS), I do not recommend to use it in real production (yet) (soon tho).
 
 ## TODOs
 
