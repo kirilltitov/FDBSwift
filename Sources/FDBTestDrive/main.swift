@@ -38,9 +38,13 @@ func main() {
     let keyBytesLength = Int32(keyBytes.count)
 
     typealias Bytes = [UInt8]
-    var bytes = Bytes()
-    for _ in 0..<UInt.random(in: 1..<50) {
-        bytes.append(UInt8.random(in: 0..<UInt8.max))
+
+    func getRandomBytes() -> Bytes {
+        var bytes = Bytes()
+        for _ in 0..<UInt.random(in: 1..<50) {
+            bytes.append(UInt8.random(in: 0..<UInt8.max))
+        }
+        return bytes
     }
 
 //    print("etalon")
@@ -73,22 +77,36 @@ func main() {
 //            return
 //        }
 //        try transaction.commit()
-        for i in 0...300000 {
+        let subspace1 = Subspace("parent")
+        let subspace2 = subspace1.subspace("child", "subchild1")
+//        try fdb.clear(range: subspace2.range)
+        let _ = try fdb.get(range: subspace2.range).forEach {
+            dump("\($0.key.string) - \($0.value.string)")
+            return
+        }
+        exit(0)
+        for i in 0...10 {
 //            let writeProfiler = Profiler.begin()
-//            try fdb.set(key: keyBytes, value: bytes, transaction: transaction, commit: false)
+            try fdb.set(
+                key: subspace2.subspace("teonoman #\(i)"),
+                value: getRandomBytes(),
+                transaction: transaction,
+                commit: false
+            )
+
+            //try fdb.clear(range: subspace2.range)
 //            let writeTime = writeProfiler.end().rounded(toPlaces: 5)
 //            let readProfiler = Profiler.begin()
-//            try fdb.remove(key: key)
             //let _ = try transaction.get(key: keyBytes)
             //try transaction.clear(key: keyBytes)
-            fdb_transaction_clear(transaction.pointer, "lul", 3)
+//            fdb_transaction_clear(transaction.pointer, "lul", 3)
 //            dump(value)
 //            let readTime = readProfiler.end().rounded(toPlaces: 5)
 //            print("Iteration #\(i), w: \(writeTime), r: \(readTime)")
 //            print("Iteration #\(i)")
         }
         try transaction.commit()
-        sleep(60)
+//        sleep(60)
     } catch {
         dump(error)
     }

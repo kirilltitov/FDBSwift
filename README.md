@@ -10,12 +10,14 @@ Obviously, you need to install `FoundationDB` first. Download it from [official 
 
 ## Usage
 
-By default this wrapper (as well as C API) operates with byte keys and values (not pointers, but `Array<UInt8>`). For your convenience I made proxy `set` / `get` / `remove` methods which operate `String` keys. It's not very OK, but whatever. Values are always bytes (or `nil` if key not found). Why not `Data` you may ask? I'd like to stay `Foundation`less for as long as I can (srsly, import half of the world just for `Data` object which is a fancy wrapper around `NSData` which is a fancy wrapper around `[UInt8]`?) (Hast thou forgot that you need to wrap all your `Data` objects with `autoreleasepool` or otherwise you get _fancy_ memory leaks?), you can always convert bytes to `Data` with `Data(bytes: Bytes)` initializer (why would you want to do that? oh yeah, right, JSON... ok, but do it yourself plz, extensions to the rescue).
+By default (and in the very core) this wrapper, as well as C API, operates with byte keys and values (not pointers, but `Array<UInt8>`). For your convenience I created a protocol `FDBKey` which defines basic FDB key logics. This protocol is adopted by `String`, `[UInt8]`, `Tuple` and `Subspace` types (two latter are local). You may use any of these types as keys in all FDB methods which involve keys (like `set` / `get` / `clear`) or adopt this protocol by other types of your choice.
+
+Values are always bytes (or `nil` if key not found). Why not `Data` you may ask? I'd like to stay `Foundation`less for as long as I can (srsly, import half of the world just for `Data` object which is a fancy wrapper around `NSData` which is a fancy wrapper around `[UInt8]`?) (Hast thou forgot that you need to wrap all your `Data` objects with `autoreleasepool` or otherwise you get _fancy_ memory leaks?), you can always convert bytes to `Data` with `Data(bytes: Bytes)` initializer (why would you want to do that? oh yeah, right, JSON... ok, but do it yourself plz, extensions to the rescue).
 
 Ahem. Where was I? OK so you can use this package as library (`FDB`) or you can just clone this repo and play with `FDBTestDrive` product, I've done some tests there. Now, about library API.
 
 ```swift
-// Import, duh
+// duh
 import FDB
 
 // Default path, wouldn't really like to hardcode it as default value
@@ -29,11 +31,37 @@ let fdb = FDB(cluster: "/usr/local/etc/foundationdb/fdb.cluster")
 // 'commit: false' argument, just in case you would want to do things within that transaction,
 // but in that case you must commit it by yourself (see below), or it will rollback
 try fdb.set(key: "somekey", value: someBytes)
+// OR
+try fdb.set(key: Bytes([0, 1, 2, 3]), value: someBytes)
+// OR
+try fdb.set(key: Tuple("foo", nil, "bar", Tuple("baz", "sas"), "lul"), value: someBytes)
+// OR
+try fdb.set(key: Subspace("foo").subspace("bar"), value: someBytes)
 
 // Value is optional, unwrap it before usage
 let value = try fdb.get(key: "someKey")
 
-try fdb.remove(key: "someKey")
+// dump subspace if you would like to see how it looks from the inside
+let rootSubspace = Subspace("root")
+// also check Subspace.swift for more details and usecases
+let childSubspace = rootSubspace.subspace("child", "subspace")
+
+try fdb.clear(key: childSubspace.subspace("concrete_record"))
+
+// clears whole subspace, including "concrete_record" key
+try fdb.clear(range: childSubspace.range)
+
+let range = childSubspace.range
+
+// these two calls are completely equal (can't really come up with case when you need second form,
+// but whatever, I've seen worse whims)
+let records = try fdb.get(range: range)
+let records = try fdb.get(begin: range.begin, end: range.end)
+
+records.forEach {
+    dump("\($0.key) - \($0.value)")
+    return
+}
 
 // Or you can manually manage transactions (it gives you insane performance boost since transaction
 // per operation is quite expensive)
@@ -43,13 +71,12 @@ try fdb.set(key: "someKey", value: someBytes, transaction: transaction, commit: 
 //                                                                      ^^^^^^^^^^^^^  notice this plz
 
 try transaction.commit()
-// No explicit rollback yet, but you can just leave transaction object in place and it rollbacks itself
-// on `deinit`
+// No explicit rollback yet, but you can just leave transaction object in place and it rollbacks itself on `deinit`
 ```
 
 ## Warning
 
-This package is on extremely early stage. Though I did some RW-tests on my machine (macOS), I do not recommend to use it in real production.
+This package is on extremely early stage. Though I did some RW-tests on my machine (macOS), I do not recommend to use it in real production (yet) (soon tho).
 
 ## TODOs
 
@@ -57,11 +84,11 @@ This package is on extremely early stage. Though I did some RW-tests on my machi
 * Network options
 * ~Proper errors~
 * The rest of C API
-* There is a memory leak somewhere, find@eliminate
+* ~There is a memory leak somewhere, find@eliminate~
 * Enterprise support, vendor WSDL, rewrite on Java
 * Drop enterprise support, rewrite on golang using react-native (pretty sure it will be a thing by that time)
 * Blockchain? ICO? VR? AR?
 * Rehab
 * Transactions rollback
 * ~Tuples~ (including ~pack~ and unpack)
-* ~Ranges~, subspaces, directories
+* ~Ranges~, ~subspaces~, directories

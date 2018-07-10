@@ -57,8 +57,12 @@ extension Array: TuplePackable where Element == Byte {
 public struct Tuple: TuplePackable {
     private let tuple: [TuplePackable?]
 
-    public init(_ input: TuplePackable?...) {
+    public init(_ input: [TuplePackable?]) {
         self.tuple = input
+    }
+
+    public init(_ input: TuplePackable?...) {
+        self.init(input)
     }
 
     public func pack() -> Bytes {

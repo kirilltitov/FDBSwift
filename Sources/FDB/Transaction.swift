@@ -32,16 +32,16 @@ public class Transaction {
         }
     }
 
-    public func set(key: Bytes, value: Bytes, commit: Bool = false) throws {
-        fdb_transaction_set(self.pointer, key, Int32(key.count), value, Int32(value.count))
+    public func set(key: FDBKey, value: Bytes, commit: Bool = false) throws {
+        fdb_transaction_set(self.pointer, key.asFDBKey(), key.asFDBKeyLength(), value, Int32(value.count))
         if commit {
             try self.commit()
         }
     }
 
     public func get(
-        begin: Bytes,
-        end: Bytes,
+        begin: FDBKey,
+        end: FDBKey,
         beginEqual: Bool = false,
         beginOffset: Int32 = 1,
         endEqual: Bool = false,
@@ -56,8 +56,8 @@ public class Transaction {
     ) throws -> [KeyValue] {
         let future = try fdb_transaction_get_range(
             self.pointer,
-            begin, Int32(begin.count), beginEqual.int, beginOffset,
-            end, Int32(end.count), endEqual.int, endOffset,
+            begin.asFDBKey(), begin.asFDBKeyLength(), beginEqual.int, beginOffset,
+            end.asFDBKey(), end.asFDBKeyLength(), endEqual.int, endOffset,
             limit,
             targetBytes,
             FDBStreamingMode(mode.rawValue),
@@ -80,8 +80,44 @@ public class Transaction {
         }
     }
 
-    public func get(key: Bytes, snapshot: Int32 = 0, commit: Bool = false) throws -> Bytes? {
-        let future = try fdb_transaction_get(self.pointer, key, Int32(key.count), snapshot).waitForFuture()
+    public func get(
+        range: RangeFDBKey,
+        beginEqual: Bool = false,
+        beginOffset: Int32 = 1,
+        endEqual: Bool = false,
+        endOffset: Int32 = 1,
+        limit: Int32 = 0,
+        targetBytes: Int32 = 0,
+        mode: FDB.StreamingMode = .WantAll,
+        iteration: Int32 = 1,
+        snapshot: Int32 = 0,
+        reverse: Bool = false,
+        commit: Bool = false
+    ) throws -> [KeyValue] {
+        return try self.get(
+            begin: range.begin,
+            end: range.end,
+            beginEqual: beginEqual,
+            beginOffset: beginOffset,
+            endEqual: endEqual,
+            endOffset: endOffset,
+            limit: limit,
+            targetBytes: targetBytes,
+            mode: mode,
+            iteration: iteration,
+            snapshot: snapshot,
+            reverse: reverse,
+            commit: commit
+        )
+    }
+
+    public func get(key: FDBKey, snapshot: Int32 = 0, commit: Bool = false) throws -> Bytes? {
+        let future = try fdb_transaction_get(
+            self.pointer,
+            key.asFDBKey(),
+            key.asFDBKeyLength(),
+            snapshot
+        ).waitForFuture()
         var readValueFound: Int32 = 0
         var readValue: UnsafePointer<Byte>!
         var readValueLength: Int32 = 0
@@ -95,10 +131,27 @@ public class Transaction {
         return readValue.getBytes(count: readValueLength)
     }
 
-    public func clear(key: Bytes, commit: Bool = false) throws {
-        fdb_transaction_clear(self.pointer, key, Int32(key.count))
-//        if commit {
-//            try self.commit()
-//        }
+    public func clear(key: FDBKey, commit: Bool = false) throws {
+        fdb_transaction_clear(self.pointer, key.asFDBKey(), key.asFDBKeyLength())
+        if commit {
+            try self.commit()
+        }
+    }
+
+    public func clear(begin: FDBKey, end: FDBKey, commit: Bool = false) throws {
+        fdb_transaction_clear_range(
+            self.pointer,
+            begin.asFDBKey(),
+            begin.asFDBKeyLength(),
+            end.asFDBKey(),
+            end.asFDBKeyLength()
+        )
+        if commit {
+            try self.commit()
+        }
+    }
+
+    public func clear(range: RangeFDBKey, commit: Bool = false) throws {
+        try self.clear(begin: range.begin, end: range.end, commit: commit)
     }
 }

@@ -114,7 +114,7 @@ public class FDB {
     }
 
     @discardableResult public func set(
-        key: Bytes,
+        key: FDBKey,
         value: Bytes,
         transaction: Transaction? = nil,
         commit: Bool = true
@@ -124,17 +124,8 @@ public class FDB {
         return commit ? nil : tr
     }
 
-    @discardableResult public func set(
-        key: String,
-        value: Bytes,
-        transaction: Transaction? = nil,
-        commit: Bool = true
-    ) throws -> Transaction? {
-        return try self.set(key: key.bytes, value: value, transaction: transaction, commit: commit)
-    }
-
     public func get(
-        key: Bytes,
+        key: FDBKey,
         transaction: Transaction? = nil,
         snapshot: Int32 = 0,
         commit: Bool = true
@@ -142,26 +133,54 @@ public class FDB {
         return try (transaction ?? self.begin()).get(key: key, snapshot: snapshot, commit: commit)
     }
 
-    public func get(
-        key: String,
-        transaction: Transaction? = nil,
-        snapshot: Int32 = 0,
-        commit: Bool = true
-    ) throws -> Bytes? {
-        return try self.get(key: key.bytes, transaction: transaction, snapshot: snapshot, commit: commit)
-    }
-
-    public func remove(key: Bytes, transaction: Transaction? = nil, commit: Bool = true) throws {
+    public func clear(key: FDBKey, transaction: Transaction? = nil, commit: Bool = true) throws {
         return try (transaction ?? self.begin()).clear(key: key, commit: commit)
     }
 
-    public func remove(key: String, transaction: Transaction? = nil, commit: Bool = true) throws {
-        return try self.remove(key: key.bytes, transaction: transaction, commit: commit)
+    public func clear(begin: FDBKey, end: FDBKey, transaction: Transaction? = nil, commit: Bool = true) throws {
+        return try (transaction ?? self.begin()).clear(begin: begin, end: end, commit: commit)
+    }
+
+    public func clear(range: RangeFDBKey, transaction: Transaction? = nil, commit: Bool = true) throws {
+        return try self.clear(begin: range.begin, end: range.end, transaction: transaction, commit: commit)
     }
 
     public func get(
-        begin: Bytes,
-        end: Bytes,
+        range: RangeFDBKey,
+        transaction: Transaction? = nil,
+        beginEqual: Bool = false,
+        beginOffset: Int32 = 1,
+        endEqual: Bool = false,
+        endOffset: Int32 = 1,
+        limit: Int32 = 0,
+        targetBytes: Int32 = 0,
+        mode: FDB.StreamingMode = .WantAll,
+        iteration: Int32 = 1,
+        snapshot: Int32 = 0,
+        reverse: Bool = false,
+        commit: Bool = true
+    ) throws -> [KeyValue] {
+        return try self.get(
+            begin: range.begin,
+            end: range.end,
+            transaction: transaction,
+            beginEqual: beginEqual,
+            beginOffset: beginOffset,
+            endEqual: endEqual,
+            endOffset: endOffset,
+            limit: limit,
+            targetBytes: targetBytes,
+            mode: mode,
+            iteration: iteration,
+            snapshot: snapshot,
+            reverse: reverse,
+            commit: commit
+        )
+    }
+
+    public func get(
+        begin: FDBKey,
+        end: FDBKey,
         transaction: Transaction? = nil,
         beginEqual: Bool = false,
         beginOffset: Int32 = 1,
