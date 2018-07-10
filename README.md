@@ -75,9 +75,10 @@ try transaction.commit()
 transaction.reset()
 // OR
 transaction.cancel()
-// Or you can just leave transaction object in place and it resets & cancels itself on `deinit`.
+// Or you can just leave transaction object in place and it resets & destroys itself on `deinit`.
 // Consider it auto-rollback.
-// (please refer to official docs on reset and cancel behaviour: https://apple.github.io/foundationdb/api-c.html#c.fdb_transaction_reset)
+// Please refer to official docs on reset and cancel behaviour:
+// https://apple.github.io/foundationdb/api-c.html#c.fdb_transaction_reset
 ```
 
 ## Warning
