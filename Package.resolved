@@ -1,7 +1,15 @@
 {
   "object": {
     "pins": [
-
+      {
+        "package": "CFDB",
+        "repositoryURL": "/Users/kirilltitov/work/Elegion/CFDBSwift",
+        "state": {
+          "branch": "master",
+          "revision": "ef21041887426368b7ff85dea7bd0eac639c66ed",
+          "version": null
+        }
+      }
     ]
   },
   "version": 1
