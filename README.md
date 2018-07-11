@@ -106,5 +106,6 @@ This package is on ~extremely~ quite early stage. Though I did some RW-tests on 
 * Rehab
 * ~Transactions rollback~
 * ~Tuples~ (including ~pack~ and unpack)
+* Integer tuples
 * ~Ranges~, ~subspaces~, directories
 * ~Tests~
