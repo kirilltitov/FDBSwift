@@ -107,3 +107,4 @@ This package is on ~extremely~ quite early stage. Though I did some RW-tests on 
 * ~Transactions rollback~
 * ~Tuples~ (including ~pack~ and unpack)
 * ~Ranges~, ~subspaces~, directories
+* ~Tests~
