@@ -1,10 +1,5 @@
 import CFDB
 
-public struct KeyValue {
-    public let key: Bytes
-    public let value: Bytes
-}
-
 public class Transaction {
     public var pointer: OpaquePointer!
 

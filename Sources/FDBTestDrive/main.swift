@@ -40,7 +40,7 @@ func main() {
 
     func getRandomBytes() -> Bytes {
         var bytes = Bytes()
-        for _ in 0..<UInt.random(in: 1..<50) {
+        for _ in 0..<10 {
             bytes.append(UInt8.random(in: 0..<UInt8.max))
         }
         return bytes
@@ -77,9 +77,12 @@ func main() {
 //        }
 //        try transaction.commit()
         let subspace1 = Subspace("parent")
-        let subspace2 = subspace1["child", "subchild1"]
-////        try fdb.clear(range: subspace2.range)
-        let _ = try fdb.get(range: subspace2.range).forEach {
+        let subspace2 = subspace1["child", "subchild2"]
+//        try fdb.clear(range: subspace2.range)
+        for i in 0..<2 {
+            try fdb.set(key: subspace2["key \(i)"], value: getRandomBytes())
+        }
+        try fdb.get(subspace: subspace2).forEach {
             dump("\($0.key.string) - \($0.value.string)")
             return
         }

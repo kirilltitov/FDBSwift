@@ -1,5 +1,16 @@
 public typealias RangeFDBKey = (begin: FDBKey, end: FDBKey)
 
+public struct KeyValue {
+    public let key: Bytes
+    public let value: Bytes
+}
+
+extension KeyValue: Equatable {
+    public static func == (lhs: KeyValue, rhs: KeyValue) -> Bool {
+        return lhs.key == rhs.key && lhs.value == rhs.value
+    }
+}
+
 public protocol FDBKey {
     func asFDBKey() -> Bytes
     func asFDBKeyLength() -> Int32

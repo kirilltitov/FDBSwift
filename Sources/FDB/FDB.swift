@@ -109,7 +109,7 @@ public class FDB {
 
     private func debug(_ message: String) {
         if self.verbose {
-            print(message)
+            print("[FDB \(ObjectIdentifier(self))] \(message)")
         }
     }
 
@@ -125,10 +125,6 @@ public class FDB {
         try self.begin().set(key: key, value: value, commit: true)
     }
 
-    public func get(key: FDBKey, snapshot: Int32 = 0) throws -> Bytes? {
-        return try self.begin().get(key: key, snapshot: snapshot, commit: true)
-    }
-
     public func clear(key: FDBKey) throws {
         return try self.begin().clear(key: key, commit: true)
     }
@@ -139,6 +135,18 @@ public class FDB {
 
     public func clear(range: RangeFDBKey) throws {
         return try self.clear(begin: range.begin, end: range.end)
+    }
+
+    public func clear(subspace: Subspace) throws {
+        return try self.clear(range: subspace.range)
+    }
+
+    public func get(key: FDBKey, snapshot: Int32 = 0) throws -> Bytes? {
+        return try self.begin().get(key: key, snapshot: snapshot, commit: true)
+    }
+
+    public func get(subspace: Subspace, snapshot: Int32 = 0) throws -> [KeyValue] {
+        return try self.begin().get(range: subspace.range, snapshot: snapshot)
     }
 
     public func get(
