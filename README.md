@@ -91,7 +91,7 @@ transaction.cancel()
 
 ## Warning
 
-This package is on ~extremely~ quite early stage. Though I did some RW-tests on my machine (macOS), I do not recommend to use it in real production (yet) (soon tho).
+This package is on ~extremely~ ~very~ quite early stage. Though I did some RW-tests on my machine (macOS), I do not recommend to use it in real production (yet) (soon tho).
 
 ## TODOs
 
