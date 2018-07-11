@@ -18,26 +18,34 @@ public class FDB {
         case Serial   =  4 // FDB_STREAMING_MODE_SERIAL
     }
 
-    static let dbName: StaticString = "DB"
+    static private let dbName: StaticString = "DB"
 
-    let version: Int32
-    let networkStopTimeout: Int
-    let clusterFile: String
-    var cluster: Cluster? = nil
-    var db: Database? = nil
-    let queue: DispatchQueue
+    private let version: Int32
+    private let networkStopTimeout: Int
+    private let clusterFile: String
+    private var cluster: Cluster? = nil
+    private var db: Database? = nil
+    private let queue: DispatchQueue
 
     public var verbose = false
 
-    let semaphore = DispatchSemaphore(value: 0)
+    private let semaphore = DispatchSemaphore(value: 0)
 
     public required init(
-        cluster: String,
+        cluster: String? = nil,
         networkStopTimeout: Int = 10,
         version: Int32 = FDB_API_VERSION,
         queue: DispatchQueue = DispatchQueue(label: "fdb", qos: .userInitiated, attributes: .concurrent)
     ) {
-        self.clusterFile = cluster
+        if let cluster = cluster {
+            self.clusterFile = cluster
+        } else {
+            #if os(macOS)
+                self.clusterFile = "/usr/local/etc/foundationdb/fdb.cluster"
+            #else // assuming that else is linux
+                self.clusterFile = "/etc/foundationdb/fdb.cluster"
+            #endif
+        }
         self.networkStopTimeout = networkStopTimeout
         self.version = version
         self.queue = queue
@@ -113,75 +121,29 @@ public class FDB {
         let _ = try self.getDB()
     }
 
-    @discardableResult public func set(
-        key: FDBKey,
-        value: Bytes,
-        transaction: Transaction? = nil,
-        commit: Bool = true
-    ) throws -> Transaction? {
-        let tr = try transaction ?? self.begin()
-        try tr.set(key: key, value: value, commit: commit)
-        return commit ? nil : tr
+    public func set(key: FDBKey, value: Bytes) throws {
+        try self.begin().set(key: key, value: value, commit: true)
     }
 
-    public func get(
-        key: FDBKey,
-        transaction: Transaction? = nil,
-        snapshot: Int32 = 0,
-        commit: Bool = true
-    ) throws -> Bytes? {
-        return try (transaction ?? self.begin()).get(key: key, snapshot: snapshot, commit: commit)
+    public func get(key: FDBKey, snapshot: Int32 = 0) throws -> Bytes? {
+        return try self.begin().get(key: key, snapshot: snapshot, commit: true)
     }
 
-    public func clear(key: FDBKey, transaction: Transaction? = nil, commit: Bool = true) throws {
-        return try (transaction ?? self.begin()).clear(key: key, commit: commit)
+    public func clear(key: FDBKey) throws {
+        return try self.begin().clear(key: key, commit: true)
     }
 
-    public func clear(begin: FDBKey, end: FDBKey, transaction: Transaction? = nil, commit: Bool = true) throws {
-        return try (transaction ?? self.begin()).clear(begin: begin, end: end, commit: commit)
+    public func clear(begin: FDBKey, end: FDBKey) throws {
+        return try self.begin().clear(begin: begin, end: end, commit: true)
     }
 
-    public func clear(range: RangeFDBKey, transaction: Transaction? = nil, commit: Bool = true) throws {
-        return try self.clear(begin: range.begin, end: range.end, transaction: transaction, commit: commit)
-    }
-
-    public func get(
-        range: RangeFDBKey,
-        transaction: Transaction? = nil,
-        beginEqual: Bool = false,
-        beginOffset: Int32 = 1,
-        endEqual: Bool = false,
-        endOffset: Int32 = 1,
-        limit: Int32 = 0,
-        targetBytes: Int32 = 0,
-        mode: FDB.StreamingMode = .WantAll,
-        iteration: Int32 = 1,
-        snapshot: Int32 = 0,
-        reverse: Bool = false,
-        commit: Bool = true
-    ) throws -> [KeyValue] {
-        return try self.get(
-            begin: range.begin,
-            end: range.end,
-            transaction: transaction,
-            beginEqual: beginEqual,
-            beginOffset: beginOffset,
-            endEqual: endEqual,
-            endOffset: endOffset,
-            limit: limit,
-            targetBytes: targetBytes,
-            mode: mode,
-            iteration: iteration,
-            snapshot: snapshot,
-            reverse: reverse,
-            commit: commit
-        )
+    public func clear(range: RangeFDBKey) throws {
+        return try self.clear(begin: range.begin, end: range.end)
     }
 
     public func get(
         begin: FDBKey,
         end: FDBKey,
-        transaction: Transaction? = nil,
         beginEqual: Bool = false,
         beginOffset: Int32 = 1,
         endEqual: Bool = false,
@@ -191,10 +153,9 @@ public class FDB {
         mode: FDB.StreamingMode = .WantAll,
         iteration: Int32 = 1,
         snapshot: Int32 = 0,
-        reverse: Bool = false,
-        commit: Bool = true
+        reverse: Bool = false
     ) throws -> [KeyValue] {
-        return try (transaction ?? self.begin()).get(
+        return try self.begin().get(
             begin: begin,
             end: end,
             beginEqual: beginEqual,
@@ -207,7 +168,36 @@ public class FDB {
             iteration: iteration,
             snapshot: snapshot,
             reverse: reverse,
-            commit: commit
+            commit: true
+        )
+    }
+
+    public func get(
+        range: RangeFDBKey,
+        beginEqual: Bool = false,
+        beginOffset: Int32 = 1,
+        endEqual: Bool = false,
+        endOffset: Int32 = 1,
+        limit: Int32 = 0,
+        targetBytes: Int32 = 0,
+        mode: FDB.StreamingMode = .WantAll,
+        iteration: Int32 = 1,
+        snapshot: Int32 = 0,
+        reverse: Bool = false
+    ) throws -> [KeyValue] {
+        return try self.get(
+            begin: range.begin,
+            end: range.end,
+            beginEqual: beginEqual,
+            beginOffset: beginOffset,
+            endEqual: endEqual,
+            endOffset: endOffset,
+            limit: limit,
+            targetBytes: targetBytes,
+            mode: mode,
+            iteration: iteration,
+            snapshot: snapshot,
+            reverse: reverse
         )
     }
 }

@@ -31,8 +31,7 @@ extension Float {
 }
 
 func main() {
-    let clusterPath = "/usr/local/etc/foundationdb/fdb.cluster"
-    let fdb = FDB(cluster: clusterPath)
+    let fdb = FDB()
     let key = "lul"
     var keyBytes = [UInt8](key.utf8)
     let keyBytesLength = Int32(keyBytes.count)
@@ -78,8 +77,8 @@ func main() {
 //        }
 //        try transaction.commit()
         let subspace1 = Subspace("parent")
-        let subspace2 = subspace1.subspace("child", "subchild1")
-//        try fdb.clear(range: subspace2.range)
+        let subspace2 = subspace1["child", "subchild1"]
+////        try fdb.clear(range: subspace2.range)
         let _ = try fdb.get(range: subspace2.range).forEach {
             dump("\($0.key.string) - \($0.value.string)")
             return
@@ -87,12 +86,7 @@ func main() {
         exit(0)
         for i in 0...10 {
 //            let writeProfiler = Profiler.begin()
-            try fdb.set(
-                key: subspace2.subspace("teonoman #\(i)"),
-                value: getRandomBytes(),
-                transaction: transaction,
-                commit: false
-            )
+            try transaction.set(key: subspace2["teonoman #\(i)"], value: getRandomBytes())
 
             //try fdb.clear(range: subspace2.range)
 //            let writeTime = writeProfiler.end().rounded(toPlaces: 5)

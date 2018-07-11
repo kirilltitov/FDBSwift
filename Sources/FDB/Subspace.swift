@@ -20,7 +20,17 @@ public struct Subspace {
         self.init(tuple.pack())
     }
 
-    public func subspace(_ input: TuplePackable?...) -> Subspace {
+    public func subspace(_ input: [TuplePackable?]) -> Subspace {
         return Subspace(self.prefix + Tuple(input).pack())
+    }
+
+    public func subspace(_ input: TuplePackable?...) -> Subspace {
+        return self.subspace(input)
+    }
+
+    public subscript(index: TuplePackable...) -> Subspace {
+        get {
+            return self.subspace(index)
+        }
     }
 }

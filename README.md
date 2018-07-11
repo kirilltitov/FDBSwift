@@ -20,16 +20,11 @@ Ahem. Where was I? OK so you can use this package as library (`FDB`) or you can 
 // duh
 import FDB
 
-// Default path, wouldn't really like to hardcode it as default value
+// Default cluster path depending on your OS
+let fdb = FDB()
+// OR
 let fdb = FDB(cluster: "/usr/local/etc/foundationdb/fdb.cluster")
 
-// Plz don't forget to wrap it with 'docatch' block and don't you dare to force 'try!' it.
-// Always catch errors, you might get 'TransactionRetry' error which tells you that something went
-// slightly wrong, but you can still get things done if you just replay all work within the same
-// transaction (obviously, it works only if you manage the transaction by yourself).
-// By the way, this method may return 'Transaction' object, but only if you explicitly passed
-// 'commit: false' argument, just in case you would want to do things within that transaction,
-// but in that case you must commit it by yourself (see below), or it will rollback
 try fdb.set(key: "somekey", value: someBytes)
 // OR
 try fdb.set(key: Bytes([0, 1, 2, 3]), value: someBytes)
@@ -38,7 +33,7 @@ try fdb.set(key: Tuple("foo", nil, "bar", Tuple("baz", "sas"), "lul"), value: so
 // OR
 try fdb.set(key: Subspace("foo").subspace("bar"), value: someBytes)
 
-// Value is optional, unwrap it before usage
+// Value is `Bytes?`, unwrap it before usage
 let value = try fdb.get(key: "someKey")
 
 // dump subspace if you would like to see how it looks from the inside
@@ -47,14 +42,24 @@ let rootSubspace = Subspace("root")
 let childSubspace = rootSubspace.subspace("child", "subspace")
 
 try fdb.clear(key: childSubspace.subspace("concrete_record"))
+// OR
+try fdb.clear(key: childSubspace["concrete_record"])
+// OR
+try fdb.clear(key: rootSubspace["child"]["subspace"]["concrete_record"])
+// OR EVEN
+try fdb.clear(key: rootSubspace["child", "subspace", "concrete_record"])
+// OR EVEN (this is not OK, but still possible :)
+try fdb.clear(key: rootSubspace["child", nil, Tuple("foo", "bar"), "concrete_record"])
 
 // clears whole subspace, including "concrete_record" key
 try fdb.clear(range: childSubspace.range)
 
 let range = childSubspace.range
 
-// these two calls are completely equal (can't really come up with case when you need second form,
-// but whatever, I've seen worse whims)
+/*
+  these two calls are completely equal (can't really come up with case when you need second form,
+  but whatever, I've seen worse whims)
+*/
 let records = try fdb.get(range: range)
 let records = try fdb.get(begin: range.begin, end: range.end)
 
@@ -63,17 +68,20 @@ records.forEach {
     return
 }
 
-// Or you can manually manage transactions (it gives you insane performance boost since transaction
-// per operation is quite expensive)
+/*
+  `fdb.get`, `fdb.set`, `fdb.clear` methods are implicitly transactional, but you can manually
+  manage transactions (it gives you insane performance boost since transaction per operation
+  is quite expensive)
+*/
 let transaction = try fdb.begin()
 
-try fdb.set(key: "someKey", value: someBytes, transaction: transaction, commit: false)
-//                                                                      ^^^^^^^^^^^^^  notice this plz
+// By default transactions are NOT committed, you must do it explicitly or pass optional arg `commit`
+try transaction.set(key: "someKey", value: someBytes, commit: true)
 
 try transaction.commit()
-// OR
+// or
 transaction.reset()
-// OR
+// or
 transaction.cancel()
 // Or you can just leave transaction object in place and it resets & destroys itself on `deinit`.
 // Consider it auto-rollback.
