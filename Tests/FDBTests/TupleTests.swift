@@ -32,7 +32,7 @@ class TupleTests: XCTestCase {
         var expected = Bytes()
         expected.append(0x05)
 
-        // This should be `0x01` according to tuple dock
+        // This should be `0x01` according to tuple doc
         // (see https://github.com/apple/foundationdb/blob/master/design/tuple.md#nested-tuple)
         // HOWEVER Swift can't make a difference between ASCII and UTF strings,
         // so I decided to use only UTF strings in tuples.
