@@ -57,11 +57,15 @@ try fdb.clear(range: childSubspace.range)
 let range = childSubspace.range
 
 /*
-  these two calls are completely equal (can't really come up with case when you need second form,
+  these three calls are completely equal (can't really come up with case when you need second form,
   but whatever, I've seen worse whims)
 */
 let records = try fdb.get(range: range)
 let records = try fdb.get(begin: range.begin, end: range.end)
+let records = try fdb.get(subspace: childSubspace)
+// though call below is not equal to above one because `subspace:` overload implicitly loads range
+// this one will load bare subspace key
+let records = try fdb.get(key: childSubspace)
 
 records.forEach {
     dump("\($0.key) - \($0.value)")
