@@ -109,3 +109,4 @@ This package is on ~extremely~ ~very~ quite early stage. Though I did some RW-te
 * Integer tuples
 * ~Ranges~, ~subspaces~, directories
 * ~Tests~
+* Properly test on Linux
