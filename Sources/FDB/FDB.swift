@@ -18,6 +18,20 @@ public class FDB {
         case Serial   =  4 // FDB_STREAMING_MODE_SERIAL
     }
 
+    public enum MutationType: UInt32 {
+        case Add                    = 2  // FDB_MUTATION_TYPE_ADD
+        case BitAnd                 = 6  // FDB_MUTATION_TYPE_BIT_AND
+        case BitOr                  = 7  // FDB_MUTATION_TYPE_BIT_OR
+        case BitXor                 = 8  // FDB_MUTATION_TYPE_BIT_XOR
+        case AppendIfFits           = 9  // FDB_MUTATION_TYPE_APPEND_IF_FITS
+        case Max                    = 12 // FDB_MUTATION_TYPE_MAX
+        case Min                    = 13 // FDB_MUTATION_TYPE_MIN
+        case SetVersionstampedKey   = 14 // FDB_MUTATION_TYPE_SET_VERSIONSTAMPED_KEY
+        case SetVersionstampedValue = 15 // FDB_MUTATION_TYPE_SET_VERSIONSTAMPED_VALUE
+        case ByteMin                = 16 // FDB_MUTATION_TYPE_BYTE_MIN
+        case ByteMax                = 17 // FDB_MUTATION_TYPE_BYTE_MAX
+    }
+
     static private let dbName: StaticString = "DB"
 
     private let version: Int32
@@ -207,5 +221,17 @@ public class FDB {
             snapshot: snapshot,
             reverse: reverse
         )
+    }
+
+    public func atomic(_ op: MutationType, key: FDBKey, value: Bytes) throws {
+        try self.begin().atomic(op, key: key, value: value, commit: true)
+    }
+
+    public func atomic<T: SignedInteger>(_ op: MutationType, key: FDBKey, value: T) throws {
+        try self.atomic(op, key: key, value: getBytes(value))
+    }
+
+    public func increment(key: FDBKey, value: Int = 1) throws {
+        try self.atomic(.Add, key: key, value: value)
     }
 }

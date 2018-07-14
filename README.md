@@ -101,16 +101,21 @@ This package is on ~extremely~ ~very~ quite early stage. Though I did some RW-te
 
 * Asynchronous methods
 * Network options
-* ~Proper errors~
+* ✅ Proper errors
 * The rest of C API
-* ~There is a memory leak somewhere, find@eliminate~
+* ✅ There is a memory leak somewhere, find@eliminate
 * Enterprise support, vendor WSDL, rewrite on Java
 * Drop enterprise support, rewrite on golang using react-native (pretty sure it will be a thing by that time)
 * Blockchain? ICO? VR? AR?
 * Rehab
-* ~Transactions rollback~
-* ~Tuples~ (including ~pack~ and unpack)
+* ✅ Transactions rollback
+* ✅ Tuples
+* ✅ Tuples pack
+* Tuples unpack
 * Integer tuples
-* ~Ranges~, ~subspaces~, directories
-* ~Tests~
+* ✅ Ranges
+* ✅ Subspaces
+* Directories
+* ✅ Atomic operations
+* ✅ Tests
 * Properly test on Linux

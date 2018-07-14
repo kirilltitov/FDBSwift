@@ -1,6 +1,18 @@
 import XCTest
 @testable import FDB
 
+fileprivate extension Array where Element == Byte {
+    func cast<Result>() -> Result {
+        precondition(
+            MemoryLayout<Result>.size == self.count,
+            "Memory layout size for result type '\(Result.self)' (\(MemoryLayout<Result>.size) bytes) does not match with given byte array length (\(self.count) bytes)"
+        )
+        return self.withUnsafeBytes {
+            $0.baseAddress!.assumingMemoryBound(to: Result.self).pointee
+        }
+    }
+}
+
 class FDBTests: XCTestCase {
     static var fdb: FDB!
     static var subspace: Subspace!
@@ -66,10 +78,25 @@ class FDBTests: XCTestCase {
         XCTAssertEqual(try FDBTests.fdb.get(begin: subspace.range.begin, end: subspace.range.end), values)
     }
 
+    func testAtomicAdd() throws {
+        let key = FDBTests.subspace["atomic_incr"]
+        let step: Int64 = 1
+        let expected = step + 1
+        for _ in 0..<expected - 1 {
+            try FDBTests.fdb.atomic(.Add, key: key, value: step)
+        }
+        try FDBTests.fdb.increment(key: key)
+        let result = try FDBTests.fdb.get(key: key)
+        XCTAssertNotNil(result)
+        XCTAssertEqual(result!.cast() as Int64, expected)
+        XCTAssertEqual(result, getBytes(expected))
+    }
+
     static var allTests = [
         ("testEmptyValue", testEmptyValue),
         ("testSetGetBytes", testSetGetBytes),
         ("testTransaction", testTransaction),
         ("testGetRange", testGetRange),
+        ("testAtomicAdd", testAtomicAdd),
     ]
 }

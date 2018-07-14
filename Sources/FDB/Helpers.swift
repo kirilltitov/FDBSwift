@@ -1,16 +1,21 @@
 import Dispatch
 import CFDB
 
-public /* TODO: make it internal */ extension String {
+internal extension String {
     var bytes: Bytes {
         return Bytes(self.utf8)
     }
 }
 
-extension Bool {
+internal extension Bool {
     var int: fdb_bool_t {
         return self ? 1 : 0
     }
+}
+
+// little endian byte order
+internal func getBytes<Input>(_ input: Input) -> Bytes {
+    return withUnsafeBytes(of: input) { Bytes($0) }
 }
 
 internal extension OpaquePointer {

@@ -157,4 +157,18 @@ public class Transaction {
     public func reset() {
         fdb_transaction_reset(self.pointer)
     }
+
+    public func atomic(_ op: FDB.MutationType, key: FDBKey, value: Bytes, commit: Bool = false) throws {
+        fdb_transaction_atomic_op(
+            self.pointer,
+            key.asFDBKey(),
+            key.asFDBKeyLength(),
+            value,
+            Int32(value.count),
+            FDBMutationType(op.rawValue)
+        )
+        if commit {
+            try self.commit()
+        }
+    }
 }
