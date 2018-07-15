@@ -91,11 +91,13 @@ transaction.cancel()
 // Consider it auto-rollback.
 // Please refer to official docs on reset and cancel behaviour:
 // https://apple.github.io/foundationdb/api-c.html#c.fdb_transaction_reset
+
+// also see other public methods in FDB.swift and Transaction.swift
 ```
 
 ## Warning
 
-This package is on ~extremely~ ~very~ quite early stage. Though I did some RW-tests on my machine (macOS), I do not recommend to use it in real production (yet) (soon tho).
+This package is on ~extremely~ ~very~ ~quite~ moderately early stage. Though I did some RW-tests (including highload tests) on my machine (macOS) and got all tests passing on Ubuntu, I would recommend to use it in production with caution. Obviously, I am not responsible of shark attack and your data corruption.
 
 ## TODOs
 
@@ -118,4 +120,4 @@ This package is on ~extremely~ ~very~ quite early stage. Though I did some RW-te
 * Directories
 * ✅ Atomic operations
 * ✅ Tests
-* Properly test on Linux
+* ✅ Properly test on Linux
