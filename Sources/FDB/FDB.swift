@@ -231,7 +231,7 @@ public class FDB {
         try self.atomic(op, key: key, value: getBytes(value))
     }
 
-    public func increment(key: FDBKey, value: Int = 1) throws {
+    public func increment(key: FDBKey, value: Int64 = 1) throws {
         try self.atomic(.Add, key: key, value: value)
     }
 }
