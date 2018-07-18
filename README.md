@@ -138,7 +138,7 @@ try fdb.increment(key: key)
 // OR returning incremented value, which is always Int64
 let result: Int64 = try fdb.increment(key: key)
 // OR
-let result: Int64 = try fdb.increment(key: key, value: 2)
+let result = try fdb.increment(key: key, value: 2)
 ```
 
 And decrement, which is just a proxy for `increment(key:value:)`, just inverting the `value`:
