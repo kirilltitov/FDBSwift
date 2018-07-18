@@ -56,6 +56,7 @@ let childSubspace = rootSubspace["child", "subspace"]
 
 ### Setting values
 
+Simple as that.
 ```swift
 try fdb.set(key: "somekey", value: someBytes)
 // OR
@@ -68,7 +69,7 @@ try fdb.set(key: Subspace("foo").subspace("bar"), value: someBytes)
 
 ### Getting values
 
-Simple as that. Value is always `Bytes?` (`nil` if key not found), you should unwrap it before use.
+Value is always `Bytes?` (`nil` if key not found), you should unwrap it before use. Keys are, of course, still `FDBKey`.
 ```swift
 let value = try fdb.get(key: "someKey")
 ```
