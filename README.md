@@ -78,7 +78,7 @@ let value = try fdb.get(key: "someKey")
 
 Since FoundationDB keys are lexicographically ordered over the underlying bytes, you can get all subspace values (or even from whole DB) by querying range from key `somekey\x00` to key `somekey\xFF` (from byte 0 to byte 255). You shouldn't do it manually though, as `Subspace` object has a shortcut that does it for you.
 
-Additionally, `get(range:)` (and its' versions) method returns not `Bytes`, but array of `KeyValue` structures:
+Additionally, `get(range:)` (and its versions) method returns not `Bytes`, but array of `KeyValue` structures:
 ```swift
 public struct KeyValue {
     public let key: Bytes
