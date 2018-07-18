@@ -1,4 +1,4 @@
-# FDBSwift
+# FDBSwift <img src="https://img.shields.io/badge/Swift-4.2-brightgreen.svg" alt="Swift: 4.2" />
 ### Fine. I'll do it myself.
 ##### It should definitely be better than Python bindings in Swift :D
 
