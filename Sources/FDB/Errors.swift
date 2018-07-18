@@ -93,11 +93,11 @@ public extension FDB {
         }
 
         public func getDescription() -> String {
-            if self.rawValue == 9000 {
-                return "Error is unexpected, it shouldn't really happen"
-            }
             if self.rawValue == 8000 {
                 return "You should replay this transaction"
+            }
+            if self.rawValue == 9000 {
+                return "Error is unexpected, it shouldn't really happen"
             }
             return Error.getErrorInfo(for: self.rawValue)
         }

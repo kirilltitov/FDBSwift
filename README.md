@@ -1,6 +1,6 @@
 # FDBSwift
 ### Fine. I'll do it myself.
-#### It should definitely be better than Python bindings in Swift :D
+##### It should definitely be better than Python bindings in Swift :D
 
 This is FoundationDB wrapper for Swift. It's quite low-level, `Foundation`less (almost) and synchronous.
 
@@ -10,21 +10,53 @@ Obviously, you need to install `FoundationDB` first. Download it from [official 
 
 ## Usage
 
-By default (and in the very core) this wrapper, as well as C API, operates with byte keys and values (not pointers, but `Array<UInt8>`). For your convenience I created a protocol `FDBKey` which defines basic FDB key logics. This protocol is adopted by `String`, `[UInt8]`, `Tuple` and `Subspace` types (two latter are local). You may use any of these types as keys in all FDB methods which involve keys (like `set` / `get` / `clear`) or adopt this protocol by other types of your choice.
+### Root concepts
 
-Values are always bytes (or `nil` if key not found). Why not `Data` you may ask? I'd like to stay `Foundation`less for as long as I can (srsly, import half of the world just for `Data` object which is a fancy wrapper around `NSData` which is a fancy wrapper around `[UInt8]`?) (Hast thou forgot that you need to wrap all your `Data` objects with `autoreleasepool` or otherwise you get _fancy_ memory leaks?), you can always convert bytes to `Data` with `Data(bytes: Bytes)` initializer (why would you want to do that? oh yeah, right, JSON... ok, but do it yourself plz, extensions to the rescue).
+By default (and in the very core) this wrapper, as well as C API, operates with byte keys and values (not pointers, but `Array<UInt8>`). See [Keys, tuples and subspaces](#keys-tuples-and-subspaces) section for more details.
+
+Values are always bytes (or `nil` if key not found). Why not `Data` you may ask? I'd like to stay `Foundation`less for as long as I can (srsly, import half of the world just for `Data` object which is a fancy wrapper around `NSData` which is a fancy wrapper around `[UInt8]`?) (Hast thou forgot that you need to wrap all your `Data` objects with `autoreleasepool` or otherwise you get _fancy_ memory leaks?) (except for Linux, thought, yes), you can always convert bytes to `Data` with `Data(bytes: Bytes)` initializer (why would you want to do that? oh yeah, right, JSON... ok, but do it yourself plz, extensions to the rescue).
 
 Ahem. Where was I? OK so you can use this package as library (`FDB`) or you can just clone this repo and play with `FDBTestDrive` product, I've done some tests there. Now, about library API.
 
-```swift
-// duh
-import FDB
+### Connection
 
+```swift
 // Default cluster path depending on your OS
 let fdb = FDB()
 // OR
 let fdb = FDB(cluster: "/usr/local/etc/foundationdb/fdb.cluster")
+```
+Keep in mind that at this point connection has not yet been established, it automatically established on first `get`/`set` etc. If you would like to explicitly connect to database and catch possible errors, you should just call:
+```swift
+try fdb.connect()
+```
+Disconnection is automatic, on `deinit`.
 
+### Keys, tuples and subspaces
+
+All keys are `FDBKey` which is a protocol:
+```swift
+public protocol FDBKey {
+    func asFDBKey() -> Bytes
+}
+```
+This protocol is adopted by `String`, `StaticString`, `Tuple`, `Subspace` and `Bytes` (aka `Array<UInt8>`), so you may freely use any of these types, or adopt this protocol in your custom types.
+
+Since you would probably like to have some kind of namespacing in your application, you should stick to `Subspaces` which is an extremely useful instrument for creating namespaces. Under the hood it utilizes Tuple concept. You oughtn't really bother delving into it, just remember that currently subspaces accept `String` and `Bytes` as arguments (`Int` pending, see [TODOs](#todos)).
+```swift
+// dump subspace if you would like to see how it looks from the inside
+let rootSubspace = Subspace("root")
+// also check Subspace.swift for more details and usecases
+let childSubspace = rootSubspace.subspace("child", "subspace")
+// OR
+let childSubspace = rootSubspace["child"]["subspace"]
+// OR
+let childSubspace = rootSubspace["child", "subspace"]
+```
+
+### Setting values
+
+```swift
 try fdb.set(key: "somekey", value: someBytes)
 // OR
 try fdb.set(key: Bytes([0, 1, 2, 3]), value: someBytes)
@@ -32,15 +64,53 @@ try fdb.set(key: Bytes([0, 1, 2, 3]), value: someBytes)
 try fdb.set(key: Tuple("foo", nil, "bar", Tuple("baz", "sas"), "lul"), value: someBytes)
 // OR
 try fdb.set(key: Subspace("foo").subspace("bar"), value: someBytes)
+```
 
-// Value is `Bytes?`, unwrap it before usage
+### Getting values
+
+Simple as that. Value is always `Bytes?` (`nil` if key not found), you should unwrap it before use.
+```swift
 let value = try fdb.get(key: "someKey")
+```
 
-// dump subspace if you would like to see how it looks from the inside
-let rootSubspace = Subspace("root")
-// also check Subspace.swift for more details and usecases
-let childSubspace = rootSubspace.subspace("child", "subspace")
+### Range get (multi get)
 
+Since FoundationDB keys are lexicographically ordered over the underlying bytes, you can get all subspace values (or even from whole DB) by querying range from key `somekey\x00` to key `somekey\xFF` (from byte 0 to byte 255). You shouldn't do it manually though, as `Subspace` object has a shortcut that does it for you.
+
+Additionally, `get(range:)` (and its' versions) method returns not `Bytes`, but array of `KeyValue` structures:
+```swift
+public struct KeyValue {
+    public let key: Bytes
+    public let value: Bytes
+}
+```
+
+If range call returned zero records, it would result in an empty array (not `nil`).
+```swift
+let subspace = Subspace("root")
+let range = subspace.range
+/*
+  these three calls are completely equal (can't really come up with case when you need second form,
+  but whatever, I've seen worse whims)
+*/
+let records = try fdb.get(range: range)
+let records = try fdb.get(begin: range.begin, end: range.end)
+let records = try fdb.get(subspace: subspace)
+
+// though call below is not equal to above one because `key(subspace:)` overload implicitly loads range
+// this one will load bare subspace key
+let records = try fdb.get(key: subspace)
+
+records.forEach {
+    dump("\($0.key) - \($0.value)")
+    return
+}
+```
+
+### Clearing values
+
+Clearing (removing, deleting, you name it) records is simple as well.
+```swift
 try fdb.clear(key: childSubspace.subspace("concrete_record"))
 // OR
 try fdb.clear(key: childSubspace["concrete_record"])
@@ -53,51 +123,62 @@ try fdb.clear(key: rootSubspace["child", nil, Tuple("foo", "bar"), "concrete_rec
 
 // clears whole subspace, including "concrete_record" key
 try fdb.clear(range: childSubspace.range)
+```
 
-let range = childSubspace.range
+### Atomic operations
 
-/*
-  these three calls are completely equal (can't really come up with case when you need second form,
-  but whatever, I've seen worse whims)
-*/
-let records = try fdb.get(range: range)
-let records = try fdb.get(begin: range.begin, end: range.end)
-let records = try fdb.get(subspace: childSubspace)
-// though call below is not equal to above one because `subspace:` overload implicitly loads range
-// this one will load bare subspace key
-let records = try fdb.get(key: childSubspace)
+FoundationDB also supports atomic operations like ADD, AND, OR, XOR and stuff like that (please refer to [docs](https://apple.github.io/foundationdb/api-c.html#c.FDBMutationType)). You can perform any of these operations with `atomic(op:key:value:)` method:
+```swift
+try fdb.atomic(.Add, key: key, value: 1)
+```
+Knowing that most popular atomic operation is increment (or decrement), I added handy syntax sugar:
+```swift
+try fdb.increment(key: key)
+// OR returning incremented value, which is always Int64
+let result: Int64 = try fdb.increment(key: key)
+// OR
+let result: Int64 = try fdb.increment(key: key, value: 2)
+```
 
-records.forEach {
-    dump("\($0.key) - \($0.value)")
-    return
-}
+And decrement, which is just a proxy for `increment(key:value:)`, just inverting the `value`:
+```swift
+let result = try fdb.decrement(key: key)
+// OR
+let result = try fdb.decrement(key: key, value: 2)
+```
 
-/*
-  `fdb.get`, `fdb.set`, `fdb.clear` methods are implicitly transactional, but you can manually
-  manage transactions (it gives you insane performance boost since transaction per operation
-  is quite expensive)
-*/
+### Transactions
+
+All previous examples are utilizing `FDB` objects methods which are implicitly transactional. If you would like to perform more than one operation within one transaction, you should first begin transaction from `fdb` object and then do your stuff (just don't forget to `commit()` it in the end, by default transactions roll back if not committed explicitly, or after timeout of 5 seconds):
+```swift
 let transaction = try fdb.begin()
 
 // By default transactions are NOT committed, you must do it explicitly or pass optional arg `commit`
 try transaction.set(key: "someKey", value: someBytes, commit: true)
 
 try transaction.commit()
-// or
+// OR
 transaction.reset()
-// or
+// OR
 transaction.cancel()
 // Or you can just leave transaction object in place and it resets & destroys itself on `deinit`.
 // Consider it auto-rollback.
 // Please refer to official docs on reset and cancel behaviour:
 // https://apple.github.io/foundationdb/api-c.html#c.fdb_transaction_reset
+```
 
-// also see other public methods in FDB.swift and Transaction.swift
+### Debugging
+
+If FDB doesn't kickstart properly and you're unsure on what's happening, you may enable verbose mode which prints useful debug info to stdout:
+```swift
+fdb.verbose = true
 ```
 
 ## Warning
 
-This package is on ~extremely~ ~very~ ~quite~ moderately early stage. Though I did some RW-tests (including highload tests) on my machine (macOS) and got all tests passing on Ubuntu, I would recommend to use it in production with caution. Obviously, I am not responsible of shark attack and your data corruption.
+This package is on ~extremely~ ~very~ ~quite~ moderately early stage. Though I did some CRUD-tests (including highload tests) on my machine (macOS) and got all tests passing on Ubuntu, I would recommend to use it in production with caution. Obviously, I am not responsible for sudden shark attacks and your data corruption.
+
+Additionally, I don't guarantee tuples/subspaces compatibility with other languages implementations. During development I checked with Python implementation, but there might be slight differences (like, unicode string and byte string packing, see [design doc](https://github.com/apple/foundationdb/blob/master/design/tuple.md) on strings and [my comments](https://github.com/kirilltitov/FDBSwift/blob/master/Tests/FDBTests/TupleTests.swift) on that). Probably one day I'll spend some time on ensuring packing compatibility, but that's not high priority for me. Personal opinion: you shouldn't mix DB clients at all, really. You have some architectural issues if you want things like that.
 
 ## TODOs
 
@@ -121,3 +202,5 @@ This package is on ~extremely~ ~very~ ~quite~ moderately early stage. Though I d
 * ✅ Atomic operations
 * ✅ Tests
 * ✅ Properly test on Linux
+* Docblocks and built-in documentation
+* More verbose

@@ -28,7 +28,8 @@ public class Transaction {
     }
 
     public func set(key: FDBKey, value: Bytes, commit: Bool = false) throws {
-        fdb_transaction_set(self.pointer, key.asFDBKey(), key.asFDBKeyLength(), value, Int32(value.count))
+        let keyBytes = key.asFDBKey()
+        fdb_transaction_set(self.pointer, keyBytes, keyBytes.length, value, value.length)
         if commit {
             try self.commit()
         }
@@ -49,10 +50,12 @@ public class Transaction {
         reverse: Bool = false,
         commit: Bool = false
     ) throws -> [KeyValue] {
+        let beginBytes = begin.asFDBKey()
+        let endBytes = end.asFDBKey()
         let future = try fdb_transaction_get_range(
             self.pointer,
-            begin.asFDBKey(), begin.asFDBKeyLength(), beginEqual.int, beginOffset,
-            end.asFDBKey(), end.asFDBKeyLength(), endEqual.int, endOffset,
+            beginBytes, beginBytes.length, beginEqual.int, beginOffset,
+            endBytes, endBytes.length, endEqual.int, endOffset,
             limit,
             targetBytes,
             FDBStreamingMode(mode.rawValue),
@@ -107,12 +110,8 @@ public class Transaction {
     }
 
     public func get(key: FDBKey, snapshot: Int32 = 0, commit: Bool = false) throws -> Bytes? {
-        let future = try fdb_transaction_get(
-            self.pointer,
-            key.asFDBKey(),
-            key.asFDBKeyLength(),
-            snapshot
-        ).waitForFuture()
+        let keyBytes = key.asFDBKey()
+        let future = try fdb_transaction_get(self.pointer, keyBytes, keyBytes.length, snapshot).waitForFuture()
         var readValueFound: Int32 = 0
         var readValue: UnsafePointer<Byte>!
         var readValueLength: Int32 = 0
@@ -127,20 +126,17 @@ public class Transaction {
     }
 
     public func clear(key: FDBKey, commit: Bool = false) throws {
-        fdb_transaction_clear(self.pointer, key.asFDBKey(), key.asFDBKeyLength())
+        let keyBytes = key.asFDBKey()
+        fdb_transaction_clear(self.pointer, keyBytes, keyBytes.length)
         if commit {
             try self.commit()
         }
     }
 
     public func clear(begin: FDBKey, end: FDBKey, commit: Bool = false) throws {
-        fdb_transaction_clear_range(
-            self.pointer,
-            begin.asFDBKey(),
-            begin.asFDBKeyLength(),
-            end.asFDBKey(),
-            end.asFDBKeyLength()
-        )
+        let beginBytes = begin.asFDBKey()
+        let endBytes = end.asFDBKey()
+        fdb_transaction_clear_range(self.pointer, beginBytes, beginBytes.length, endBytes, endBytes.length)
         if commit {
             try self.commit()
         }
@@ -159,12 +155,13 @@ public class Transaction {
     }
 
     public func atomic(_ op: FDB.MutationType, key: FDBKey, value: Bytes, commit: Bool = false) throws {
+        let keyBytes = key.asFDBKey()
         fdb_transaction_atomic_op(
             self.pointer,
-            key.asFDBKey(),
-            key.asFDBKeyLength(),
+            keyBytes,
+            keyBytes.length,
             value,
-            Int32(value.count),
+            value.length,
             FDBMutationType(op.rawValue)
         )
         if commit {

@@ -13,6 +13,22 @@ internal extension Bool {
     }
 }
 
+internal extension Array where Element == Byte {
+    func cast<R>() -> R {
+        precondition(
+            MemoryLayout<R>.size == self.count,
+            "Memory layout size for result type '\(R.self)' (\(MemoryLayout<R>.size) bytes) does not match with given byte array length (\(self.count) bytes)"
+        )
+        return self.withUnsafeBytes {
+            $0.baseAddress!.assumingMemoryBound(to: R.self).pointee
+        }
+    }
+
+    var length: Int32 {
+        return Int32(self.count)
+    }
+}
+
 // little endian byte order
 internal func getBytes<Input>(_ input: Input) -> Bytes {
     return withUnsafeBytes(of: input) { Bytes($0) }

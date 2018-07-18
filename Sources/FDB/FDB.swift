@@ -231,7 +231,17 @@ public class FDB {
         try self.atomic(op, key: key, value: getBytes(value))
     }
 
-    public func increment(key: FDBKey, value: Int64 = 1) throws {
-        try self.atomic(.Add, key: key, value: value)
+    @discardableResult public func increment(key: FDBKey, value: Int64 = 1) throws -> Int64 {
+        let transaction = try self.begin()
+        try transaction.atomic(.Add, key: key, value: getBytes(value))
+        guard let bytes = try transaction.get(key: key) else {
+            throw Error.UnexpectedError
+        }
+        try transaction.commit()
+        return bytes.cast()
+    }
+
+    @discardableResult public func decrement(key: FDBKey, value: Int64 = 1) throws -> Int64 {
+        return try self.increment(key: key, value: -value)
     }
 }

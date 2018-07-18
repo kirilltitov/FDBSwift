@@ -41,6 +41,10 @@ class FDBTests: XCTestCase {
         return bytes
     }
 
+    func testConnect() throws {
+        XCTAssertNoThrow(try FDBTests.fdb.connect())
+    }
+
     func testEmptyValue() throws {
         XCTAssertNil(try FDBTests.fdb.get(key: FDBTests.subspace[nil]), "Non-nil value returned")
     }
@@ -58,7 +62,7 @@ class FDBTests: XCTestCase {
         let transaction = try FDBTests.fdb.begin()
         try transaction.set(key: key, value: value)
         XCTAssertEqual(try transaction.get(key: key), value)
-        try transaction.commit()
+        XCTAssertNoThrow(try transaction.commit())
         // transaction is already closed
         XCTAssertThrowsError(try transaction.commit())
     }
@@ -79,17 +83,50 @@ class FDBTests: XCTestCase {
     }
 
     func testAtomicAdd() throws {
-        let key = FDBTests.subspace["atomic_incr"]
+        let fdb = FDBTests.fdb!
+        let key = FDBTests.subspace.subspace("atomic_incr")
         let step: Int64 = 1
         let expected = step + 1
         for _ in 0..<expected - 1 {
-            try FDBTests.fdb.atomic(.Add, key: key, value: step)
+            XCTAssertNoThrow(try fdb.atomic(.Add, key: key, value: step))
         }
-        try FDBTests.fdb.increment(key: key)
-        let result = try FDBTests.fdb.get(key: key)
+        XCTAssertNoThrow(try fdb.increment(key: key))
+        let result = try fdb.get(key: key)
         XCTAssertNotNil(result)
         XCTAssertEqual(result!.cast() as Int64, expected)
         XCTAssertEqual(result, getBytes(expected))
+        XCTAssertEqual(try fdb.increment(key: key), expected + 1)
+        XCTAssertEqual(try fdb.increment(key: key, value: -1), expected)
+        XCTAssertEqual(try fdb.decrement(key: key), expected - 1)
+        XCTAssertEqual(try fdb.decrement(key: key), 0)
+    }
+
+    func testClear() throws {
+        XCTAssertNoThrow(try FDBTests.fdb.clear(key: FDBTests.subspace["empty"]))
+    }
+
+    func testStringKeys() throws {
+        let fdb = FDBTests.fdb!
+        let key = "foo"
+        let value: Bytes = [0,1,2]
+        XCTAssertNoThrow(try fdb.set(key: key, value: value))
+        XCTAssertEqual(try fdb.get(key: key), value)
+    }
+
+    func testStaticStringKeys() throws {
+        let fdb = FDBTests.fdb!
+        let key: StaticString = "foo"
+        let value: Bytes = [0,1,2]
+        XCTAssertNoThrow(try fdb.set(key: key, value: value))
+        XCTAssertEqual(try fdb.get(key: key), value)
+    }
+
+    func testErrorDescription() {
+        let error = FDB.Error.self
+        XCTAssertEqual(error.TransactionReadOnly.rawValue, 2021)
+        XCTAssertEqual(error.TransactionReadOnly.getDescription(), "Transaction is read-only and therefore does not have a commit version")
+        XCTAssertEqual(error.TransactionRetry.getDescription(), "You should replay this transaction")
+        XCTAssertEqual(error.UnexpectedError.getDescription(), "Error is unexpected, it shouldn't really happen")
     }
 
     static var allTests = [
@@ -98,5 +135,9 @@ class FDBTests: XCTestCase {
         ("testTransaction", testTransaction),
         ("testGetRange", testGetRange),
         ("testAtomicAdd", testAtomicAdd),
+        ("testClear", testClear),
+        ("testStringKeys", testStringKeys),
+        ("testStaticStringKeys", testStaticStringKeys),
+        ("testErrorDescription", testErrorDescription),
     ]
 }
