@@ -27,6 +27,14 @@ public class Transaction {
         }
     }
 
+    public func cancel() {
+        fdb_transaction_cancel(self.pointer)
+    }
+
+    public func reset() {
+        fdb_transaction_reset(self.pointer)
+    }
+
     public func set(key: FDBKey, value: Bytes, commit: Bool = false) throws {
         let keyBytes = key.asFDBKey()
         fdb_transaction_set(self.pointer, keyBytes, keyBytes.length, value, value.length)
@@ -144,14 +152,6 @@ public class Transaction {
 
     public func clear(range: RangeFDBKey, commit: Bool = false) throws {
         try self.clear(begin: range.begin, end: range.end, commit: commit)
-    }
-
-    public func cancel() {
-        fdb_transaction_cancel(self.pointer)
-    }
-
-    public func reset() {
-        fdb_transaction_reset(self.pointer)
     }
 
     public func atomic(_ op: FDB.MutationType, key: FDBKey, value: Bytes, commit: Bool = false) throws {

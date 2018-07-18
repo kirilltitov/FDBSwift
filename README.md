@@ -150,7 +150,7 @@ let result = try fdb.decrement(key: key, value: 2)
 
 ### Transactions
 
-All previous examples are utilizing `FDB` objects methods which are implicitly transactional. If you would like to perform more than one operation within one transaction, you should first begin transaction from `fdb` object and then do your stuff (just don't forget to `commit()` it in the end, by default transactions roll back if not committed explicitly, or after timeout of 5 seconds):
+All previous examples are utilizing `FDB` object methods which are implicitly transactional. If you would like to perform more than one operation within one transaction, you should first begin transaction using `begin()` method on `FDB` object context and then do your stuff (just don't forget to `commit()` it in the end, by default transactions roll back if not committed explicitly, or after timeout of 5 seconds):
 ```swift
 let transaction = try fdb.begin()
 
@@ -170,16 +170,16 @@ transaction.cancel()
 
 ### Debugging
 
-If FDB doesn't kickstart properly and you're unsure on what's happening, you may enable verbose mode which prints useful debug info to stdout:
+If FDB doesn't kickstart properly and you're unsure on what's happening, you may enable verbose mode which prints useful debug info to `stdout`:
 ```swift
 fdb.verbose = true
 ```
 
-## Warning
+## Warnings
 
 This package is on ~extremely~ ~very~ ~quite~ moderately early stage. Though I did some CRUD-tests (including highload tests) on my machine (macOS) and got all tests passing on Ubuntu, I would recommend to use it in production with caution. Obviously, I am not responsible for sudden shark attacks and your data corruption.
 
-Additionally, I don't guarantee tuples/subspaces compatibility with other languages implementations. During development I checked with Python implementation, but there might be slight differences (like, unicode string and byte string packing, see [design doc](https://github.com/apple/foundationdb/blob/master/design/tuple.md) on strings and [my comments](https://github.com/kirilltitov/FDBSwift/blob/master/Tests/FDBTests/TupleTests.swift) on that). Probably one day I'll spend some time on ensuring packing compatibility, but that's not high priority for me. Personal opinion: you shouldn't mix DB clients at all, really. You have some architectural issues if you want things like that.
+Additionally, I don't guarantee tuples/subspaces compatibility with other languages implementations. During development I refered to Python implementation, but there might be slight differences (like unicode string and byte string packing, see [design doc](https://github.com/apple/foundationdb/blob/master/design/tuple.md) on strings and [my comments](https://github.com/kirilltitov/FDBSwift/blob/master/Tests/FDBTests/TupleTests.swift) on that). Probably one day I'll spend some time on ensuring packing compatibility, but that's not high priority for me. Personal opinion: you shouldn't mix DB clients at all, really. You have some architectural issues if you want things like that.
 
 ## TODOs
 
