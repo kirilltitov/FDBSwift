@@ -11,8 +11,14 @@ extension KeyValue: Equatable {
     }
 }
 
-public protocol FDBKey {
+public protocol FDBKey: TuplePackable {
     func asFDBKey() -> Bytes
+}
+
+extension FDBKey {
+    public func pack() -> Bytes {
+        return self.asFDBKey().pack()
+    }
 }
 
 extension String: FDBKey {
