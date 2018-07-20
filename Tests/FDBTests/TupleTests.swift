@@ -110,6 +110,22 @@ class TupleTests: XCTestCase {
         expected.append(contentsOf: [0x00, 0x00, 0x00])
         XCTAssertEqual(Tuple(-1, 0, 5, Tuple("foo"), nil).pack(), expected)
     }
+    
+    func testUnpack() {
+        let etalonTuple = Tuple(
+            Bytes([0, 1, 2]),
+            322,
+            "foo\u{00}bar",
+            -322,
+            nil,
+            "foo",
+            Tuple("bar", 1337, "baz"),
+            Tuple(),
+            nil
+        )
+        let packed = etalonTuple.pack()
+        XCTAssertEqual(packed, Tuple(from: packed).pack())
+    }
 
     static var allTests = [
         ("testPackUnicodeString", testPackUnicodeString),
@@ -117,5 +133,6 @@ class TupleTests: XCTestCase {
         ("testPackNestedTuple", testPackNestedTuple),
         ("testPackInts", testPackInts),
         ("testUnofficialCases", testUnofficialCases),
+        ("testUnpack", testUnpack),
     ]
 }
