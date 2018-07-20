@@ -61,7 +61,7 @@ let tupleBytes: Bytes? = unpacked.tuple[0]
 let tupleInt: Int? = unpacked.tuple[1]
 // ...
 let tupleEmptyTuple: Tuple? = unpacked.tuple[6]
-let tupleNil: TuplePackable = unpacked.tuple[7]
+let tupleNil: TuplePackable? = unpacked.tuple[7]
 // you get the idea
 ```
 Alert! Due to a bug in Linux Swift Foundation (4.0+) any strings in Linux are decoded from `Bytes` or `Data` as null-terminated, i.e. `String(bytes: [102, 111, 111, 0, 98, 97, 114], encoding: .ascii)` on macOS would be `foo\u{00}bar` (as expected), but on Linux it's just `foo`. Keep that in mind, avoid using nulls in your string tuples.
