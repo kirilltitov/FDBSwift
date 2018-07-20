@@ -9,48 +9,19 @@ public extension TuplePackable {
     }
 }
 
-let NULL: Byte                = 0x00
-let PREFIX_BYTE_STRING: Byte  = 0x01
-let PREFIX_UTF_STRING: Byte   = 0x02
-let PREFIX_NESTED_TUPLE: Byte = 0x05
+let NULL: Byte                 = 0x00
+let PREFIX_BYTE_STRING: Byte   = 0x01
+let PREFIX_UTF_STRING: Byte    = 0x02
+let PREFIX_NESTED_TUPLE: Byte  = 0x05
+let PREFIX_INT_ZERO_CODE: Byte = 0x14
+let PREFIX_POS_INT_END: Byte   = 0x1d
+let PREFIX_NEG_INT_START: Byte = 0x0b
 
 let NULL_ESCAPE_SEQUENCE: Bytes = [NULL, 0xFF]
 
 public struct Null: TuplePackable {
     public func pack() -> Bytes {
         return [NULL]
-    }
-}
-
-extension String: TuplePackable {
-    public func pack() -> Bytes {
-        var result = Bytes()
-        result.append(PREFIX_UTF_STRING)
-        Bytes(self.utf8).forEach {
-            if $0 == NULL {
-                result.append(contentsOf: NULL_ESCAPE_SEQUENCE)
-            } else {
-                result.append($0)
-            }
-        }
-        result.append(NULL)
-        return result
-    }
-}
-
-extension Array: TuplePackable where Element == Byte {
-    public func pack() -> Bytes {
-        var result = Bytes()
-        result.append(PREFIX_BYTE_STRING)
-        self.forEach {
-            if $0 == NULL {
-                result.append(contentsOf: NULL_ESCAPE_SEQUENCE)
-            } else {
-                result.append($0)
-            }
-        }
-        result.append(NULL)
-        return result
     }
 }
 
