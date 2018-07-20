@@ -112,19 +112,27 @@ class TupleTests: XCTestCase {
     }
     
     func testUnpack() {
-        let etalonTuple = Tuple(
+        var input: [TuplePackable?] = [
             Bytes([0, 1, 2]),
             322,
-            "foo\u{00}bar",
             -322,
             nil,
             "foo",
             Tuple("bar", 1337, "baz"),
             Tuple(),
             nil
-        )
+        ]
+        #if os(Linux)
+            // linux currently null-terminates strings :(
+            // https://bugs.swift.org/browse/SR-7455
+            input.append("foobar")
+        #else
+            input.append("foo\u{00}bar")
+        #endif
+        let etalonTuple = Tuple(input)
         let packed = etalonTuple.pack()
-        XCTAssertEqual(packed, Tuple(from: packed).pack())
+        let repacked = Tuple(from: packed).pack()
+        XCTAssertEqual(packed, repacked)
     }
 
     static var allTests = [
