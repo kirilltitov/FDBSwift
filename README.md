@@ -52,7 +52,19 @@ let childSubspace = rootSubspace.subspace("child", "subspace")
 let childSubspace = rootSubspace["child"]["subspace"]
 // OR
 let childSubspace = rootSubspace["child", "subspace"]
+
+// Talking about tuples:
+let tuple = Tuple(Bytes([0, 1, 2]), 322, -322, nil, "foo", Tuple("bar", 1337, "baz"), Tuple(), nil)
+let packed: Bytes = tuple.pack()
+let unpacked: Tuple = Tuple(from: packed)
+let tupleBytes: Bytes? = unpacked.tuple[0]
+let tupleInt: Int? = unpacked.tuple[1]
+// ...
+let tupleEmptyTuple: Tuple? = unpacked.tuple[6]
+let tupleNil: TuplePackable = unpacked.tuple[7]
+// you get the idea
 ```
+Alert! Due to a bug in Linux Swift Foundation (4.0+) any strings in Linux are decoded from `Bytes` or `Data` as null-terminated, i.e. `String(bytes: [102, 111, 111, 0, 98, 97, 114], encoding: .ascii)` on macOS would be `foo\u{00}bar` (as expected), but on Linux it's just `foo`. Keep that in mind, avoid using nulls in your string tuples.
 
 ### Setting values
 
@@ -183,7 +195,7 @@ Additionally, I don't guarantee tuples/subspaces compatibility with other langua
 
 ## TODOs
 
-* Enterprise support, vendor WSDL, rewrite on Java
+* Enterprise support, vendor WSDL, rewrite on ~Java~ ~Scala~ ~Kotlin~ Java 10
 * Drop enterprise support, rewrite on golang using react-native (pretty sure it will be a thing by that time)
 * Blockchain? ICO? VR? AR?
 * Rehab
@@ -191,16 +203,18 @@ Additionally, I don't guarantee tuples/subspaces compatibility with other langua
 * ✅ Transactions rollback
 * ✅ Tuples
 * ✅ Tuples pack
+* ✅ Tuples unpack
 * ✅ Integer tuples
 * ✅ Ranges
 * ✅ Subspaces
 * ✅ Atomic operations
 * ✅ Tests
 * ✅ Properly test on Linux
-* Tuples unpack
 * More verbose
 * Network options
 * Asynchronous methods
 * Directories
 * The rest of C API
+* The rest of tuple pack/unpack
 * Docblocks and built-in documentation
+* Drop VR support
