@@ -116,5 +116,6 @@ class TupleTests: XCTestCase {
         ("testPackBinaryString", testPackBinaryString),
         ("testPackNestedTuple", testPackNestedTuple),
         ("testPackInts", testPackInts),
+        ("testUnofficialCases", testUnofficialCases),
     ]
 }
