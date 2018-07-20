@@ -42,7 +42,7 @@ public protocol FDBKey {
 ```
 This protocol is adopted by `String`, `StaticString`, `Tuple`, `Subspace` and `Bytes` (aka `Array<UInt8>`), so you may freely use any of these types, or adopt this protocol in your custom types.
 
-Since you would probably like to have some kind of namespacing in your application, you should stick to `Subspaces` which is an extremely useful instrument for creating namespaces. Under the hood it utilizes Tuple concept. You oughtn't really bother delving into it, just remember that currently subspaces accept `String` and `Bytes` as arguments (`Int` pending, see [TODOs](#todos)).
+Since you would probably like to have some kind of namespacing in your application, you should stick to `Subspaces` which is an extremely useful instrument for creating namespaces. Under the hood it utilizes Tuple concept. You oughtn't really bother delving into it, just remember that currently subspaces accept `String`, `Int`, `Tuple` (hence `TuplePackable`), `nil` (why would you do that?) and `Bytes` as arguments.
 ```swift
 // dump subspace if you would like to see how it looks from the inside
 let rootSubspace = Subspace("root")
@@ -183,25 +183,24 @@ Additionally, I don't guarantee tuples/subspaces compatibility with other langua
 
 ## TODOs
 
-* Asynchronous methods
-* Network options
-* ✅ Proper errors
-* The rest of C API
-* ✅ There is a memory leak somewhere, find@eliminate
 * Enterprise support, vendor WSDL, rewrite on Java
 * Drop enterprise support, rewrite on golang using react-native (pretty sure it will be a thing by that time)
 * Blockchain? ICO? VR? AR?
 * Rehab
+* ✅ Proper errors
 * ✅ Transactions rollback
 * ✅ Tuples
 * ✅ Tuples pack
-* Tuples unpack
-* Integer tuples
+* ✅ Integer tuples
 * ✅ Ranges
 * ✅ Subspaces
-* Directories
 * ✅ Atomic operations
 * ✅ Tests
 * ✅ Properly test on Linux
-* Docblocks and built-in documentation
+* Tuples unpack
 * More verbose
+* Network options
+* Asynchronous methods
+* Directories
+* The rest of C API
+* Docblocks and built-in documentation
