@@ -14,7 +14,7 @@ Obviously, you need to install `FoundationDB` first. Download it from [official 
 
 By default (and in the very core) this wrapper, as well as C API, operates with byte keys and values (not pointers, but `Array<UInt8>`). See [Keys, tuples and subspaces](#keys-tuples-and-subspaces) section for more details.
 
-Values are always bytes (or `nil` if key not found). Why not `Data` you may ask? I'd like to stay `Foundation`less for as long as I can (srsly, import half of the world just for `Data` object which is a fancy wrapper around `NSData` which is a fancy wrapper around `[UInt8]`?) (Hast thou forgot that you need to wrap all your `Data` objects with `autoreleasepool` or otherwise you get _fancy_ memory leaks?) (except for Linux, thought, yes), you can always convert bytes to `Data` with `Data(bytes: Bytes)` initializer (why would you want to do that? oh yeah, right, JSON... ok, but do it yourself plz, extensions to the rescue).
+Values are always bytes (or `nil` if key not found). Why not `Data` you may ask? I'd like to stay `Foundation`less for as long as I can (srsly, import half of the world just for `Data` object which is a fancy wrapper around `NSData` which is a fancy wrapper around `[UInt8]`?) (Hast thou forgot that you need to wrap all your `Data` objects with `autoreleasepool` or otherwise you get _fancy_ memory leaks?) (except for Linux, tho, yes), you can always convert bytes to `Data` with `Data(bytes: Bytes)` initializer (why would you want to do that? oh yeah, right, JSON... ok, but do it yourself plz, extensions to the rescue).
 
 Ahem. Where was I? OK so about library API.
 
@@ -61,7 +61,7 @@ let tupleBytes: Bytes? = unpacked.tuple[0]
 let tupleInt: Int? = unpacked.tuple[1]
 // ...
 let tupleEmptyTuple: Tuple? = unpacked.tuple[6]
-let tupleNil: TuplePackable = unpacked.tuple[7]
+let tupleNil: TuplePackable? = unpacked.tuple[7]
 // you get the idea
 ```
 Alert! Due to a bug in Linux Swift Foundation (4.0+) any strings in Linux are decoded from `Bytes` or `Data` as null-terminated, i.e. `String(bytes: [102, 111, 111, 0, 98, 97, 114], encoding: .ascii)` on macOS would be `foo\u{00}bar` (as expected), but on Linux it's just `foo`. Keep that in mind, avoid using nulls in your string tuples.
