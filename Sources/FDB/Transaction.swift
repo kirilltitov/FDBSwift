@@ -17,11 +17,27 @@ public class Transaction {
         fdb_transaction_destroy(self.pointer)
     }
 
-    public func commit() throws {
-        let commitFuture = try fdb_transaction_commit(self.pointer).waitForFuture()
-        let commitError = fdb_future_get_error(commitFuture.pointer)
+    public func commit() throws -> Future<Void> {
+        let future: Future<Void> = fdb_transaction_commit(self.pointer).asFuture()
+        try future.whenReady { future in
+            
+        }
+        return future
+    }
+    
+    private func checkCommitError(future: Future<Void>) throws {
+        let commitError = fdb_future_get_error(future.pointer)
         guard commitError == 0 else {
-            let retryFuture = try fdb_transaction_on_error(self.pointer, commitError).waitForFuture()
+            let retryFuture: Future<Void> = try fdb_transaction_on_error(self.pointer, commitError).waitForFuture()
+            try fdb_future_get_error(retryFuture.pointer).orThrow()
+            throw FDB.Error.TransactionRetry
+        }
+    }
+
+    public func commit() throws {
+        let commitError = fdb_future_get_error(try self.commit().wait().pointer)
+        guard commitError == 0 else {
+            let retryFuture: Future<Void> = try fdb_transaction_on_error(self.pointer, commitError).waitForFuture()
             try fdb_future_get_error(retryFuture.pointer).orThrow()
             throw FDB.Error.TransactionRetry
         }
@@ -60,7 +76,7 @@ public class Transaction {
     ) throws -> [KeyValue] {
         let beginBytes = begin.asFDBKey()
         let endBytes = end.asFDBKey()
-        let future = try fdb_transaction_get_range(
+        let future: Future<[KeyValue]> = try fdb_transaction_get_range(
             self.pointer,
             beginBytes, beginBytes.length, beginEqual.int, beginOffset,
             endBytes, endBytes.length, endEqual.int, endOffset,

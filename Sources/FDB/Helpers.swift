@@ -34,16 +34,6 @@ internal func getBytes<Input>(_ input: Input) -> Bytes {
     return withUnsafeBytes(of: input) { Bytes($0) }
 }
 
-internal extension OpaquePointer {
-    func asFuture() -> Future {
-        return Future(self)
-    }
-
-    @discardableResult func waitForFuture() throws -> Future {
-        return try self.asFuture().waitAndCheck()
-    }
-}
-
 internal extension UnsafePointer {
     func unwrapPointee(count: Int32) -> [Pointee] {
         let items = Int(count)

@@ -1,9 +1,9 @@
 import CFDB
 
-internal class Future {
+public class Future<R> {
     let pointer: OpaquePointer
 
-    init(_ pointer: OpaquePointer) {
+    public init(_ pointer: OpaquePointer) {
         self.pointer = pointer
     }
 
@@ -12,17 +12,17 @@ internal class Future {
         fdb_future_destroy(self.pointer)
     }
 
-    func wait() throws -> Future {
+    public func wait() throws -> Future {
         try fdb_future_block_until_ready(self.pointer).orThrow()
         return self
     }
 
-    func checkError() throws -> Future {
+    public func checkError() throws -> Future {
         try fdb_future_get_error(self.pointer).orThrow()
         return self
     }
 
-    func waitAndCheck() throws -> Future {
+    public func waitAndCheck() throws -> Future {
         return try self.wait().checkError()
     }
 }

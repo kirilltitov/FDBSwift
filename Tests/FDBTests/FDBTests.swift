@@ -128,6 +128,11 @@ class FDBTests: XCTestCase {
         XCTAssertEqual(error.TransactionRetry.getDescription(), "You should replay this transaction")
         XCTAssertEqual(error.UnexpectedError.getDescription(), "Error is unexpected, it shouldn't really happen")
     }
+    
+//    func testFutureCallback() {
+//        let semaphore = DispatchSemaphore(value: 0)
+//        
+//    }
 
     static var allTests = [
         ("testEmptyValue", testEmptyValue),
