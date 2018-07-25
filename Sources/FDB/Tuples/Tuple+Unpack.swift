@@ -67,10 +67,12 @@ extension Tuple {
             return (input[(pos + 1)..<end].replaceEscapes(), end + 1)
         } else if code == PREFIX_UTF_STRING {
             let _pos = pos + 1
-            let begin = pos + 1
             let end = findTerminator(input: input, pos: _pos)
-            let bytes = input[begin..<end].replaceEscapes()
-            return (String(bytes: bytes, encoding: .utf8), end + 1)
+            let bytes = input[(pos + 1)..<end].replaceEscapes()
+            return (
+                String(bytes: bytes, encoding: .utf8),
+                end + 1
+            )
         } else if code >= PREFIX_INT_ZERO_CODE && code < PREFIX_POS_INT_END {
             let n = Int(code) - 20
             let begin = pos + 1

@@ -26,7 +26,7 @@ public struct Null: TuplePackable {
 }
 
 public struct Tuple: TuplePackable {
-    private let tuple: [TuplePackable?]
+    public private(set) var tuple: [TuplePackable?]
 
     public init(_ input: [TuplePackable?]) {
         self.tuple = input
