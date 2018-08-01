@@ -95,13 +95,13 @@ public class FDB {
     }
 
     private func initCluster() throws -> FDB {
-        let clusterFuture = try fdb_create_cluster(self.clusterFile).waitForFuture()
+        let clusterFuture: Future<Void> = try fdb_create_cluster(self.clusterFile).waitForFuture()
         try fdb_future_get_cluster(clusterFuture.pointer, &self.cluster).orThrow()
         return self
     }
 
     private func initDB() throws {
-        let dbFuture = try fdb_cluster_create_database(
+        let dbFuture: Future<Void> = try fdb_cluster_create_database(
             self.cluster,
             FDB.dbName.utf8Start,
             Int32(FDB.dbName.utf8CodeUnitCount)
@@ -159,7 +159,7 @@ public class FDB {
         return try self.begin().get(key: key, snapshot: snapshot, commit: true)
     }
 
-    public func get(subspace: Subspace, snapshot: Int32 = 0) throws -> [KeyValue] {
+    public func get(subspace: Subspace, snapshot: Int32 = 0) throws -> KeyValuesResult {
         return try self.begin().get(range: subspace.range, snapshot: snapshot)
     }
 
@@ -176,7 +176,7 @@ public class FDB {
         iteration: Int32 = 1,
         snapshot: Int32 = 0,
         reverse: Bool = false
-    ) throws -> [KeyValue] {
+    ) throws -> KeyValuesResult {
         return try self.begin().get(
             begin: begin,
             end: end,
@@ -206,7 +206,7 @@ public class FDB {
         iteration: Int32 = 1,
         snapshot: Int32 = 0,
         reverse: Bool = false
-    ) throws -> [KeyValue] {
+    ) throws -> KeyValuesResult {
         return try self.get(
             begin: range.begin,
             end: range.end,
@@ -233,11 +233,11 @@ public class FDB {
 
     @discardableResult public func increment(key: FDBKey, value: Int64 = 1) throws -> Int64 {
         let transaction = try self.begin()
-        try transaction.atomic(.Add, key: key, value: getBytes(value))
-        guard let bytes = try transaction.get(key: key) else {
+        try transaction.atomic(.Add, key: key, value: getBytes(value), commit: false)
+        guard let bytes: Bytes = try transaction.get(key: key) else {
             throw Error.UnexpectedError
         }
-        try transaction.commit()
+        try transaction.commitSync()
         return bytes.cast()
     }
 

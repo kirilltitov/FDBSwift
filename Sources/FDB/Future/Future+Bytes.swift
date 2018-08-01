@@ -1,39 +1,58 @@
 import CFDB
 
 fileprivate class BytesContext {
-    let callback: (_ bytes: Bytes?) -> Void
+    typealias Closure = Future<Bytes?>.ReadyBytesClosure
+
+    let callback: Closure
+    let ctx: Future<Bytes?>
     
-    init(_ callback: @escaping (_ bytes: Bytes?) -> Void) {
+    init(
+        _ callback: @escaping Closure,
+        _ ctx: Future<Bytes?>
+    ) {
         self.callback = callback
+        self.ctx = ctx
     }
 }
 
 public extension Future where R == Bytes? {
-    public func whenReady(_ callback: @escaping (_ bytes: Bytes?) -> Void) throws {
+    public typealias ReadyBytesClosure = (_ bytes: Bytes?) throws -> Void
+
+    public func whenReady(_ callback: @escaping ReadyBytesClosure) throws {
         try fdb_future_set_callback(
             self.pointer,
             { futurePtr, contextPtr in
-                let callback = Unmanaged<BytesContext>.fromOpaque(contextPtr!).takeRetainedValue().callback
-
-                var readValueFound: Int32 = 0
-                var readValue: UnsafePointer<Byte>!
-                var readValueLength: Int32 = 0
-
+                let context = Unmanaged<BytesContext>.fromOpaque(contextPtr!).takeRetainedValue()
                 do {
-                    try fdb_future_get_value(futurePtr, &readValueFound, &readValue, &readValueLength).orThrow()
+                    try context.callback(try context.ctx.parseBytes(futurePtr!))
                 } catch {
-                    print("FDB: Unexpected error occured while unwrapping Bytes future: \(error)")
-                    callback(nil)
-                    return
+                    context.ctx.fail(with: error)
                 }
-
-                guard readValueFound > 0 else {
-                    callback(nil)
-                    return
-                }
-                callback(readValue.getBytes(count: readValueLength))
             },
-            Unmanaged<BytesContext>.passUnretained(BytesContext(callback)).toOpaque()
+            Unmanaged<BytesContext>.passRetained(BytesContext(callback, self)).toOpaque()
         ).orThrow()
+    }
+
+    public func wait() throws -> Bytes? {
+        return try self.waitAndCheck().parseBytes(self.pointer)
+    }
+
+    internal func parseBytes(_ futurePtr: OpaquePointer) throws -> Bytes? {
+        var readValueFound: Int32 = 0
+        var readValue: UnsafePointer<Byte>!
+        var readValueLength: Int32 = 0
+
+        do {
+            try fdb_future_get_value(futurePtr, &readValueFound, &readValue, &readValueLength).orThrow()
+        } catch {
+            print("FDB: Unexpected error occured while unwrapping Bytes future: \(error)")
+            return nil
+        }
+
+        guard readValueFound > 0 else {
+            return nil
+        }
+
+        return readValue.getBytes(count: readValueLength)
     }
 }

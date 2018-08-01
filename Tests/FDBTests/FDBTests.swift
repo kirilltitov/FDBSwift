@@ -24,12 +24,16 @@ class FDBTests: XCTestCase {
     }
 
     override class func tearDown() {
+        dump("TEAR DOWN 1")
         super.tearDown()
         do {
+            dump("TEAR DOWN 2")
             try self.fdb.clear(subspace: self.subspace)
+            dump("TEAR DOWN 3")
         } catch {
             XCTFail("Could not tearDown: \(error)")
         }
+        dump("TEAR DOWN 4")
         self.fdb = nil
     }
 
@@ -60,11 +64,11 @@ class FDBTests: XCTestCase {
         let key = FDBTests.subspace["transaction"]
         let value = self.getRandomBytes()
         let transaction = try FDBTests.fdb.begin()
-        try transaction.set(key: key, value: value)
+        transaction.set(key: key, value: value)
         XCTAssertEqual(try transaction.get(key: key), value)
-        XCTAssertNoThrow(try transaction.commit())
+        XCTAssertNoThrow(try transaction.commit().waitAndCheck())
         // transaction is already closed
-        XCTAssertThrowsError(try transaction.commit())
+        XCTAssertThrowsError(try transaction.commit().waitAndCheck())
     }
 
     func testGetRange() throws {
@@ -77,9 +81,10 @@ class FDBTests: XCTestCase {
             values.append(KeyValue(key: key, value: value))
             try FDBTests.fdb.set(key: key, value: value)
         }
-        XCTAssertEqual(try FDBTests.fdb.get(subspace: subspace), values)
-        XCTAssertEqual(try FDBTests.fdb.get(range: subspace.range), values)
-        XCTAssertEqual(try FDBTests.fdb.get(begin: subspace.range.begin, end: subspace.range.end), values)
+        let expected = KeyValuesResult(result: values, hasMore: false)
+        XCTAssertEqual(try FDBTests.fdb.get(subspace: subspace), expected)
+        XCTAssertEqual(try FDBTests.fdb.get(range: subspace.range), expected)
+        XCTAssertEqual(try FDBTests.fdb.get(begin: subspace.range.begin, end: subspace.range.end), expected)
     }
 
     func testAtomicAdd() throws {
