@@ -2,7 +2,7 @@
 > **Fine. I'll do it myself.**
 >> _It should definitely be better than Python bindings in Swift :D_
 
-This is FoundationDB wrapper for Swift. It's quite low-level, `Foundation`less (almost) and synchronous.
+This is FoundationDB wrapper for Swift. It's quite low-level, (almost) `Foundation`less and can into Swift-NIO.
 
 ## Installation
 
@@ -16,7 +16,7 @@ By default (and in the very core) this wrapper, as well as C API, operates with 
 
 Values are always bytes (or `nil` if key not found). Why not `Data` you may ask? I'd like to stay `Foundation`less for as long as I can (srsly, import half of the world just for `Data` object which is a fancy wrapper around `NSData` which is a fancy wrapper around `[UInt8]`?) (Hast thou forgot that you need to wrap all your `Data` objects with `autoreleasepool` or otherwise you get _fancy_ memory leaks?) (except for Linux, tho, yes), you can always convert bytes to `Data` with `Data(bytes: Bytes)` initializer (why would you want to do that? oh yeah, right, JSON... ok, but do it yourself plz, extensions to the rescue).
 
-Ahem. Where was I? OK so about library API.
+Ahem. Where was I? OK so about library API. First let's deal with synchronous API (there is also asynchronous, using Swift-NIO, see below).
 
 ### Connection
 
@@ -30,7 +30,7 @@ Keep in mind that at this point connection has not yet been established, it auto
 ```swift
 try fdb.connect()
 ```
-Disconnection is automatic, on `deinit`.
+Disconnection is automatic, on `deinit`. But also you can call `disconnect()` method directly.
 
 ### Keys, tuples and subspaces
 
@@ -180,12 +180,63 @@ transaction.cancel()
 // https://apple.github.io/foundationdb/api-c.html#c.fdb_transaction_reset
 ```
 
+### Asynchronous API
+
+If your application is NIO-based, you would definitely want (_need_) to utilize `EventLoopFuture`s otherwise you are in a great danger of deadlocks which are exceptionally tricky to debug (I've once spent whole weekend debugging my first deadlock, don't repeat my mistakes).
+
+If you would like to know Swift-NIO Futures better, please refer to [docs](https://apple.github.io/swift-nio/docs/current/NIO/Classes/EventLoopFuture.html).
+
+In order to utilize Futures, you must first have a reference to current `EventLoop`. All asynchronous stuff (basically mirror methods for all synchronous methods, see `Transaction+Sync.swift`) is located in Transaction class (see `Transaction+NIO.Swift` file for complete API), but it all starts with following:
+```swift
+let transaction = try fdb.begin(eventLoop: currentEventLoop)
+```
+
+This transaction now supports asynchronous methods (if you try to call asynchronous method on transaction created without `EventLoop`, your application will fail with fatal error, so take care). Complete example:
+
+```swift
+// EmbeddedEventLoop is meant to be used for testing only
+let eventLoop = EmbeddedEventLoop()
+let tr = try fdb.begin(eventLoop: eventLoop)
+let key = Subspace("1337")["322"]
+let future: EventLoopFuture<String> = tr
+    .set(key: key, value: Bytes([1, 2, 3]))
+    .then { tr.get(key: key) }
+    .thenThrowing { bytes in
+        guard let bytes = bytes else {
+            throw E.lul("Bytes are not bytes")
+        }
+        guard let string = String(bytes: bytes, encoding: .ascii) else {
+            throw E.lul("String is not string")
+        }
+        return string
+    }
+    .and(tr.commit())
+    .map { $0.0 }
+
+future.whenSuccess { (resultString: String) in
+    print("My string is '\(resultString)'")
+}
+future.whenFailure { (error: Error) in
+    print("Error :C '\(error)'")
+}
+// OR
+let string: String = try future.wait()
+```
+
 ### Debugging
 
 If FDB doesn't kickstart properly and you're unsure on what's happening, you may enable verbose mode which prints useful debug info to `stdout`:
 ```swift
 fdb.verbose = true
 ```
+
+## Troubleshooting
+
+*Q*: I'm getting strange error on second operation: `"API version already set"`. What's happening?
+*A*: You tried to create more than one instance of FDB object, which is a) prohibited b) not needed at all since one instance is just enough for any application (if not, consider horizontal scaling, FDB absolutely shouldn't be a bottleneck of your application)
+
+*Q*: My application/server just stuck, it stopped responding and dispatching requests. The heck?
+*A*: It's called deadlock. You blocked main/event loop thread. You never block main thread (or event loop thread). It happened because you did some blocking disk or network operation within `then`/`map` future closure. Do your blocking (IO/network) operation inside `DispatchQueue`, resolve it with `EventLoopPromise` and return future result as `EventLoopFuture`.
 
 ## Warnings
 
@@ -210,9 +261,10 @@ Additionally, I don't guarantee tuples/subspaces compatibility with other langua
 * ✅ Atomic operations
 * ✅ Tests
 * ✅ Properly test on Linux
+* ✅ 🎉 Asynchronous methods (Swift-NIO)
+* More sugar for atomic operations
 * More verbose
 * Network options
-* Asynchronous methods
 * Directories
 * The rest of C API
 * The rest of tuple pack/unpack

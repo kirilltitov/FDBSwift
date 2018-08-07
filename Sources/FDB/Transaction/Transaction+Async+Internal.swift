@@ -1,23 +1,21 @@
 import CFDB
 
-public extension Transaction {
-    public func commit() throws -> Future<Void> {
-        let future: Future<Void> = fdb_transaction_commit(self.pointer).asFuture()
-        try future.whenReady { _future in
-            let commitError = fdb_future_get_error(future.pointer)
-            guard commitError == 0 else {
-                throw FDB.Error.from(errno: commitError)
-            }
-        }
-        return future
+internal extension Transaction {
+    internal func commit() throws -> Future<Void> {
+        return fdb_transaction_commit(self.pointer).asFuture()
     }
 
-    public func set(key: FDBKey, value: Bytes) {
+    internal func set(key: FDBKey, value: Bytes) {
         let keyBytes = key.asFDBKey()
         fdb_transaction_set(self.pointer, keyBytes, keyBytes.length, value, value.length)
     }
 
-    public func get(
+    internal func get(key: FDBKey, snapshot: Int32 = 0) -> Future<Bytes?> {
+        let keyBytes = key.asFDBKey()
+        return fdb_transaction_get(self.pointer, keyBytes, keyBytes.length, snapshot).asFuture()
+    }
+
+    internal func get(
         begin: FDBKey,
         end: FDBKey,
         beginEqual: Bool = false,
@@ -46,7 +44,7 @@ public extension Transaction {
         ).asFuture()
     }
 
-    public func get(
+    internal func get(
         range: RangeFDBKey,
         beginEqual: Bool = false,
         beginOffset: Int32 = 1,
@@ -73,10 +71,5 @@ public extension Transaction {
             snapshot: snapshot,
             reverse: reverse
         )
-    }
-
-    public func get(key: FDBKey, snapshot: Int32 = 0) -> Future<Bytes?> {
-        let keyBytes = key.asFDBKey()
-        return fdb_transaction_get(self.pointer, keyBytes, keyBytes.length, snapshot).asFuture()
     }
 }

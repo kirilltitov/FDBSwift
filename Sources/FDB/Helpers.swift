@@ -34,6 +34,10 @@ internal func getBytes<Input>(_ input: Input) -> Bytes {
     return withUnsafeBytes(of: input) { Bytes($0) }
 }
 
+internal func debugOnly(_ body: () -> Void) {
+    assert({ body(); return true }())
+}
+
 internal extension UnsafePointer {
     func unwrapPointee(count: Int32) -> [Pointee] {
         let items = Int(count)

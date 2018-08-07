@@ -1,20 +1,23 @@
 import CFDB
+import NIO
 
 public class Transaction {
-    internal var pointer: OpaquePointer
+    internal let pointer: OpaquePointer
+    internal let eventLoop: EventLoop?
 
-    public init(_ pointer: OpaquePointer) {
+    public required init(_ pointer: OpaquePointer, _ eventLoop: EventLoop? = nil) {
         self.pointer = pointer
+        self.eventLoop = eventLoop
     }
 
     deinit {
         fdb_transaction_destroy(self.pointer)
     }
 
-    public class func begin(_ db: FDB.Database) throws -> Transaction {
+    public class func begin(_ db: FDB.Database, _ eventLoop: EventLoop? = nil) throws -> Transaction {
         var ptr: OpaquePointer!
         try fdb_database_create_transaction(db, &ptr).orThrow()
-        return Transaction(ptr)
+        return Transaction(ptr, eventLoop)
     }
 
     public func cancel() {
