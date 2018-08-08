@@ -7,11 +7,9 @@ public class Future<R> {
 
     public init(_ pointer: OpaquePointer) {
         self.pointer = pointer
-//        dump("init   \(ObjectIdentifier(self)):\(self.pointer)")
     }
 
     deinit {
-//        dump("deinit \(ObjectIdentifier(self)):\(self.pointer)")
         fdb_future_release_memory(self.pointer)
         fdb_future_destroy(self.pointer)
     }
@@ -39,7 +37,7 @@ public class Future<R> {
         }
         self.failClosure?(error)
     }
-    
+
     public func whenError(_ closure: @escaping (Error) -> Void) {
         self.failClosure = closure
     }

@@ -34,6 +34,7 @@ internal func getBytes<Input>(_ input: Input) -> Bytes {
     return withUnsafeBytes(of: input) { Bytes($0) }
 }
 
+// taken from Swift-NIO
 internal func debugOnly(_ body: () -> Void) {
     assert({ body(); return true }())
 }

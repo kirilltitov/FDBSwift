@@ -196,7 +196,7 @@ It's not really necessary to commit readonly transaction though :)
 
 ### Asynchronous API
 
-If your application is NIO-based (pure [Swift-NIO](https://github.com/apple/swift-nio) or [Vapor](http://vapor.codes)), you would definitely want (_need_) to utilize `EventLoopFuture`s otherwise you are in a great danger of deadlocks which are exceptionally tricky to debug (I've once spent whole weekend debugging my first deadlock, don't repeat my mistakes; thin ice, big time).
+If your application is NIO-based (pure [Swift-NIO](https://github.com/apple/swift-nio) or [Vapor](http://vapor.codes)), you would definitely want (_need_) to utilize `EventLoopFuture`s, otherwise you are in a great danger of deadlocks which are exceptionally tricky to debug (I've once spent whole weekend debugging my first deadlock, don't repeat my mistakes; thin ice, big time).
 
 If you would like to know Swift-NIO Futures better, please refer to [docs](https://apple.github.io/swift-nio/docs/current/NIO/Classes/EventLoopFuture.html).
 
@@ -221,10 +221,10 @@ let future: EventLoopFuture<String> = transaction
     .then { transaction.get(key: key) }
     .thenThrowing { bytes in
         guard let bytes = bytes else {
-            throw MyApplicationError("Bytes are not bytes")
+            throw MyApplicationError.Something("Bytes are not bytes")
         }
         guard let string = String(bytes: bytes, encoding: .ascii) else {
-            throw MyApplicationError("String is not string")
+            throw MyApplicationError.Something("String is not string")
         }
         return string
     }
@@ -250,14 +250,14 @@ fdb.verbose = true
 
 ## Troubleshooting
 
-*Q*: I cannot compile my project, something like `"Undefined symbols for architecture"` and tons of similar crap. Pls halp.
-*A*: You haven't properly installed `pkg-config` for FoundationDB, see [Installation section](#installation).
+**Q**: I cannot compile my project, something like `"Undefined symbols for architecture"` and tons of similar crap. Pls halp.
+**A**: You haven't properly installed `pkg-config` for FoundationDB, see [Installation section](#installation).
 
-*Q*: I'm getting strange error on second operation: `"API version already set"`. What's happening?
-*A*: You tried to create more than one instance of FDB object, which is a) prohibited b) not needed at all since one instance is just enough for any application (if not, consider horizontal scaling, FDB absolutely shouldn't be a bottleneck of your application). Philosophically speaking it's not very ok, there should be a way of creating more than one of FDB connection in a runtime, and I will definitely try to make it possible. Still, I don't think that FDB connection pooling is a good idea, it already does everything for you.
+**Q**: I'm getting strange error on second operation: `"API version already set"`. What's happening?
+**A**: You tried to create more than one instance of FDB object, which is a) prohibited b) not needed at all since one instance is just enough for any application (if not, consider horizontal scaling, FDB absolutely shouldn't be a bottleneck of your application). Philosophically speaking it's not very ok, there should be a way of creating more than one of FDB connection in a runtime, and I will definitely try to make it possible. Still, I don't think that FDB connection pooling is a good idea, it already does everything for you.
 
-*Q*: My application/server just stuck, it stopped responding and dispatching requests. The heck?
-*A*: It's called deadlock. You blocked main/event loop thread. You never block main thread (or event loop thread). It happened because you did some blocking disk or network operation within `then`/`map` future closure. Do your blocking (IO/network) operation inside `DispatchQueue`, resolve it with `EventLoopPromise` and return future result as `EventLoopFuture`.
+**Q**: My application/server just stuck, it stopped responding and dispatching requests. The heck?
+**A**: It's called deadlock. You blocked main/event loop thread. You never block main thread (or event loop thread). It happened because you did some blocking disk or network operation within `then`/`map` future closure. Do your blocking (IO/network) operation inside `DispatchQueue`, resolve it with `EventLoopPromise` and return future result as `EventLoopFuture`.
 
 ## Warnings
 
