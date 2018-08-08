@@ -31,12 +31,13 @@ public class Future<R> {
     }
 
     internal func fail(with error: Error) {
-        guard let failClosure = self.failClosure else {
-            // TODO: this should be debug only
-            print("FDB: no fail closure, caught error \(error)")
-            return
+        debugOnly {
+            guard let _ = self.failClosure else {
+                print("FDB: no fail closure, caught error \(error)")
+                return
+            }
         }
-        failClosure(error)
+        self.failClosure?(error)
     }
     
     public func whenError(_ closure: @escaping (Error) -> Void) {

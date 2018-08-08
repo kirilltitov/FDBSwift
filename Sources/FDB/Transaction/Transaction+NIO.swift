@@ -2,9 +2,13 @@ import CFDB
 import NIO
 
 public extension Transaction {
+    fileprivate var dummyEventLoop: EmbeddedEventLoop {
+        return EmbeddedEventLoop()
+    }
+
     public func commit() -> EventLoopFuture<Void> {
         guard let eventLoop = self.eventLoop else {
-            fatalError("No eventLoop!")
+            return self.dummyEventLoop.newFailedFuture(error: FDB.Error.NoEventLoopProvided)
         }
         let promise: EventLoopPromise<Future<Void>> = eventLoop.newPromise()
         do {
@@ -36,7 +40,7 @@ public extension Transaction {
 
     public func set(key: FDBKey, value: Bytes, commit: Bool = false) -> EventLoopFuture<Void> {
         guard let eventLoop = self.eventLoop else {
-            fatalError("No eventLoop!")
+            return self.dummyEventLoop.newFailedFuture(error: FDB.Error.NoEventLoopProvided)
         }
         self.set(key: key, value: value)
         let future: EventLoopFuture<Void> = eventLoop.newSucceededFuture(result: ())
@@ -50,7 +54,7 @@ public extension Transaction {
 
     public func get(key: FDBKey, snapshot: Int32 = 0, commit: Bool = false) -> EventLoopFuture<Bytes?> {
         guard let eventLoop = self.eventLoop else {
-            fatalError("No eventLoop!")
+            return self.dummyEventLoop.newFailedFuture(error: FDB.Error.NoEventLoopProvided)
         }
         let promise: EventLoopPromise<Bytes?> = eventLoop.newPromise()
         do {
@@ -85,7 +89,7 @@ public extension Transaction {
         commit: Bool = false
     ) -> EventLoopFuture<KeyValuesResult> {
         guard let eventLoop = self.eventLoop else {
-            fatalError("No eventLoop!")
+            return self.dummyEventLoop.newFailedFuture(error: FDB.Error.NoEventLoopProvided)
         }
         let promise: EventLoopPromise<KeyValuesResult> = eventLoop.newPromise()
         do {
@@ -150,7 +154,7 @@ public extension Transaction {
     
     fileprivate func genericAction(commit: Bool, _ closure: () -> Void) -> EventLoopFuture<Void> {
         guard let eventLoop = self.eventLoop else {
-            fatalError("No eventLoop!")
+            return self.dummyEventLoop.newFailedFuture(error: FDB.Error.NoEventLoopProvided)
         }
         let future = eventLoop.newSucceededFuture(result: ())
         closure()

@@ -83,6 +83,7 @@ public extension FDB {
 
         case TransactionRetry = 8000
         case UnexpectedError = 9000
+        case NoEventLoopProvided = 9500
 
         public static func from(errno: Errno) -> Error {
             guard let error = Error(rawValue: errno) else {

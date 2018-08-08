@@ -6,7 +6,12 @@ This is FoundationDB wrapper for Swift. It's quite low-level, (almost) `Foundati
 
 ## Installation
 
-Obviously, you need to install `FoundationDB` first. Download it from [official website](https://www.foundationdb.org/download/). Next part is tricky because subpackage [CFDBSwift](https://github.com/kirilltitov/CFDBSwift) (C bindings) won't link `libfdb_c` library on its own, and FoundationDB doesn't yet ship `pkg-config` during installation. Therefore you must install it yourself. Run `scripts/install_pkgconfig.sh` or copy `scripts/libfdb.pc` (choose your platform) to `/usr/local/lib/pkgconfig/` on macOS or `/usr/lib/pkgconfig/libfdb.pc` on Linux.
+Obviously, you need to install `FoundationDB` first. Download it from [official website](https://www.foundationdb.org/download/). Next part is tricky because subpackage [CFDBSwift](https://github.com/kirilltitov/CFDBSwift) (C bindings) won't link `libfdb_c` library on its own, and FoundationDB doesn't yet ship `pkg-config` during installation. Therefore you must install it yourself. Run
+```bash
+chmod +x ./scripts/install_pkgconfig.sh
+./scripts/install_pkgconfig.sh
+```
+or copy `scripts/libfdb.pc` (choose your platform) to `/usr/local/lib/pkgconfig/` on macOS or `/usr/lib/pkgconfig/libfdb.pc` on Linux.
 
 ## Usage
 
@@ -14,7 +19,7 @@ Obviously, you need to install `FoundationDB` first. Download it from [official 
 
 By default (and in the very core) this wrapper, as well as C API, operates with byte keys and values (not pointers, but `Array<UInt8>`). See [Keys, tuples and subspaces](#keys-tuples-and-subspaces) section for more details.
 
-Values are always bytes (or `nil` if key not found). Why not `Data` you may ask? I'd like to stay `Foundation`less for as long as I can (srsly, import half of the world just for `Data` object which is a fancy wrapper around `NSData` which is a fancy wrapper around `[UInt8]`?) (Hast thou forgot that you need to wrap all your `Data` objects with `autoreleasepool` or otherwise you get _fancy_ memory leaks?) (except for Linux, tho, yes), you can always convert bytes to `Data` with `Data(bytes: Bytes)` initializer (why would you want to do that? oh yeah, right, JSON... ok, but do it yourself plz, extensions to the rescue).
+Values are always bytes (`typealias Bytes = [UInt8]`) (or `nil` if key not found). Why not `Data` you may ask? I'd like to stay `Foundation`less for as long as I can (srsly, import half of the world just for `Data` object which is a fancy wrapper around `NSData` which is a fancy wrapper around `[UInt8]`?) (Hast thou forgot that you need to wrap all your `Data` objects with `autoreleasepool` or otherwise you get _fancy_ memory leaks?) (except for Linux, tho, yes), you can always convert bytes to `Data` with `Data(bytes: Bytes)` initializer (why would you want to do that? oh yeah, right, JSON... ok, but do it yourself plz, extensions to the rescue).
 
 Ahem. Where was I? OK so about library API. First let's deal with synchronous API (there is also asynchronous, using Swift-NIO, see below).
 
@@ -26,11 +31,13 @@ let fdb = FDB()
 // OR
 let fdb = FDB(cluster: "/usr/local/etc/foundationdb/fdb.cluster")
 ```
-Keep in mind that at this point connection has not yet been established, it automatically established on first `get`/`set` etc. If you would like to explicitly connect to database and catch possible errors, you should just call:
+Optionally you may pass network stop timeout, API version and `DispatchQueue` to FDB initializer.
+
+Keep in mind that at this point connection has not yet been established, it automatically established on first actual database operation. If you would like to explicitly connect to database and catch possible errors, you should just call:
 ```swift
 try fdb.connect()
 ```
-Disconnection is automatic, on `deinit`. But also you can call `disconnect()` method directly.
+Disconnection is automatic, on `deinit`. But also you can call `disconnect()` method directly. Be warned that if anything goes wrong during disconnection, you will get uncatchable fatal error. It's not that bad because disconnection should happen only once, when your application shuts down (and you shouldn't really care about fatal errors at that point). Also you _very_ ought ensure that FDB really disconnected before actual shutdown (trap `SIGTERM` signal), otherwise you might experience undefined behaviour (I personally haven't really encountered that yet, but it's not phantom menace; when you don't follow FoundationDB recommendations, things get quite messy indeed).
 
 ### Keys, tuples and subspaces
 
@@ -182,35 +189,39 @@ transaction.cancel()
 
 ### Asynchronous API
 
-If your application is NIO-based, you would definitely want (_need_) to utilize `EventLoopFuture`s otherwise you are in a great danger of deadlocks which are exceptionally tricky to debug (I've once spent whole weekend debugging my first deadlock, don't repeat my mistakes).
+If your application is NIO-based (pure [Swift-NIO](https://github.com/apple/swift-nio) or [Vapor](http://vapor.codes)), you would definitely want (_need_) to utilize `EventLoopFuture`s otherwise you are in a great danger of deadlocks which are exceptionally tricky to debug (I've once spent whole weekend debugging my first deadlock, don't repeat my mistakes; thin ice, big time).
 
 If you would like to know Swift-NIO Futures better, please refer to [docs](https://apple.github.io/swift-nio/docs/current/NIO/Classes/EventLoopFuture.html).
 
-In order to utilize Futures, you must first have a reference to current `EventLoop`. All asynchronous stuff (basically mirror methods for all synchronous methods, see `Transaction+Sync.swift`) is located in Transaction class (see `Transaction+NIO.Swift` file for complete API), but it all starts with following:
+In order to utilize Futures, you must first have a reference to current `EventLoop`.
+
+If you use Swift-NIO directly, it's available within `ChannelHandler.channelRead` method, as `ChannelHandlerContext`s argument property `eventLoop`.
+
+If you use Vapor (starting from version 3.0), it's available from `req` argument within each action. Please refer to [official docs](https://docs.vapor.codes/3.0/async/overview/#event-loop).
+
+All asynchronous stuff (basically mirror methods for all synchronous methods, see [`Transaction+Sync.swift`](https://github.com/kirilltitov/FDBSwift/blob/master/Sources/FDB/Transaction/Transaction%2BSync.swift)) is located in Transaction class (see [`Transaction+NIO.Swift`](https://github.com/kirilltitov/FDBSwift/blob/master/Sources/FDB/Transaction/Transaction%2BNIO.swift) file for complete API), but it all starts with creating a new transaction with `EventLoop`:
 ```swift
 let transaction = try fdb.begin(eventLoop: currentEventLoop)
 ```
 
-This transaction now supports asynchronous methods (if you try to call asynchronous method on transaction created without `EventLoop`, your application will fail with fatal error, so take care). Complete example:
+This transaction now supports asynchronous methods (if you try to call asynchronous method on transaction created without `EventLoop`, you will instantly get failed `EventLoopPromise`, so take care). Complete example:
 
 ```swift
 // EmbeddedEventLoop is meant to be used for testing only
-let eventLoop = EmbeddedEventLoop()
-let tr = try fdb.begin(eventLoop: eventLoop)
 let key = Subspace("1337")["322"]
-let future: EventLoopFuture<String> = tr
+let future: EventLoopFuture<String> = transaction
     .set(key: key, value: Bytes([1, 2, 3]))
-    .then { tr.get(key: key) }
+    .then { transaction.get(key: key) }
     .thenThrowing { bytes in
         guard let bytes = bytes else {
-            throw E.lul("Bytes are not bytes")
+            throw MyApplicationError("Bytes are not bytes")
         }
         guard let string = String(bytes: bytes, encoding: .ascii) else {
-            throw E.lul("String is not string")
+            throw MyApplicationError("String is not string")
         }
         return string
     }
-    .and(tr.commit())
+    .and(transaction.commit())
     .map { $0.0 }
 
 future.whenSuccess { (resultString: String) in
@@ -219,7 +230,7 @@ future.whenSuccess { (resultString: String) in
 future.whenFailure { (error: Error) in
     print("Error :C '\(error)'")
 }
-// OR
+// OR (you only use wait method outside of main thread or eventLoop thread, because it's blocking)
 let string: String = try future.wait()
 ```
 
@@ -232,8 +243,11 @@ fdb.verbose = true
 
 ## Troubleshooting
 
+*Q*: I cannot compile my project, something like `"Undefined symbols for architecture"` and tons of similar crap. Pls halp.
+*A*: You haven't properly installed `pkg-config` for FoundationDB, see [Installation section](#installation).
+
 *Q*: I'm getting strange error on second operation: `"API version already set"`. What's happening?
-*A*: You tried to create more than one instance of FDB object, which is a) prohibited b) not needed at all since one instance is just enough for any application (if not, consider horizontal scaling, FDB absolutely shouldn't be a bottleneck of your application)
+*A*: You tried to create more than one instance of FDB object, which is a) prohibited b) not needed at all since one instance is just enough for any application (if not, consider horizontal scaling, FDB absolutely shouldn't be a bottleneck of your application). Philosophically speaking it's not very ok, there should be a way of creating more than one of FDB connection in a runtime, and I will definitely try to make it possible. Still, I don't think that FDB connection pooling is a good idea, it already does everything for you.
 
 *Q*: My application/server just stuck, it stopped responding and dispatching requests. The heck?
 *A*: It's called deadlock. You blocked main/event loop thread. You never block main thread (or event loop thread). It happened because you did some blocking disk or network operation within `then`/`map` future closure. Do your blocking (IO/network) operation inside `DispatchQueue`, resolve it with `EventLoopPromise` and return future result as `EventLoopFuture`.
@@ -262,11 +276,11 @@ Additionally, I don't guarantee tuples/subspaces compatibility with other langua
 * ✅ Tests
 * ✅ Properly test on Linux
 * ✅ 🎉 Asynchronous methods (Swift-NIO)
-* More sugar for atomic operations
 * More verbose
+* More sugar for atomic operations
 * Network options
 * Directories
 * The rest of C API
-* The rest of tuple pack/unpack
+* The rest of tuple pack/unpack (only floats, I think?)
 * Docblocks and built-in documentation
 * Drop VR support
