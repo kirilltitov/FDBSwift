@@ -73,7 +73,7 @@ class FDBTests: XCTestCase {
             values.append(KeyValue(key: key, value: value))
             try FDBTests.fdb.set(key: key, value: value)
         }
-        let expected = KeyValuesResult(result: values, hasMore: false)
+        let expected = KeyValuesResult(records: values, hasMore: false)
         XCTAssertEqual(try FDBTests.fdb.get(subspace: subspace), expected)
         XCTAssertEqual(try FDBTests.fdb.get(range: subspace.range), expected)
         XCTAssertEqual(try FDBTests.fdb.get(begin: subspace.range.begin, end: subspace.range.end), expected)
@@ -195,7 +195,7 @@ class FDBTests: XCTestCase {
         }
         let _: Void = try tr.commit().wait()
         let tr2 = try self.begin()
-        let expected = KeyValuesResult(result: values, hasMore: false)
+        let expected = KeyValuesResult(records: values, hasMore: false)
         XCTAssertEqual(try tr2.get(range: subspace.range).wait(), expected)
         let _ = tr2
             .get(begin: subspace.range.begin, end: subspace.range.end)

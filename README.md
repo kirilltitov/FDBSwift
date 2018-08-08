@@ -97,15 +97,20 @@ let value = try fdb.get(key: "someKey")
 
 Since FoundationDB keys are lexicographically ordered over the underlying bytes, you can get all subspace values (or even from whole DB) by querying range from key `somekey\x00` to key `somekey\xFF` (from byte 0 to byte 255). You shouldn't do it manually though, as `Subspace` object has a shortcut that does it for you.
 
-Additionally, `get(range:)` (and its versions) method returns not `Bytes`, but array of `KeyValue` structures:
+Additionally, `get(range:)` (and its versions) method returns not `Bytes`, but special structure `KeyValuesResult` which holds an array of `KeyValue` structures and a flag indicating whether DB can provide more results (pagination, kinda):
 ```swift
 public struct KeyValue {
     public let key: Bytes
     public let value: Bytes
 }
+
+public struct KeyValuesResult {
+    public let records: [KeyValue]
+    public let hasMore: Bool
+}
 ```
 
-If range call returned zero records, it would result in an empty array (not `nil`).
+If range call returned zero records, it would result in an empty `KeyValuesResult` struct (not `nil`).
 ```swift
 let subspace = Subspace("root")
 let range = subspace.range
@@ -113,15 +118,15 @@ let range = subspace.range
   these three calls are completely equal (can't really come up with case when you need second form,
   but whatever, I've seen worse whims)
 */
-let records = try fdb.get(range: range)
-let records = try fdb.get(begin: range.begin, end: range.end)
-let records = try fdb.get(subspace: subspace)
+let result: KeyValuesResult = try fdb.get(range: range)
+let result: KeyValuesResult = try fdb.get(begin: range.begin, end: range.end)
+let result: KeyValuesResult = try fdb.get(subspace: subspace)
 
 // though call below is not equal to above one because `key(subspace:)` overload implicitly loads range
 // this one will load bare subspace key
-let records = try fdb.get(key: subspace)
+let result: KeyValuesResult = try fdb.get(key: subspace)
 
-records.forEach {
+result.records.forEach {
     dump("\($0.key) - \($0.value)")
     return
 }
@@ -186,6 +191,8 @@ transaction.cancel()
 // Please refer to official docs on reset and cancel behaviour:
 // https://apple.github.io/foundationdb/api-c.html#c.fdb_transaction_reset
 ```
+
+It's not really necessary to commit readonly transaction though :)
 
 ### Asynchronous API
 

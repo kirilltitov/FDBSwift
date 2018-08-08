@@ -4,7 +4,7 @@ public struct KeyValue {
 }
 
 public struct KeyValuesResult {
-    public let result: [KeyValue]
+    public let records: [KeyValue]
     public let hasMore: Bool
 }
 
@@ -16,6 +16,6 @@ extension KeyValue: Equatable {
 
 extension KeyValuesResult: Equatable {
     public static func == (lhs: KeyValuesResult, rhs: KeyValuesResult) -> Bool {
-        return lhs.result == rhs.result && lhs.hasMore == rhs.hasMore
+        return lhs.records == rhs.records && lhs.hasMore == rhs.hasMore
     }
 }
