@@ -19,7 +19,7 @@ or copy `scripts/libfdb.pc` (choose your platform) to `/usr/local/lib/pkgconfig/
 
 By default (and in the very core) this wrapper, as well as C API, operates with byte keys and values (not pointers, but `Array<UInt8>`). See [Keys, tuples and subspaces](#keys-tuples-and-subspaces) section for more details.
 
-Values are always bytes (`typealias Bytes = [UInt8]`) (or `nil` if key not found). Why not `Data` you may ask? I'd like to stay `Foundation`less for as long as I can (srsly, import half of the world just for `Data` object which is a fancy wrapper around `NSData` which is a fancy wrapper around `[UInt8]`?) (Hast thou forgot that you need to wrap all your `Data` objects with `autoreleasepool` or otherwise you get _fancy_ memory leaks?) (except for Linux, tho, yes), you can always convert bytes to `Data` with `Data(bytes: Bytes)` initializer (why would you want to do that? oh yeah, right, JSON... ok, but do it yourself plz, extensions to the rescue).
+Values are always bytes (`typealias Bytes = [UInt8]`) (or `nil` if key not found). Why not `Data` you may ask? I'd like to stay `Foundation`less for as long as I can (srsly, import half of the world just for `Data` object which is a fancy wrapper around `NSData` which is a fancy wrapper around `[UInt8]`?) (Hast thou forgot that you need to wrap all your `Data` objects with `autoreleasepool` or otherwise you get _fancy_ memory leaks?) (except for Linux tho, yes), you can always convert bytes to `Data` with `Data(bytes: myBytes)` initializer (why would you want to do that? oh yeah, right, JSON... ok, but do it yourself plz, extensions to the rescue).
 
 Ahem. Where was I? OK so about library API. First let's deal with synchronous API (there is also asynchronous, using Swift-NIO, see below).
 
@@ -31,13 +31,13 @@ let fdb = FDB()
 // OR
 let fdb = FDB(cluster: "/usr/local/etc/foundationdb/fdb.cluster")
 ```
-Optionally you may pass network stop timeout, API version and `DispatchQueue` to FDB initializer.
+Optionally you may pass network stop timeout, API version and `DispatchQueue` to FDB initializer (as FDB always need a dedicated thread to run its stuff).
 
 Keep in mind that at this point connection has not yet been established, it automatically established on first actual database operation. If you would like to explicitly connect to database and catch possible errors, you should just call:
 ```swift
 try fdb.connect()
 ```
-Disconnection is automatic, on `deinit`. But also you can call `disconnect()` method directly. Be warned that if anything goes wrong during disconnection, you will get uncatchable fatal error. It's not that bad because disconnection should happen only once, when your application shuts down (and you shouldn't really care about fatal errors at that point). Also you _very_ ought ensure that FDB really disconnected before actual shutdown (trap `SIGTERM` signal), otherwise you might experience undefined behaviour (I personally haven't really encountered that yet, but it's not phantom menace; when you don't follow FoundationDB recommendations, things get quite messy indeed).
+Disconnection is automatic, on `deinit`. But also you may call `disconnect()` method directly. Be warned that if anything goes wrong during disconnection, you will get uncatchable fatal error. It's not that bad because disconnection should happen only once, when your application shuts down (and you shouldn't really care about fatal errors at that point). Also you _very_ should ensure that FDB really disconnected before actual shutdown (trap `SIGTERM` signal and wait for `disconnect` to finish), otherwise you might experience undefined behaviour (I personally haven't really encountered that yet, but it's not phantom menace; when you don't follow FoundationDB recommendations, things get quite messy indeed).
 
 ### Keys, tuples and subspaces
 
@@ -49,7 +49,7 @@ public protocol FDBKey {
 ```
 This protocol is adopted by `String`, `StaticString`, `Tuple`, `Subspace` and `Bytes` (aka `Array<UInt8>`), so you may freely use any of these types, or adopt this protocol in your custom types.
 
-Since you would probably like to have some kind of namespacing in your application, you should stick to `Subspaces` which is an extremely useful instrument for creating namespaces. Under the hood it utilizes Tuple concept. You oughtn't really bother delving into it, just remember that currently subspaces accept `String`, `Int`, `Tuple` (hence `TuplePackable`), `nil` (why would you do that?) and `Bytes` as arguments.
+Since you would probably like to have some kind of namespacing in your application, you should stick to `Subspace` which is an extremely useful instrument for creating namespaces. Under the hood it utilizes the Tuple concept. You oughtn't really bother delving into it, just remember that currently subspaces accept `String`, `Int`, `Tuple` (hence `TuplePackable`), `nil` (why would you do that?) and `Bytes` as arguments.
 ```swift
 // dump subspace if you would like to see how it looks from the inside
 let rootSubspace = Subspace("root")
@@ -71,11 +71,11 @@ let tupleEmptyTuple: Tuple? = unpacked.tuple[6]
 let tupleNil: TuplePackable? = unpacked.tuple[7]
 // you get the idea
 ```
-Alert! Due to a bug in Linux Swift Foundation (4.0+) any strings in Linux are decoded from `Bytes` or `Data` as null-terminated, i.e. `String(bytes: [102, 111, 111, 0, 98, 97, 114], encoding: .ascii)` on macOS would be `foo\u{00}bar` (as expected), but on Linux it's just `foo`. Keep that in mind, avoid using nulls in your string tuples.
+**Alert!** Due to a bug in Linux Swift Foundation (4.0+) any strings in Linux are decoded from `Bytes` or `Data` as null-terminated, i.e. `String(bytes: [102, 111, 111, 0, 98, 97, 114], encoding: .ascii)` on macOS would be `foo\u{00}bar` (as expected), but on Linux it's just `foo`. Keep that in mind, avoid using nulls in your string tuples.
 
 ### Setting values
 
-Simple as that.
+Simple as that:
 ```swift
 try fdb.set(key: "somekey", value: someBytes)
 // OR
@@ -88,7 +88,7 @@ try fdb.set(key: Subspace("foo").subspace("bar"), value: someBytes)
 
 ### Getting values
 
-Value is always `Bytes?` (`nil` if key not found), you should unwrap it before use. Keys are, of course, still `FDBKey`.
+Value is always `Bytes?` (`nil` if key not found), you should unwrap it before use. Keys are, of course, still `FDBKey`s.
 ```swift
 let value = try fdb.get(key: "someKey")
 ```
@@ -150,6 +150,8 @@ try fdb.clear(key: rootSubspace["child", nil, Tuple("foo", "bar"), "concrete_rec
 try fdb.clear(range: childSubspace.range)
 ```
 
+Don't forget that actual clearing is not performed until transaction commit.
+
 ### Atomic operations
 
 FoundationDB also supports atomic operations like ADD, AND, OR, XOR and stuff like that (please refer to [docs](https://apple.github.io/foundationdb/api-c.html#c.FDBMutationType)). You can perform any of these operations with `atomic(op:key:value:)` method:
@@ -174,7 +176,7 @@ let result = try fdb.decrement(key: key, value: 2)
 
 ### Transactions
 
-All previous examples are utilizing `FDB` object methods which are implicitly transactional. If you would like to perform more than one operation within one transaction, you should first begin transaction using `begin()` method on `FDB` object context and then do your stuff (just don't forget to `commit()` it in the end, by default transactions roll back if not committed explicitly, or after timeout of 5 seconds):
+All previous examples are utilizing `FDB` object methods which are implicitly transactional. If you would like to perform more than one operation within one transaction (and experience all delights of [ACID](https://en.wikipedia.org/wiki/ACID_(computer_science))), you should first begin transaction using `begin()` method on `FDB` object context and then do your stuff (just don't forget to `commit()` it in the end, by default transactions roll back if not committed explicitly, or after timeout of 5 seconds):
 ```swift
 let transaction = try fdb.begin()
 
@@ -200,11 +202,7 @@ If your application is NIO-based (pure [Swift-NIO](https://github.com/apple/swif
 
 If you would like to know Swift-NIO Futures better, please refer to [docs](https://apple.github.io/swift-nio/docs/current/NIO/Classes/EventLoopFuture.html).
 
-In order to utilize Futures, you must first have a reference to current `EventLoop`.
-
-If you use Swift-NIO directly, it's available within `ChannelHandler.channelRead` method, as `ChannelHandlerContext`s argument property `eventLoop`.
-
-If you use Vapor (starting from version 3.0), it's available from `req` argument within each action. Please refer to [official docs](https://docs.vapor.codes/3.0/async/overview/#event-loop).
+In order to utilize Futures, you must first have a reference to current `EventLoop`. If you use Swift-NIO directly, it's available within `ChannelHandler.channelRead` method, as `ChannelHandlerContext`s argument property `eventLoop`. If you use Vapor (starting from version 3.0), it's available from `req` argument within each action. Please refer to [official docs](https://docs.vapor.codes/3.0/async/overview/#event-loop).
 
 All asynchronous stuff (basically mirror methods for all synchronous methods, see [`Transaction+Sync.swift`](https://github.com/kirilltitov/FDBSwift/blob/master/Sources/FDB/Transaction/Transaction%2BSync.swift)) is located in Transaction class (see [`Transaction+NIO.Swift`](https://github.com/kirilltitov/FDBSwift/blob/master/Sources/FDB/Transaction/Transaction%2BNIO.swift) file for complete API), but it all starts with creating a new transaction with `EventLoop`:
 ```swift
@@ -260,7 +258,7 @@ fdb.verbose = true
 
 **Q**: My application/server just stuck, it stopped responding and dispatching requests. The heck?
 
-**A**: It's called deadlock. You blocked main/event loop thread. You never block main thread (or event loop thread). It happened because you did some blocking disk or network operation within `then`/`map` future closure. Do your blocking (IO/network) operation inside `DispatchQueue`, resolve it with `EventLoopPromise` and return future result as `EventLoopFuture`.
+**A**: It's called deadlock. You blocked main/event loop thread. You never block main thread (or event loop thread). It happened because you did some blocking disk or network operation within `then`/`map` future closure (probably, while requesting the very same application instance over network). Do your blocking (IO/network) operation within `DispatchQueue.async` context, resolve it with `EventLoopPromise` and return future result as `EventLoopFuture`.
 
 ## Warnings
 
