@@ -31,7 +31,7 @@ let fdb = FDB()
 // OR
 let fdb = FDB(cluster: "/usr/local/etc/foundationdb/fdb.cluster")
 ```
-Optionally you may pass network stop timeout, API version and `DispatchQueue` to FDB initializer (as FDB always need a dedicated thread to run its stuff).
+Optionally you may pass network stop timeout, API version and `DispatchQueue` to FDB initializer (as FDB always needs a dedicated thread to run its stuff).
 
 Keep in mind that at this point connection has not yet been established, it automatically established on first actual database operation. If you would like to explicitly connect to database and catch possible errors, you should just call:
 ```swift
