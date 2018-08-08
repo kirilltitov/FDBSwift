@@ -1,5 +1,6 @@
 import CFDB
 import Dispatch
+import NIO
 
 public typealias Byte = UInt8
 public typealias Bytes = [Byte]
@@ -41,6 +42,8 @@ public class FDB {
     private var db: Database? = nil
     private let queue: DispatchQueue
 
+    private var isConnected = false
+
     public var verbose = false
 
     private let semaphore = DispatchSemaphore(value: 0)
@@ -67,6 +70,16 @@ public class FDB {
 
     deinit {
         self.debug("Deinit started")
+        if self.isConnected {
+            self.disconnect()
+        }
+    }
+
+    public func disconnect() {
+        if !self.isConnected {
+            print("Trying to disconnect from FDB while not connected")
+            return
+        }
         fdb_stop_network().orDie()
         if self.semaphore.wait(for: self.networkStopTimeout) == .timedOut {
             print("Stop network timeout (\(self.networkStopTimeout) seconds)")
@@ -76,6 +89,7 @@ public class FDB {
         fdb_database_destroy(self.db)
         fdb_cluster_destroy(self.cluster)
         self.debug("Cluster and database destroyed")
+        self.isConnected = false
     }
 
     private func selectApiVersion() throws -> FDB {
@@ -95,13 +109,13 @@ public class FDB {
     }
 
     private func initCluster() throws -> FDB {
-        let clusterFuture = try fdb_create_cluster(self.clusterFile).waitForFuture()
+        let clusterFuture: Future<Void> = try fdb_create_cluster(self.clusterFile).waitForFuture()
         try fdb_future_get_cluster(clusterFuture.pointer, &self.cluster).orThrow()
         return self
     }
 
     private func initDB() throws {
-        let dbFuture = try fdb_cluster_create_database(
+        let dbFuture: Future<Void> = try fdb_cluster_create_database(
             self.cluster,
             FDB.dbName.utf8Start,
             Int32(FDB.dbName.utf8CodeUnitCount)
@@ -118,6 +132,7 @@ public class FDB {
             .initNetwork()
             .initCluster()
             .initDB()
+        self.isConnected = true
         return try self.getDB()
     }
 
@@ -127,8 +142,8 @@ public class FDB {
         }
     }
 
-    public func begin() throws -> Transaction {
-        return try Transaction.begin(try self.getDB())
+    public func begin(eventLoop: EventLoop? = nil) throws -> Transaction {
+        return try Transaction.begin(try self.getDB(), eventLoop)
     }
 
     public func connect() throws {
@@ -136,7 +151,7 @@ public class FDB {
     }
 
     public func set(key: FDBKey, value: Bytes) throws {
-        try self.begin().set(key: key, value: value, commit: true)
+        try self.begin().set(key: key, value: value, commit: true) as Void
     }
 
     public func clear(key: FDBKey) throws {
@@ -159,7 +174,7 @@ public class FDB {
         return try self.begin().get(key: key, snapshot: snapshot, commit: true)
     }
 
-    public func get(subspace: Subspace, snapshot: Int32 = 0) throws -> [KeyValue] {
+    public func get(subspace: Subspace, snapshot: Int32 = 0) throws -> KeyValuesResult {
         return try self.begin().get(range: subspace.range, snapshot: snapshot)
     }
 
@@ -176,7 +191,7 @@ public class FDB {
         iteration: Int32 = 1,
         snapshot: Int32 = 0,
         reverse: Bool = false
-    ) throws -> [KeyValue] {
+    ) throws -> KeyValuesResult {
         return try self.begin().get(
             begin: begin,
             end: end,
@@ -206,7 +221,7 @@ public class FDB {
         iteration: Int32 = 1,
         snapshot: Int32 = 0,
         reverse: Bool = false
-    ) throws -> [KeyValue] {
+    ) throws -> KeyValuesResult {
         return try self.get(
             begin: range.begin,
             end: range.end,
@@ -224,7 +239,7 @@ public class FDB {
     }
 
     public func atomic(_ op: MutationType, key: FDBKey, value: Bytes) throws {
-        try self.begin().atomic(op, key: key, value: value, commit: true)
+        try self.begin().atomic(op, key: key, value: value, commit: true) as Void
     }
 
     public func atomic<T: SignedInteger>(_ op: MutationType, key: FDBKey, value: T) throws {
@@ -233,11 +248,11 @@ public class FDB {
 
     @discardableResult public func increment(key: FDBKey, value: Int64 = 1) throws -> Int64 {
         let transaction = try self.begin()
-        try transaction.atomic(.Add, key: key, value: getBytes(value))
-        guard let bytes = try transaction.get(key: key) else {
+        try transaction.atomic(.Add, key: key, value: getBytes(value), commit: false) as Void
+        guard let bytes: Bytes = try transaction.get(key: key) else {
             throw Error.UnexpectedError
         }
-        try transaction.commit()
+        try transaction.commitSync()
         return bytes.cast()
     }
 

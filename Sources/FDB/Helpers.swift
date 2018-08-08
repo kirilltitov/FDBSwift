@@ -34,14 +34,9 @@ internal func getBytes<Input>(_ input: Input) -> Bytes {
     return withUnsafeBytes(of: input) { Bytes($0) }
 }
 
-internal extension OpaquePointer {
-    func asFuture() -> Future {
-        return Future(self)
-    }
-
-    @discardableResult func waitForFuture() throws -> Future {
-        return try self.asFuture().waitAndCheck()
-    }
+// taken from Swift-NIO
+internal func debugOnly(_ body: () -> Void) {
+    assert({ body(); return true }())
 }
 
 internal extension UnsafePointer {
