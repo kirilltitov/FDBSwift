@@ -43,12 +43,7 @@ public extension Future where R == KeyValuesResult {
         var outCount: Int32 = 0
         var outMore: Int32 = 0
 
-        do {
-            try fdb_future_get_keyvalue_array(futurePtr, &outRawValues, &outCount, &outMore).orThrow()
-        } catch {
-            print("FDB: Unexpected error occured while unwrapping [KeyValue] future: \(error)")
-            return KeyValuesResult(records: [], hasMore: false)
-        }
+        try fdb_future_get_keyvalue_array(futurePtr, &outRawValues, &outCount, &outMore).orThrow()
 
         return KeyValuesResult(
             records: outCount == 0 ? [] : outRawValues.unwrapPointee(count: outCount).map {

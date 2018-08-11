@@ -42,12 +42,7 @@ public extension Future where R == Bytes? {
         var readValue: UnsafePointer<Byte>!
         var readValueLength: Int32 = 0
 
-        do {
-            try fdb_future_get_value(futurePtr, &readValueFound, &readValue, &readValueLength).orThrow()
-        } catch {
-            print("FDB: Unexpected error occured while unwrapping Bytes future: \(error)")
-            return nil
-        }
+        try fdb_future_get_value(futurePtr, &readValueFound, &readValue, &readValueLength).orThrow()
 
         guard readValueFound > 0 else {
             return nil
