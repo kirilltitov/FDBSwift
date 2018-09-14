@@ -1,6 +1,6 @@
 import Foundation
 
-@inlinable internal func findTerminator(input: Bytes, pos: Int) -> Int {
+internal func findTerminator(input: Bytes, pos: Int) -> Int {
     let length = input.count
     var _pos = pos
     while true {
@@ -16,7 +16,7 @@ import Foundation
 }
 
 extension ArraySlice where Element == Byte {
-    @inlinable internal func replaceEscapes() -> Bytes {
+    internal func replaceEscapes() -> Bytes {
         if self.count == 0 {
             return []
         }
