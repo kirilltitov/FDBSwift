@@ -1,12 +1,12 @@
 import CFDB
 
 fileprivate class KeyValueArrayContext {
-    typealias Closure = Future<KeyValuesResult>.ReadyKeyValuesClosure
+    internal typealias Closure = Future<KeyValuesResult>.ReadyKeyValuesClosure
 
-    let callback: Closure
-    let ctx: Future<KeyValuesResult>
+    internal let callback: Closure
+    internal let ctx: Future<KeyValuesResult>
     
-    init(
+    internal init(
         _ callback: @escaping Closure,
         _ ctx: Future<KeyValuesResult>
     ) {
@@ -15,10 +15,10 @@ fileprivate class KeyValueArrayContext {
     }
 }
 
-public extension Future where R == KeyValuesResult {
-    public typealias ReadyKeyValuesClosure = (_ result: KeyValuesResult) throws -> Void
+internal extension Future where R == KeyValuesResult {
+    internal typealias ReadyKeyValuesClosure = (_ result: KeyValuesResult) throws -> Void
 
-    public func whenReady(_ callback: @escaping ReadyKeyValuesClosure) throws {
+    internal func whenReady(_ callback: @escaping ReadyKeyValuesClosure) throws {
         try fdb_future_set_callback(
             self.pointer,
             { futurePtr, contextPtr in
@@ -34,7 +34,7 @@ public extension Future where R == KeyValuesResult {
         ).orThrow()
     }
 
-    public func wait() throws -> KeyValuesResult {
+    internal func wait() throws -> KeyValuesResult {
         return try self.waitAndCheck().parseKeyValues(self.pointer)
     }
 

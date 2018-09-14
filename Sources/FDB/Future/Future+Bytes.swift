@@ -1,10 +1,10 @@
 import CFDB
 
 fileprivate class BytesContext {
-    typealias Closure = Future<Bytes?>.ReadyBytesClosure
+    internal typealias Closure = Future<Bytes?>.ReadyBytesClosure
 
-    let callback: Closure
-    let ctx: Future<Bytes?>
+    internal let callback: Closure
+    internal let ctx: Future<Bytes?>
     
     init(
         _ callback: @escaping Closure,
@@ -15,10 +15,10 @@ fileprivate class BytesContext {
     }
 }
 
-public extension Future where R == Bytes? {
-    public typealias ReadyBytesClosure = (_ bytes: Bytes?) throws -> Void
+internal extension Future where R == Bytes? {
+    internal typealias ReadyBytesClosure = (_ bytes: Bytes?) throws -> Void
 
-    public func whenReady(_ callback: @escaping ReadyBytesClosure) throws {
+    internal func whenReady(_ callback: @escaping ReadyBytesClosure) throws {
         try fdb_future_set_callback(
             self.pointer,
             { futurePtr, contextPtr in
@@ -33,7 +33,7 @@ public extension Future where R == Bytes? {
         ).orThrow()
     }
 
-    public func wait() throws -> Bytes? {
+    internal func wait() throws -> Bytes? {
         return try self.waitAndCheck().parseBytes(self.pointer)
     }
 

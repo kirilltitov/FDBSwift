@@ -1,12 +1,12 @@
 extension Collection where Index: Comparable {
-    @inlinable internal subscript(from i: Int) -> SubSequence {
+    internal subscript(from i: Int) -> SubSequence {
         let _from = self.index(self.endIndex, offsetBy: i)
         let _to = self.endIndex
         return self[_from..<_to]
     }
 }
 
-@inlinable internal func bisect(list: [Int], item: Int) -> Int {
+internal func bisect(list: [Int], item: Int) -> Int {
     var count = 0
     for i in list {
         if i >= item {

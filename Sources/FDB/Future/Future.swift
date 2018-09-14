@@ -1,11 +1,11 @@
 import CFDB
 
-public class Future<R> {
-    public let pointer: OpaquePointer
+internal class Future<R> {
+    internal let pointer: OpaquePointer
 
     private var failClosure: ((Error) -> Void)? = nil
 
-    public init(_ pointer: OpaquePointer) {
+    internal init(_ pointer: OpaquePointer) {
         self.pointer = pointer
     }
 
@@ -14,17 +14,17 @@ public class Future<R> {
         fdb_future_destroy(self.pointer)
     }
 
-    @discardableResult public func wait() throws -> Future {
+    @discardableResult internal func wait() throws -> Future {
         try fdb_future_block_until_ready(self.pointer).orThrow()
         return self
     }
 
-    public func checkError() throws -> Future {
+    internal func checkError() throws -> Future {
         try fdb_future_get_error(self.pointer).orThrow()
         return self
     }
 
-    @discardableResult public func waitAndCheck() throws -> Future {
+    @discardableResult internal func waitAndCheck() throws -> Future {
         return try self.wait().checkError()
     }
 
@@ -38,7 +38,7 @@ public class Future<R> {
         self.failClosure?(error)
     }
 
-    public func whenError(_ closure: @escaping (Error) -> Void) {
+    internal func whenError(_ closure: @escaping (Error) -> Void) {
         self.failClosure = closure
     }
 }

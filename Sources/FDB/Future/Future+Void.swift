@@ -1,12 +1,12 @@
 import CFDB
 
 fileprivate class VoidContext {
-    typealias Closure = Future<Void>.ReadyVoidClosure
+    internal typealias Closure = Future<Void>.ReadyVoidClosure
 
-    let callback: Closure
-    let ctx: Future<Void>
+    internal let callback: Closure
+    internal let ctx: Future<Void>
     
-    init(
+    internal init(
         _ callback: @escaping Closure,
         _ ctx: Future<Void>
     ) {
@@ -15,10 +15,10 @@ fileprivate class VoidContext {
     }
 }
 
-public extension Future where R == Void {
-    public typealias ReadyVoidClosure = (_ future: Future<Void>) throws -> Void
+internal extension Future where R == Void {
+    internal typealias ReadyVoidClosure = (_ future: Future<Void>) throws -> Void
 
-    public func whenReady(_ callback: @escaping ReadyVoidClosure) throws {
+    internal func whenReady(_ callback: @escaping ReadyVoidClosure) throws {
         try fdb_future_set_callback(
             self.pointer,
             { _, contextPtr in

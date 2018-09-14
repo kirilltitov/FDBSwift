@@ -9,15 +9,15 @@ public extension TuplePackable {
     }
 }
 
-let NULL: Byte                 = 0x00
-let PREFIX_BYTE_STRING: Byte   = 0x01
-let PREFIX_UTF_STRING: Byte    = 0x02
-let PREFIX_NESTED_TUPLE: Byte  = 0x05
-let PREFIX_INT_ZERO_CODE: Byte = 0x14
-let PREFIX_POS_INT_END: Byte   = 0x1d
-let PREFIX_NEG_INT_START: Byte = 0x0b
+internal let NULL: Byte                 = 0x00
+internal let PREFIX_BYTE_STRING: Byte   = 0x01
+internal let PREFIX_UTF_STRING: Byte    = 0x02
+internal let PREFIX_NESTED_TUPLE: Byte  = 0x05
+internal let PREFIX_INT_ZERO_CODE: Byte = 0x14
+internal let PREFIX_POS_INT_END: Byte   = 0x1d
+internal let PREFIX_NEG_INT_START: Byte = 0x0b
 
-let NULL_ESCAPE_SEQUENCE: Bytes = [NULL, 0xFF]
+internal let NULL_ESCAPE_SEQUENCE: Bytes = [NULL, 0xFF]
 
 public struct Null: TuplePackable {
     public func pack() -> Bytes {
