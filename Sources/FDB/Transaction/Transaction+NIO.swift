@@ -2,13 +2,9 @@ import CFDB
 import NIO
 
 public extension Transaction {
-    fileprivate var dummyEventLoop: EmbeddedEventLoop {
-        return EmbeddedEventLoop()
-    }
-
     public func commit() -> EventLoopFuture<Void> {
         guard let eventLoop = self.eventLoop else {
-            return self.dummyEventLoop.newFailedFuture(error: FDB.Error.NoEventLoopProvided)
+            return FDB.dummyEventLoop.newFailedFuture(error: FDB.Error.NoEventLoopProvided)
         }
         let promise: EventLoopPromise<Future<Void>> = eventLoop.newPromise()
         do {
@@ -38,41 +34,44 @@ public extension Transaction {
         }
     }
 
-    public func set(key: FDBKey, value: Bytes, commit: Bool = false) -> EventLoopFuture<Void> {
+    public func set(key: FDBKey, value: Bytes, commit: Bool = false) -> EventLoopFuture<Transaction> {
         guard let eventLoop = self.eventLoop else {
-            return self.dummyEventLoop.newFailedFuture(error: FDB.Error.NoEventLoopProvided)
+            return FDB.dummyEventLoop.newFailedFuture(error: FDB.Error.NoEventLoopProvided)
         }
         self.set(key: key, value: value)
-        let future: EventLoopFuture<Void> = eventLoop.newSucceededFuture(result: ())
+        let future: EventLoopFuture<Transaction> = eventLoop.newSucceededFuture(result: self)
         if commit {
-            return future.then { _ in
-                self.commit()
-            }
+            return future
+                .then { _ in self.commit() }
+                .map { self }
         }
         return future
     }
 
-    public func get(key: FDBKey, snapshot: Int32 = 0, commit: Bool = false) -> EventLoopFuture<Bytes?> {
+    public func get(key: FDBKey, snapshot: Int32 = 0, commit: Bool = false) -> EventLoopFuture<(Bytes?, Transaction)> {
         guard let eventLoop = self.eventLoop else {
-            return self.dummyEventLoop.newFailedFuture(error: FDB.Error.NoEventLoopProvided)
+            return FDB.dummyEventLoop.newFailedFuture(error: FDB.Error.NoEventLoopProvided)
         }
-        let promise: EventLoopPromise<Bytes?> = eventLoop.newPromise()
+        let promise: EventLoopPromise<(Bytes?, Transaction)> = eventLoop.newPromise()
         do {
-            try self
-                .get(key: key, snapshot: snapshot)
-                .whenReady(promise.succeed)
+            let resultFuture = self.get(key: key, snapshot: snapshot)
+            try resultFuture.whenReady {
+                promise.succeed(result: ($0, self))
+            }
+            resultFuture.whenError(promise.fail)
         } catch {
             promise.fail(error: error)
         }
         let future = promise.futureResult
         if commit {
-            return future.then { bytes in
-                self.commit().map { bytes }
-            }
+            return future
+                .then { bytes in
+                    self.commit().map { bytes }
+                }
         }
         return future
     }
-    
+
     public func get(
         begin: FDBKey,
         end: FDBKey,
@@ -87,11 +86,11 @@ public extension Transaction {
         snapshot: Int32 = 0,
         reverse: Bool = false,
         commit: Bool = false
-    ) -> EventLoopFuture<KeyValuesResult> {
+    ) -> EventLoopFuture<(KeyValuesResult, Transaction)> {
         guard let eventLoop = self.eventLoop else {
-            return self.dummyEventLoop.newFailedFuture(error: FDB.Error.NoEventLoopProvided)
+            return FDB.dummyEventLoop.newFailedFuture(error: FDB.Error.NoEventLoopProvided)
         }
-        let promise: EventLoopPromise<KeyValuesResult> = eventLoop.newPromise()
+        let promise: EventLoopPromise<(KeyValuesResult, Transaction)> = eventLoop.newPromise()
         do {
             let future: Future<KeyValuesResult> = self.get(
                 begin: begin,
@@ -107,7 +106,9 @@ public extension Transaction {
                 snapshot: snapshot,
                 reverse: reverse
             )
-            try future.whenReady(promise.succeed)
+            try future.whenReady {
+                promise.succeed(result: ($0, self))
+            }
             future.whenError(promise.fail)
         } catch {
             promise.fail(error: error)
@@ -134,7 +135,7 @@ public extension Transaction {
         snapshot: Int32 = 0,
         reverse: Bool = false,
         commit: Bool = false
-    ) -> EventLoopFuture<KeyValuesResult> {
+    ) -> EventLoopFuture<(KeyValuesResult, Transaction)> {
         return self.get(
             begin: range.begin,
             end: range.end,
@@ -151,46 +152,46 @@ public extension Transaction {
             commit: commit
         )
     }
-    
-    fileprivate func genericAction(commit: Bool, _ closure: () -> Void) -> EventLoopFuture<Void> {
+
+    fileprivate func genericAction(commit: Bool, _ closure: () -> Void) -> EventLoopFuture<Transaction> {
         guard let eventLoop = self.eventLoop else {
-            return self.dummyEventLoop.newFailedFuture(error: FDB.Error.NoEventLoopProvided)
+            return FDB.dummyEventLoop.newFailedFuture(error: FDB.Error.NoEventLoopProvided)
         }
-        let future = eventLoop.newSucceededFuture(result: ())
+        let future = eventLoop.newSucceededFuture(result: self)
         closure()
         if commit {
-            return future.then {
+            return future.then { _ in
                 self.commit()
-            }
+            }.map { self }
         }
         return future
     }
 
-    public func clear(key: FDBKey, commit: Bool = false) -> EventLoopFuture<Void> {
+    public func clear(key: FDBKey, commit: Bool = false) -> EventLoopFuture<Transaction> {
         return self.genericAction(commit: commit) {
             self.clear(key: key)
         }
     }
-    
-    public func clear(begin: FDBKey, end: FDBKey, commit: Bool = false) -> EventLoopFuture<Void> {
+
+    public func clear(begin: FDBKey, end: FDBKey, commit: Bool = false) -> EventLoopFuture<Transaction> {
         return self.genericAction(commit: commit) {
             self.clear(begin: begin, end: end)
         }
     }
 
-    public func clear(range: RangeFDBKey, commit: Bool = false) -> EventLoopFuture<Void> {
+    public func clear(range: RangeFDBKey, commit: Bool = false) -> EventLoopFuture<Transaction> {
         return self.genericAction(commit: commit) {
             self.clear(range: range)
         }
     }
 
-    public func atomic(_ op: FDB.MutationType, key: FDBKey, value: Bytes, commit: Bool = false) -> EventLoopFuture<Void> {
+    public func atomic(_ op: FDB.MutationType, key: FDBKey, value: Bytes, commit: Bool = false) -> EventLoopFuture<Transaction> {
         return self.genericAction(commit: commit) {
             self.atomic(op, key: key, value: value)
         }
     }
-    
-    public func atomic<T>(_ op: FDB.MutationType, key: FDBKey, value: T, commit: Bool = false) -> EventLoopFuture<Void> {
+
+    public func atomic<T>(_ op: FDB.MutationType, key: FDBKey, value: T, commit: Bool = false) -> EventLoopFuture<Transaction> {
         return self.genericAction(commit: commit) {
             self.atomic(op, key: key, value: getBytes(value))
         }

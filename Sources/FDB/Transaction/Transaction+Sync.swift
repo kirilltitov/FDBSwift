@@ -119,7 +119,7 @@ public extension Transaction {
             try self.commitSync()
         }
     }
-    
+
     public func atomic<T>(_ op: FDB.MutationType, key: FDBKey, value: T, commit: Bool = false) throws {
         self.atomic(op, key: key, value: getBytes(value))
         if commit {

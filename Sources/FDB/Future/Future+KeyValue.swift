@@ -5,7 +5,7 @@ fileprivate class KeyValueArrayContext {
 
     internal let callback: Closure
     internal let ctx: Future<KeyValuesResult>
-    
+
     internal init(
         _ callback: @escaping Closure,
         _ ctx: Future<KeyValuesResult>
@@ -47,7 +47,7 @@ internal extension Future where R == KeyValuesResult {
 
         return KeyValuesResult(
             records: outCount == 0 ? [] : outRawValues.unwrapPointee(count: outCount).map {
-                return KeyValue(
+                KeyValue(
                     key: $0.key.getBytes(count: $0.key_length),
                     value: $0.value.getBytes(count: $0.value_length)
                 )

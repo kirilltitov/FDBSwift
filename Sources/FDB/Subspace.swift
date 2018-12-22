@@ -29,8 +29,6 @@ public struct Subspace {
     }
 
     public subscript(index: TuplePackable?...) -> Subspace {
-        get {
-            return self.subspace(index)
-        }
+        return self.subspace(index)
     }
 }
