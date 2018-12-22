@@ -33,8 +33,14 @@ internal extension Transaction {
         let endBytes = end.asFDBKey()
         return fdb_transaction_get_range(
             self.pointer,
-            beginBytes, beginBytes.length, beginEqual.int, beginOffset,
-            endBytes, endBytes.length, endEqual.int, endOffset,
+            beginBytes,
+            beginBytes.length,
+            beginEqual.int,
+            beginOffset,
+            endBytes,
+            endBytes.length,
+            endEqual.int,
+            endOffset,
             limit,
             targetBytes,
             FDBStreamingMode(mode.rawValue),

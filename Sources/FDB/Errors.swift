@@ -3,7 +3,7 @@ import CFDB
 public typealias Errno = fdb_error_t
 
 extension Errno {
-    public func orThrow() throws -> Void {
+    public func orThrow() throws {
         if self == 0 {
             return
         }
@@ -84,6 +84,7 @@ public extension FDB {
         case TransactionRetry = 8000
         case UnexpectedError = 9000
         case NoEventLoopProvided = 9500
+        case ConnectionError = 9600
 
         public static func from(errno: Errno) -> Error {
             guard let error = Error(rawValue: errno) else {

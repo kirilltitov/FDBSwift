@@ -2,7 +2,7 @@ extension Collection where Index: Comparable {
     internal subscript(from i: Int) -> SubSequence {
         let _from = self.index(self.endIndex, offsetBy: i)
         let _to = self.endIndex
-        return self[_from..<_to]
+        return self[_from ..< _to]
     }
 }
 
@@ -17,7 +17,7 @@ internal func bisect(list: [Int], item: Int) -> Int {
     return count
 }
 
-internal let sizeLimits = Array<Int>(0...7).map { (1 << ($0 * 8)) - 1 }
+internal let sizeLimits = Array<Int>(0 ... 7).map { (1 << ($0 * 8)) - 1 }
 
 extension Int: TuplePackable {
     public func pack() -> Bytes {

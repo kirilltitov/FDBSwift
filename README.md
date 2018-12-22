@@ -206,28 +206,36 @@ In order to utilize Futures, you must first have a reference to current `EventLo
 
 All asynchronous stuff (basically mirror methods for all synchronous methods, see [`Transaction+Sync.swift`](https://github.com/kirilltitov/FDBSwift/blob/master/Sources/FDB/Transaction/Transaction%2BSync.swift)) is located in Transaction class (see [`Transaction+NIO.Swift`](https://github.com/kirilltitov/FDBSwift/blob/master/Sources/FDB/Transaction/Transaction%2BNIO.swift) file for complete API), but it all starts with creating a new transaction with `EventLoop`:
 ```swift
-let transaction = try fdb.begin(eventLoop: currentEventLoop)
+let transactionFuture: EventLoopFuture<Transaction> = fdb.begin(eventLoop: currentEventLoop)
 ```
 
-This transaction now supports asynchronous methods (if you try to call asynchronous method on transaction created without `EventLoop`, you will instantly get failed `EventLoopPromise`, so take care). Complete example:
+Transaction here is wrapped with an `EventLoopFuture` because this call can fail (no connection, something is wrong, etc.).
+
+This transaction now supports asynchronous methods (if you try to call asynchronous method on transaction created without `EventLoop`, you will instantly get failed `EventLoopPromise`, so take care). Keep in mind that almost all async transaction methods returns not just `EventLoopFuture` with result (or `Void`) inside, but a tuple of result and this very same transaction, because if you'd like to commit it yourself, you must have a reference to it, and it's your job to pass this transaction further while you need it.
+
+Complete example:
 
 ```swift
 // EmbeddedEventLoop is meant to be used for testing only
 let key = Subspace("1337")["322"]
-let future: EventLoopFuture<String> = transaction
-    .set(key: key, value: Bytes([1, 2, 3]))
-    .then { transaction.get(key: key) }
-    .thenThrowing { bytes in
+let future: EventLoopFuture<String> = fdb
+    .begin(eventLoop: currentEventLoop)
+    .then { transaction in
+        transaction.set(key: key, value: Bytes([1, 2, 3]))
+    }
+    .then { transaction in
+        transaction.get(key: key)
+    }
+    .thenThrowing { (bytes, transaction) in
         guard let bytes = bytes else {
             throw MyApplicationError.Something("Bytes are not bytes")
         }
         guard let string = String(bytes: bytes, encoding: .ascii) else {
             throw MyApplicationError.Something("String is not string")
         }
+        let _: EventLoopFuture<Void> = transaction.commit()
         return string
     }
-    .and(transaction.commit())
-    .map { $0.0 }
 
 future.whenSuccess { (resultString: String) in
     print("My string is '\(resultString)'")
@@ -238,6 +246,8 @@ future.whenFailure { (error: Error) in
 // OR (you only use wait method outside of main thread or eventLoop thread, because it's blocking)
 let string: String = try future.wait()
 ```
+
+Of course, in most cases it's much easier and cleaner to just pass `commit: true` argument into `set(key:value:commit:)` method (or its siblings), and it will do things for you.
 
 ### Debugging
 
@@ -284,7 +294,7 @@ Additionally, I don't guarantee tuples/subspaces compatibility with other langua
 * ✅ Tests
 * ✅ Properly test on Linux
 * ✅ 🎉 Asynchronous methods (Swift-NIO)
-* More verbose
+* ✅ More verbose
 * More sugar for atomic operations
 * Network options
 * Directories

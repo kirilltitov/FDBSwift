@@ -1,5 +1,5 @@
-import Dispatch
 import CFDB
+import Dispatch
 
 internal extension String {
     var bytes: Bytes {

@@ -3,7 +3,7 @@ import CFDB
 internal class Future<R> {
     internal let pointer: OpaquePointer
 
-    private var failClosure: ((Error) -> Void)? = nil
+    private var failClosure: ((Error) -> Void)?
 
     internal init(_ pointer: OpaquePointer) {
         self.pointer = pointer
@@ -28,10 +28,10 @@ internal class Future<R> {
         return try self.wait().checkError()
     }
 
-    internal func fail(with error: Error) {
+    internal func fail(with error: Error, _ file: StaticString = #file, _ line: Int = #line) {
         debugOnly {
             guard let _ = self.failClosure else {
-                print("FDB: no fail closure, caught error \(error)")
+                print("FDB: no fail closure, caught error \(error) at \(file):\(line)")
                 return
             }
         }

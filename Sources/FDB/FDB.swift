@@ -1,5 +1,5 @@
 import CFDB
-import Dispatch
+import Foundation
 import NIO
 
 public typealias Byte = UInt8
@@ -33,13 +33,15 @@ public class FDB {
         case ByteMax                = 17 // FDB_MUTATION_TYPE_BYTE_MAX
     }
 
-    static private let dbName: StaticString = "DB"
+    private static let dbName: StaticString = "DB"
+
+    internal static let dummyEventLoop = EmbeddedEventLoop()
 
     private let version: Int32
     private let networkStopTimeout: Int
     private let clusterFile: String
-    private var cluster: Cluster? = nil
-    private var db: Database? = nil
+    private var cluster: Cluster?
+    private var db: Database?
     private let queue: DispatchQueue
 
     private var isConnected = false
@@ -111,43 +113,80 @@ public class FDB {
     private func initCluster() throws -> FDB {
         let clusterFuture: Future<Void> = try fdb_create_cluster(self.clusterFile).waitForFuture()
         try fdb_future_get_cluster(clusterFuture.pointer, &self.cluster).orThrow()
+        self.debug("Cluster ready")
         return self
     }
 
-    private func initDB() throws {
+    private func initDB() throws -> FDB {
         let dbFuture: Future<Void> = try fdb_cluster_create_database(
             self.cluster,
             FDB.dbName.utf8Start,
             Int32(FDB.dbName.utf8CodeUnitCount)
         ).waitForFuture()
         try fdb_future_get_database(dbFuture.pointer, &self.db).orThrow()
+        self.debug("Database ready")
+        return self
+    }
+
+    private func checkIsAlive() throws -> FDB {
+        guard let statusBytes = try self.get(key: [0xFF, 0xFF] + "/status/json".bytes) else {
+            throw FDB.Error.ConnectionError
+        }
+        guard let json = try JSONSerialization.jsonObject(with: Data(statusBytes)) as? [String: Any] else {
+            throw FDB.Error.ConnectionError
+        }
+        guard
+            let clientInfo = json["client"] as? [String: Any],
+            let dbStatus = clientInfo["database_status"] as? [String: Bool],
+            let available = dbStatus["available"],
+            available == true
+        else {
+            throw FDB.Error.ConnectionError
+        }
+        self.debug("Client is healthy")
+        return self
     }
 
     private func getDB() throws -> Database {
         if let db = self.db {
             return db
         }
-        try self
+        _ = try self
             .selectApiVersion()
             .initNetwork()
             .initCluster()
             .initDB()
+            .checkIsAlive()
         self.isConnected = true
         return try self.getDB()
     }
 
-    private func debug(_ message: String) {
+    internal func debug(_ message: String) {
         if self.verbose {
             print("[FDB \(ObjectIdentifier(self))] \(message)")
         }
     }
 
-    public func begin(eventLoop: EventLoop? = nil) throws -> Transaction {
-        return try Transaction.begin(try self.getDB(), eventLoop)
+    public func begin() throws -> Transaction {
+        return try Transaction.begin(try self.getDB())
+    }
+
+    public func begin(eventLoop: EventLoop) -> EventLoopFuture<Transaction> {
+        do {
+            return eventLoop.newSucceededFuture(
+                result: try Transaction.begin(
+                    try self.getDB(),
+                    eventLoop
+                )
+            )
+        } catch {
+            return FDB.dummyEventLoop.newFailedFuture(error: error)
+        }
     }
 
     public func connect() throws {
-        let _ = try self.getDB()
+        _ = try self.getDB()
+        self.debug("Connected")
     }
 
     public func set(key: FDBKey, value: Bytes) throws {

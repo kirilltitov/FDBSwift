@@ -5,7 +5,7 @@ fileprivate class VoidContext {
 
     internal let callback: Closure
     internal let ctx: Future<Void>
-    
+
     internal init(
         _ callback: @escaping Closure,
         _ ctx: Future<Void>

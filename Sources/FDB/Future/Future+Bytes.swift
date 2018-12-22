@@ -5,7 +5,7 @@ fileprivate class BytesContext {
 
     internal let callback: Closure
     internal let ctx: Future<Bytes?>
-    
+
     init(
         _ callback: @escaping Closure,
         _ ctx: Future<Bytes?>
