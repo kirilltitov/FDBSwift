@@ -247,6 +247,8 @@ future.whenFailure { (error: Error) in
 let string: String = try future.wait()
 ```
 
+Of course, in most cases it's much easier and cleaner to just pass `commit: true` argument into `set(key:value:commit:)` method (or its siblings), and it will do things for you.
+
 ### Debugging
 
 If FDB doesn't kickstart properly and you're unsure on what's happening, you may enable verbose mode which prints useful debug info to `stdout`:
