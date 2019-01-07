@@ -23,18 +23,16 @@ extension ArraySlice where Element == Byte {
         var result = Bytes()
         var pos = self.startIndex
         let lastIndex = self.endIndex - 1
-        var i = 0
         while true {
-            i += 1
+            if pos > lastIndex {
+                break
+            }
             if self[pos] == 0x00 && pos < lastIndex && self[pos + 1] == 0xFF {
                 result.append(0x00)
                 pos += 2
                 continue
             }
             result.append(self[pos])
-            if pos == lastIndex {
-                break
-            }
             pos += 1
         }
         return result

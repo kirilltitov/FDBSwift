@@ -1,3 +1,24 @@
+// You may adopt this protocol with any of your custom types.
+// You should only implement pack() method, not _pack().
+// Obviously, in most cases you would like to treat your
+// class/struct as binary string, this is why simply returning
+// bytes of your internal value representation is incorrect,
+// because noone would know that your returned byte array
+// should actually be treated as a binary string.
+// It must be wrapped with control characters first.
+// This is why you should additionally call .pack() from your
+// resulting byte array (see Tuple+Array.swift). Otherwise packing
+// will be incorrect, but most importantly - unpacking will
+// fail with a fatal error.
+// Example of custom pack() implementation:
+// extension MyValue {
+//     public func pack() -> Bytes {
+//         self
+//             .getBytesSomehow() // your method returns [UInt8]
+//             .pack()            // this will wrap your bytes
+//                                // with tuple binary string magic :)
+//     }
+// }
 public protocol TuplePackable {
     func pack() -> Bytes
     func _pack() -> Bytes
@@ -60,5 +81,16 @@ public struct Tuple: TuplePackable {
         }
         result.append(NULL)
         return result
+    }
+}
+
+// I DON'T LIKE IT SO MUCH
+extension Tuple: Hashable {
+    public static func == (lhs: Tuple, rhs: Tuple) -> Bool {
+        return lhs.pack() == rhs.pack()
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(self.pack())
     }
 }

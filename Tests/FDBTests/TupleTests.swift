@@ -123,14 +123,19 @@ class TupleTests: XCTestCase {
             nil,
         ]
         #if os(Linux)
-            // linux currently null-terminates strings :(
-            // https://bugs.swift.org/browse/SR-7455
             input.append("foobar")
         #else
             input.append("foo\u{00}bar")
         #endif
         let etalonTuple = Tuple(input)
         let packed = etalonTuple.pack()
+        let repacked = Tuple(from: packed).pack()
+        XCTAssertEqual(packed, repacked)
+    }
+
+    // Fixes https://github.com/kirilltitov/FDBSwift/issues/10
+    func testNullEscapes() {
+        let packed = Bytes([0, 0, 0,]).pack()
         let repacked = Tuple(from: packed).pack()
         XCTAssertEqual(packed, repacked)
     }
