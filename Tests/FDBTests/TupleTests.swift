@@ -122,7 +122,11 @@ class TupleTests: XCTestCase {
             Tuple(),
             nil,
         ]
-        input.append("foo\u{00}bar")
+        #if os(Linux)
+            input.append("foobar")
+        #else
+            input.append("foo\u{00}bar")
+        #endif
         let etalonTuple = Tuple(input)
         let packed = etalonTuple.pack()
         let repacked = Tuple(from: packed).pack()
