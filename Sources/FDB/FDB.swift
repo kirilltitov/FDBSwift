@@ -68,9 +68,9 @@ public class FDB {
             self.clusterFile = cluster
         } else {
             #if os(macOS)
-            self.clusterFile = "/usr/local/etc/foundationdb/fdb.cluster"
+                self.clusterFile = "/usr/local/etc/foundationdb/fdb.cluster"
             #else // assuming that else is linux
-            self.clusterFile = "/etc/foundationdb/fdb.cluster"
+                self.clusterFile = "/etc/foundationdb/fdb.cluster"
             #endif
         }
         self.networkStopTimeout = networkStopTimeout
@@ -127,7 +127,7 @@ public class FDB {
                 &thread,
                 nil,
                 { ptr in
-                    fdb_run_network()
+                    fdb_run_network().orDie()
                     Unmanaged<Box<FDB>>.fromOpaque(ptr).takeRetainedValue().value.semaphore.signal()
                     return nil
                 },
@@ -139,7 +139,7 @@ public class FDB {
                 &thread,
                 nil,
                 { ptr in
-                    fdb_run_network()
+                    fdb_run_network().orDie()
                     Unmanaged<Box<FDB>>.fromOpaque(ptr!).takeRetainedValue().value.semaphore.signal()
                     return nil
                 },
