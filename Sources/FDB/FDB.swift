@@ -42,7 +42,6 @@ public class FDB {
     private let clusterFile: String
     private var cluster: Cluster?
     private var db: Database?
-    private let queue: DispatchQueue
 
     private var isConnected = false
 
@@ -50,24 +49,32 @@ public class FDB {
 
     private let semaphore = DispatchSemaphore(value: 0)
 
-    public required init(
+    @available(*, deprecated, message: "Use init without queue argument")
+    public convenience init(
         cluster: String? = nil,
         networkStopTimeout: Int = 10,
         version: Int32 = FDB_API_VERSION,
         queue: DispatchQueue = DispatchQueue(label: "fdb", qos: .userInitiated, attributes: .concurrent)
     ) {
+        self.init(cluster: cluster, networkStopTimeout: networkStopTimeout, version: version)
+    }
+
+    public init(
+        cluster: String? = nil,
+        networkStopTimeout: Int = 10,
+        version: Int32 = FDB_API_VERSION
+    ) {
         if let cluster = cluster {
             self.clusterFile = cluster
         } else {
             #if os(macOS)
-                self.clusterFile = "/usr/local/etc/foundationdb/fdb.cluster"
+            self.clusterFile = "/usr/local/etc/foundationdb/fdb.cluster"
             #else // assuming that else is linux
-                self.clusterFile = "/etc/foundationdb/fdb.cluster"
+            self.clusterFile = "/etc/foundationdb/fdb.cluster"
             #endif
         }
         self.networkStopTimeout = networkStopTimeout
         self.version = version
-        self.queue = queue
     }
 
     deinit {
@@ -101,12 +108,45 @@ public class FDB {
     }
 
     private func initNetwork() throws -> FDB {
+        class Box<T> {
+            let value: T
+
+            init(_ value: T) {
+                self.value = value
+            }
+        }
+
         try fdb_setup_network().orThrow()
         self.debug("Network ready")
-        self.queue.async {
-            fdb_run_network().orDie()
-            self.semaphore.signal()
-        }
+
+        let ptr = Unmanaged.passRetained(Box(self)).toOpaque()
+
+        #if os(OSX)
+            var thread: pthread_t? = nil
+            pthread_create(
+                &thread,
+                nil,
+                { ptr in
+                    fdb_run_network()
+                    Unmanaged<Box<FDB>>.fromOpaque(ptr).takeRetainedValue().value.semaphore.signal()
+                    return nil
+                },
+                ptr
+            )
+        #else
+            var thread: pthread_t = pthread_t()
+            pthread_create(
+                &thread,
+                nil,
+                { ptr in
+                    fdb_run_network()
+                    Unmanaged<Box<FDB>>.fromOpaque(ptr!).takeRetainedValue().value.semaphore.signal()
+                    return nil
+                },
+                ptr
+            )
+        #endif
+
         return self
     }
 
