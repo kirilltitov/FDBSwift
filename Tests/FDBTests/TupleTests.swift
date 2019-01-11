@@ -147,5 +147,6 @@ class TupleTests: XCTestCase {
         ("testPackInts", testPackInts),
         ("testUnofficialCases", testUnofficialCases),
         ("testUnpack", testUnpack),
+        ("testNullEscapes", testNullEscapes),
     ]
 }
