@@ -123,29 +123,25 @@ public class FDB {
 
         #if os(OSX)
             var thread: pthread_t? = nil
-            pthread_create(
-                &thread,
-                nil,
-                { ptr in
-                    fdb_run_network().orDie()
-                    Unmanaged<Box<FDB>>.fromOpaque(ptr).takeRetainedValue().value.semaphore.signal()
-                    return nil
-                },
-                ptr
-            )
         #else
             var thread: pthread_t = pthread_t()
-            pthread_create(
-                &thread,
-                nil,
-                { ptr in
-                    fdb_run_network().orDie()
-                    Unmanaged<Box<FDB>>.fromOpaque(ptr!).takeRetainedValue().value.semaphore.signal()
-                    return nil
-                },
-                ptr
-            )
         #endif
+
+        pthread_create(
+            &thread,
+            nil,
+            { ptr in
+                fdb_run_network().orDie()
+                #if os(OSX)
+                    let _ptr = ptr
+                #else
+                    let _ptr = ptr!
+                #endif
+                Unmanaged<Box<FDB>>.fromOpaque(_ptr).takeRetainedValue().value.semaphore.signal()
+                return nil
+            },
+            ptr
+        )
 
         return self
     }
