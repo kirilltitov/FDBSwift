@@ -295,6 +295,8 @@ Additionally, I don't guarantee tuples/subspaces compatibility with other langua
 * ✅ Properly test on Linux
 * ✅ 🎉 Asynchronous methods (Swift-NIO)
 * ✅ More verbose
+* Even more verbose
+* Transaction options
 * More sugar for atomic operations
 * Network options
 * Directories
