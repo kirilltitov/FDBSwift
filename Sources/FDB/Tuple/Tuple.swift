@@ -11,7 +11,7 @@
 // will be incorrect, but most importantly - unpacking will
 // fail with a fatal error.
 // Example of custom pack() implementation:
-// extension MyValue {
+// extension MyValue: TuplePackable {
 //     public func pack() -> Bytes {
 //         self
 //             .getBytesSomehow() // your method returns [UInt8]
@@ -47,24 +47,20 @@ public struct Null: TuplePackable {
 }
 
 public struct Tuple: TuplePackable {
-    public private(set) var tuple: [TuplePackable?]
+    public private(set) var tuple: [TuplePackable]
 
-    public init(_ input: [TuplePackable?]) {
+    public init(_ input: [TuplePackable]) {
         self.tuple = input
     }
 
-    public init(_ input: TuplePackable?...) {
+    public init(_ input: TuplePackable...) {
         self.init(input)
     }
 
     public func pack() -> Bytes {
         var result = Bytes()
         self.tuple.forEach {
-            guard let value = $0 else {
-                result.append(NULL)
-                return
-            }
-            result.append(contentsOf: value._pack())
+            result.append(contentsOf: $0._pack())
         }
         return result
     }
@@ -73,11 +69,11 @@ public struct Tuple: TuplePackable {
         var result = Bytes()
         result.append(PREFIX_NESTED_TUPLE)
         self.tuple.forEach {
-            guard let value = $0 else {
+            if $0 is Null {
                 result.append(contentsOf: NULL_ESCAPE_SEQUENCE)
-                return
+            } else {
+                result.append(contentsOf: $0._pack())
             }
-            result.append(contentsOf: value._pack())
         }
         result.append(NULL)
         return result

@@ -14,7 +14,7 @@ public struct Subspace {
         self.itemsCount = items
     }
 
-    public init(_ input: TuplePackable?...) {
+    public init(_ input: TuplePackable...) {
         self.init(Tuple(input), items: input.count)
     }
 
@@ -22,15 +22,15 @@ public struct Subspace {
         self.init(tuple.pack(), items: items)
     }
 
-    public func subspace(_ input: [TuplePackable?]) -> Subspace {
+    public func subspace(_ input: [TuplePackable]) -> Subspace {
         return Subspace(self.prefix + Tuple(input).pack(), items: self.itemsCount + input.count)
     }
 
-    public func subspace(_ input: TuplePackable?...) -> Subspace {
+    public func subspace(_ input: TuplePackable...) -> Subspace {
         return self.subspace(input)
     }
 
-    public subscript(index: TuplePackable?...) -> Subspace {
+    public subscript(index: TuplePackable...) -> Subspace {
         return self.subspace(index)
     }
 }

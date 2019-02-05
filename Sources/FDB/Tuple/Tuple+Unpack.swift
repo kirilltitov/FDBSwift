@@ -41,7 +41,7 @@ extension ArraySlice where Element == Byte {
 
 extension Tuple {
     public init(from bytes: Bytes) {
-        var result: [TuplePackable?] = []
+        var result: [TuplePackable] = []
         var pos = 0
         let length = bytes.count
         while pos < length {
@@ -53,13 +53,13 @@ extension Tuple {
         self.init(result)
     }
 
-    internal static func _unpack(_ input: Bytes, _ pos: Int = 0) -> (TuplePackable?, Int) {
+    internal static func _unpack(_ input: Bytes, _ pos: Int = 0) -> (TuplePackable, Int) {
         guard input.count > 0 else {
             fatalError("Input is empty")
         }
         let code = input[pos]
         if code == NULL {
-            return (nil, pos + 1)
+            return (Null(), pos + 1)
         } else if code == PREFIX_BYTE_STRING {
             let end = findTerminator(input: input, pos: pos + 1)
             return (input[(pos + 1) ..< end].replaceEscapes(), end + 1)
@@ -68,7 +68,7 @@ extension Tuple {
             let end = findTerminator(input: input, pos: _pos)
             let bytes = input[(pos + 1) ..< end].replaceEscapes()
             return (
-                String(bytes: bytes, encoding: .utf8),
+                String(bytes: bytes, encoding: .utf8)!,
                 end + 1
             )
         } else if code >= PREFIX_INT_ZERO_CODE && code < PREFIX_POS_INT_END {
@@ -85,12 +85,12 @@ extension Tuple {
             }
             return (((Array<Byte>(repeating: 0x00, count: 8 - n) + input[begin ..< end]).reversed().cast() as Int) - sizeLimits[n], end)
         } else if code == PREFIX_NESTED_TUPLE {
-            var result: [TuplePackable?] = []
+            var result: [TuplePackable] = []
             var end = pos + 1
             while end < input.count {
                 if input[end] == 0x00 {
                     if end + 1 < input.count && input[end + 1] == 0xFF {
-                        result.append(nil)
+                        result.append(Null())
                         end += 2
                     } else {
                         break

@@ -28,7 +28,7 @@ class TupleTests: XCTestCase {
     }
 
     func testPackNestedTuple() {
-        let tuple = Tuple(Tuple("foo\u{00}bar", nil, Tuple()))
+        let tuple = Tuple(Tuple("foo\u{00}bar", Null(), Tuple()))
         var expected = Bytes()
         expected.append(0x05)
 
@@ -108,19 +108,19 @@ class TupleTests: XCTestCase {
         expected.append(contentsOf: [0x13, 0xFE, 0x14, 0x15, 0x05, 0x05, 0x02])
         expected.append(contentsOf: "foo".bytes)
         expected.append(contentsOf: [0x00, 0x00, 0x00])
-        XCTAssertEqual(Tuple(-1, 0, 5, Tuple("foo"), nil).pack(), expected)
+        XCTAssertEqual(Tuple(-1, 0, 5, Tuple("foo"), Null()).pack(), expected)
     }
 
     func testUnpack() {
-        var input: [TuplePackable?] = [
+        var input: [TuplePackable] = [
             Bytes([0, 1, 2]),
             322,
             -322,
-            nil,
+            Null(),
             "foo",
             Tuple("bar", 1337, "baz"),
             Tuple(),
-            nil,
+            Null(),
         ]
         #if os(Linux)
             input.append("foobar")

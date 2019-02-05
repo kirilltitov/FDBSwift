@@ -42,7 +42,7 @@ class FDBTests: XCTestCase {
     }
 
     func testEmptyValue() throws {
-        XCTAssertNil(try FDBTests.fdb.get(key: FDBTests.subspace[nil]), "Non-nil value returned")
+        XCTAssertNil(try FDBTests.fdb.get(key: FDBTests.subspace[Null()]), "Non-nil value returned")
     }
 
     func testSetGetBytes() throws {
