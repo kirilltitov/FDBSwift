@@ -4,7 +4,7 @@ import NIO
 public extension Transaction {
     public func commit() -> EventLoopFuture<Void> {
         guard let eventLoop = self.eventLoop else {
-            return FDB.dummyEventLoop.newFailedFuture(error: FDB.Error.NoEventLoopProvided)
+            return FDB.dummyEventLoop.newFailedFuture(error: FDB.Error.noEventLoopProvided)
         }
         let promise: EventLoopPromise<Future<Void>> = eventLoop.newPromise()
         do {
@@ -24,7 +24,7 @@ public extension Transaction {
             do {
                 try retryFuture.whenReady { _retryFuture in
                     try fdb_future_get_error(_retryFuture.pointer).orThrow()
-                    throw FDB.Error.TransactionRetry
+                    throw FDB.Error.transactionRetry
                 }
                 retryFuture.whenError(retryPromise.fail)
             } catch {
@@ -36,7 +36,7 @@ public extension Transaction {
 
     public func set(key: FDBKey, value: Bytes, commit: Bool = false) -> EventLoopFuture<Transaction> {
         guard let eventLoop = self.eventLoop else {
-            return FDB.dummyEventLoop.newFailedFuture(error: FDB.Error.NoEventLoopProvided)
+            return FDB.dummyEventLoop.newFailedFuture(error: FDB.Error.noEventLoopProvided)
         }
         self.set(key: key, value: value)
         let future: EventLoopFuture<Transaction> = eventLoop.newSucceededFuture(result: self)
@@ -50,7 +50,7 @@ public extension Transaction {
 
     public func get(key: FDBKey, snapshot: Int32 = 0, commit: Bool = false) -> EventLoopFuture<(Bytes?, Transaction)> {
         guard let eventLoop = self.eventLoop else {
-            return FDB.dummyEventLoop.newFailedFuture(error: FDB.Error.NoEventLoopProvided)
+            return FDB.dummyEventLoop.newFailedFuture(error: FDB.Error.noEventLoopProvided)
         }
         let promise: EventLoopPromise<(Bytes?, Transaction)> = eventLoop.newPromise()
         do {
@@ -81,14 +81,14 @@ public extension Transaction {
         endOffset: Int32 = 1,
         limit: Int32 = 0,
         targetBytes: Int32 = 0,
-        mode: FDB.StreamingMode = .WantAll,
+        mode: FDB.StreamingMode = .wantAll,
         iteration: Int32 = 1,
         snapshot: Int32 = 0,
         reverse: Bool = false,
         commit: Bool = false
     ) -> EventLoopFuture<(KeyValuesResult, Transaction)> {
         guard let eventLoop = self.eventLoop else {
-            return FDB.dummyEventLoop.newFailedFuture(error: FDB.Error.NoEventLoopProvided)
+            return FDB.dummyEventLoop.newFailedFuture(error: FDB.Error.noEventLoopProvided)
         }
         let promise: EventLoopPromise<(KeyValuesResult, Transaction)> = eventLoop.newPromise()
         do {
@@ -130,7 +130,7 @@ public extension Transaction {
         endOffset: Int32 = 1,
         limit: Int32 = 0,
         targetBytes: Int32 = 0,
-        mode: FDB.StreamingMode = .WantAll,
+        mode: FDB.StreamingMode = .wantAll,
         iteration: Int32 = 1,
         snapshot: Int32 = 0,
         reverse: Bool = false,
@@ -155,7 +155,7 @@ public extension Transaction {
 
     fileprivate func genericAction(commit: Bool, _ closure: () -> Void) -> EventLoopFuture<Transaction> {
         guard let eventLoop = self.eventLoop else {
-            return FDB.dummyEventLoop.newFailedFuture(error: FDB.Error.NoEventLoopProvided)
+            return FDB.dummyEventLoop.newFailedFuture(error: FDB.Error.noEventLoopProvided)
         }
         let future = eventLoop.newSucceededFuture(result: self)
         closure()

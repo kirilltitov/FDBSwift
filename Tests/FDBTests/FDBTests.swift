@@ -85,7 +85,7 @@ class FDBTests: XCTestCase {
         let step: Int64 = 1
         let expected = step + 1
         for _ in 0 ..< expected - 1 {
-            XCTAssertNoThrow(try fdb.atomic(.Add, key: key, value: step))
+            XCTAssertNoThrow(try fdb.atomic(.add, key: key, value: step))
         }
         XCTAssertNoThrow(try fdb.increment(key: key))
         let result = try fdb.get(key: key)
@@ -120,10 +120,10 @@ class FDBTests: XCTestCase {
 
     func testErrorDescription() {
         let error = FDB.Error.self
-        XCTAssertEqual(error.TransactionReadOnly.rawValue, 2021)
-        XCTAssertEqual(error.TransactionReadOnly.getDescription(), "Transaction is read-only and therefore does not have a commit version")
-        XCTAssertEqual(error.TransactionRetry.getDescription(), "You should replay this transaction")
-        XCTAssertEqual(error.UnexpectedError.getDescription(), "Error is unexpected, it shouldn't really happen")
+        XCTAssertEqual(error.transactionReadOnly.rawValue, 2021)
+        XCTAssertEqual(error.transactionReadOnly.getDescription(), "Transaction is read-only and therefore does not have a commit version")
+        XCTAssertEqual(error.transactionRetry.getDescription(), "You should replay this transaction")
+        XCTAssertEqual(error.unexpectedError.getDescription(), "Error is unexpected, it shouldn't really happen")
     }
 
     func begin() throws -> EventLoopFuture<Transaction> {
@@ -153,7 +153,7 @@ class FDBTests: XCTestCase {
         var counter: Int = 0
         tr.commit().whenFailure { error in
             counter += 1
-            guard case FDB.Error.UsedDuringCommit = error else {
+            guard case FDB.Error.usedDuringCommit = error else {
                 XCTFail("Error must be UsedDuringCommit")
                 semaphore.signal()
                 return
@@ -214,11 +214,11 @@ class FDBTests: XCTestCase {
         let step: Int64 = 1
         let expected = step + 1
         for _ in 0 ..< expected - 1 {
-            _ = try tr.atomic(.Add, key: key, value: step).wait()
+            _ = try tr.atomic(.add, key: key, value: step).wait()
         }
 //      TODO:
 //      XCTAssertNoThrow(try tr.increment(key: key))
-        tr.atomic(.Add, key: key, value: step).whenComplete {
+        tr.atomic(.add, key: key, value: step).whenComplete {
             semaphore.signal()
         }
         semaphore.wait()

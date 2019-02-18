@@ -7,7 +7,7 @@ public extension Transaction {
         guard commitError == 0 else {
             let retryFuture: Future<Void> = try fdb_transaction_on_error(self.pointer, commitError).waitForFuture()
             try fdb_future_get_error(retryFuture.pointer).orThrow()
-            throw FDB.Error.TransactionRetry
+            throw FDB.Error.transactionRetry
         }
     }
 
@@ -35,7 +35,7 @@ public extension Transaction {
         endOffset: Int32 = 1,
         limit: Int32 = 0,
         targetBytes: Int32 = 0,
-        mode: FDB.StreamingMode = .WantAll,
+        mode: FDB.StreamingMode = .wantAll,
         iteration: Int32 = 1,
         snapshot: Int32 = 0,
         reverse: Bool = false,
@@ -69,7 +69,7 @@ public extension Transaction {
         endOffset: Int32 = 1,
         limit: Int32 = 0,
         targetBytes: Int32 = 0,
-        mode: FDB.StreamingMode = .WantAll,
+        mode: FDB.StreamingMode = .wantAll,
         iteration: Int32 = 1,
         snapshot: Int32 = 0,
         reverse: Bool = false,

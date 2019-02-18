@@ -1,6 +1,9 @@
 import CFDB
 import Dispatch
 
+public typealias Byte = UInt8
+public typealias Bytes = [Byte]
+
 internal extension String {
     var bytes: Bytes {
         return Bytes(self.utf8)
