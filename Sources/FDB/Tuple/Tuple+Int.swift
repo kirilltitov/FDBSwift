@@ -19,7 +19,7 @@ internal func bisect(list: [Int], item: Int) -> Int {
 
 internal let sizeLimits = Array<Int>(0 ... 7).map { (1 << ($0 * 8)) - 1 }
 
-extension Int: TuplePackable {
+extension Int: FDBTuplePackable {
     public func pack() -> Bytes {
         if self == 0 {
             return [PREFIX_INT_ZERO_CODE]

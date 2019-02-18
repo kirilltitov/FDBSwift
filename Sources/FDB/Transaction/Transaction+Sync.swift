@@ -1,11 +1,11 @@
 import CFDB
 
-public extension Transaction {
+public extension FDB.Transaction {
     public func commitSync() throws {
         let future: Future<Void> = try self.commit().wait()
         let commitError = fdb_future_get_error(future.pointer)
         guard commitError == 0 else {
-            let retryFuture: Future<Void> = try fdb_transaction_on_error(self.pointer, commitError).waitForFuture()
+            let retryFuture: Future<Void> = try fdb_transaction_on_error(self.DBPointer, commitError).waitForFuture()
             try fdb_future_get_error(retryFuture.pointer).orThrow()
             throw FDB.Error.transactionRetry
         }
@@ -40,8 +40,8 @@ public extension Transaction {
         snapshot: Int32 = 0,
         reverse: Bool = false,
         commit: Bool = false
-    ) throws -> KeyValuesResult {
-        let future: Future<KeyValuesResult> = try self.get(
+    ) throws -> FDB.KeyValuesResult {
+        let future: Future<FDB.KeyValuesResult> = try self.get(
             begin: begin,
             end: end,
             beginEqual: beginEqual,
@@ -62,7 +62,7 @@ public extension Transaction {
     }
 
     public func get(
-        range: RangeFDBKey,
+        range: FDB.RangeKey,
         beginEqual: Bool = false,
         beginOffset: Int32 = 1,
         endEqual: Bool = false,
@@ -74,8 +74,8 @@ public extension Transaction {
         snapshot: Int32 = 0,
         reverse: Bool = false,
         commit: Bool = false
-    ) throws -> KeyValuesResult {
-        let future: Future<KeyValuesResult> = self.get(
+    ) throws -> FDB.KeyValuesResult {
+        let future: Future<FDB.KeyValuesResult> = self.get(
             begin: range.begin,
             end: range.end,
             beginEqual: beginEqual,
@@ -109,7 +109,7 @@ public extension Transaction {
         }
     }
 
-    public func clear(range: RangeFDBKey, commit: Bool = false) throws {
+    public func clear(range: FDB.RangeKey, commit: Bool = false) throws {
         try self.clear(begin: range.begin, end: range.end, commit: commit) as Void
     }
 
