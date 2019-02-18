@@ -24,7 +24,7 @@ internal extension Transaction {
         endOffset: Int32 = 1,
         limit: Int32 = 0,
         targetBytes: Int32 = 0,
-        mode: FDB.StreamingMode = .WantAll,
+        mode: FDB.StreamingMode = .wantAll,
         iteration: Int32 = 1,
         snapshot: Int32 = 0,
         reverse: Bool = false
@@ -58,7 +58,7 @@ internal extension Transaction {
         endOffset: Int32 = 1,
         limit: Int32 = 0,
         targetBytes: Int32 = 0,
-        mode: FDB.StreamingMode = .WantAll,
+        mode: FDB.StreamingMode = .wantAll,
         iteration: Int32 = 1,
         snapshot: Int32 = 0,
         reverse: Bool = false

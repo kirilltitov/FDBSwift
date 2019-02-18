@@ -4,7 +4,7 @@ public protocol FDBKey: TuplePackable {
     func asFDBKey() -> Bytes
 }
 
-extension FDBKey {
+public extension FDBKey {
     public func pack() -> Bytes {
         return self.asFDBKey().pack()
     }

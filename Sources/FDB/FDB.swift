@@ -2,35 +2,32 @@ import CFDB
 import Foundation
 import NIO
 
-public typealias Byte = UInt8
-public typealias Bytes = [Byte]
-
 public class FDB {
     public typealias Cluster = OpaquePointer
     public typealias Database = OpaquePointer
 
     public enum StreamingMode: Int32 {
-        case WantAll  = -2 // FDB_STREAMING_MODE_WANT_ALL
-        case Iterator = -1 // FDB_STREAMING_MODE_ITERATOR
-        case Exact    =  0 // FDB_STREAMING_MODE_EXACT
-        case Small    =  1 // FDB_STREAMING_MODE_SMALL
-        case Medium   =  2 // FDB_STREAMING_MODE_MEDIUM
-        case Large    =  3 // FDB_STREAMING_MODE_LARGE
-        case Serial   =  4 // FDB_STREAMING_MODE_SERIAL
+        case wantAll  = -2 // FDB_STREAMING_MODE_WANT_ALL
+        case iterator = -1 // FDB_STREAMING_MODE_ITERATOR
+        case exact    =  0 // FDB_STREAMING_MODE_EXACT
+        case small    =  1 // FDB_STREAMING_MODE_SMALL
+        case medium   =  2 // FDB_STREAMING_MODE_MEDIUM
+        case large    =  3 // FDB_STREAMING_MODE_LARGE
+        case serial   =  4 // FDB_STREAMING_MODE_SERIAL
     }
 
     public enum MutationType: UInt32 {
-        case Add                    = 2  // FDB_MUTATION_TYPE_ADD
-        case BitAnd                 = 6  // FDB_MUTATION_TYPE_BIT_AND
-        case BitOr                  = 7  // FDB_MUTATION_TYPE_BIT_OR
-        case BitXor                 = 8  // FDB_MUTATION_TYPE_BIT_XOR
-        case AppendIfFits           = 9  // FDB_MUTATION_TYPE_APPEND_IF_FITS
-        case Max                    = 12 // FDB_MUTATION_TYPE_MAX
-        case Min                    = 13 // FDB_MUTATION_TYPE_MIN
-        case SetVersionstampedKey   = 14 // FDB_MUTATION_TYPE_SET_VERSIONSTAMPED_KEY
-        case SetVersionstampedValue = 15 // FDB_MUTATION_TYPE_SET_VERSIONSTAMPED_VALUE
-        case ByteMin                = 16 // FDB_MUTATION_TYPE_BYTE_MIN
-        case ByteMax                = 17 // FDB_MUTATION_TYPE_BYTE_MAX
+        case add                    = 2  // FDB_MUTATION_TYPE_ADD
+        case bitAnd                 = 6  // FDB_MUTATION_TYPE_BIT_AND
+        case bitOr                  = 7  // FDB_MUTATION_TYPE_BIT_OR
+        case bitXor                 = 8  // FDB_MUTATION_TYPE_BIT_XOR
+        case appendIfFits           = 9  // FDB_MUTATION_TYPE_APPEND_IF_FITS
+        case max                    = 12 // FDB_MUTATION_TYPE_MAX
+        case min                    = 13 // FDB_MUTATION_TYPE_MIN
+        case setVersionstampedKey   = 14 // FDB_MUTATION_TYPE_SET_VERSIONSTAMPED_KEY
+        case setVersionstampedValue = 15 // FDB_MUTATION_TYPE_SET_VERSIONSTAMPED_VALUE
+        case byteMin                = 16 // FDB_MUTATION_TYPE_BYTE_MIN
+        case byteMax                = 17 // FDB_MUTATION_TYPE_BYTE_MAX
     }
 
     private static let dbName: StaticString = "DB"
@@ -166,10 +163,10 @@ public class FDB {
 
     private func checkIsAlive() throws -> FDB {
         guard let statusBytes = try self.get(key: [0xFF, 0xFF] + "/status/json".bytes) else {
-            throw FDB.Error.ConnectionError
+            throw FDB.Error.connectionError
         }
         guard let json = try JSONSerialization.jsonObject(with: Data(statusBytes)) as? [String: Any] else {
-            throw FDB.Error.ConnectionError
+            throw FDB.Error.connectionError
         }
         guard
             let clientInfo = json["client"] as? [String: Any],
@@ -177,7 +174,7 @@ public class FDB {
             let available = dbStatus["available"],
             available == true
         else {
-            throw FDB.Error.ConnectionError
+            throw FDB.Error.connectionError
         }
         self.debug("Client is healthy")
         return self
@@ -262,7 +259,7 @@ public class FDB {
         endOffset: Int32 = 1,
         limit: Int32 = 0,
         targetBytes: Int32 = 0,
-        mode: FDB.StreamingMode = .WantAll,
+        mode: FDB.StreamingMode = .wantAll,
         iteration: Int32 = 1,
         snapshot: Int32 = 0,
         reverse: Bool = false
@@ -292,7 +289,7 @@ public class FDB {
         endOffset: Int32 = 1,
         limit: Int32 = 0,
         targetBytes: Int32 = 0,
-        mode: FDB.StreamingMode = .WantAll,
+        mode: FDB.StreamingMode = .wantAll,
         iteration: Int32 = 1,
         snapshot: Int32 = 0,
         reverse: Bool = false
@@ -323,9 +320,9 @@ public class FDB {
 
     @discardableResult public func increment(key: FDBKey, value: Int64 = 1) throws -> Int64 {
         let transaction = try self.begin()
-        try transaction.atomic(.Add, key: key, value: getBytes(value), commit: false) as Void
+        try transaction.atomic(.add, key: key, value: getBytes(value), commit: false) as Void
         guard let bytes: Bytes = try transaction.get(key: key) else {
-            throw Error.UnexpectedError
+            throw FDB.Error.unexpectedError
         }
         try transaction.commitSync()
         return bytes.cast()
