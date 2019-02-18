@@ -1,6 +1,9 @@
-public typealias RangeFDBKey = (begin: FDBKey, end: FDBKey)
+public extension FDB {
+    public typealias RangeKey = (begin: FDBKey, end: FDBKey)
+}
 
-public protocol FDBKey: TuplePackable {
+// todo rename to AnyFDBKey
+public protocol FDBKey: FDBTuplePackable {
     func asFDBKey() -> Bytes
 }
 
@@ -19,18 +22,6 @@ extension String: FDBKey {
 extension StaticString: FDBKey {
     public func asFDBKey() -> Bytes {
         return self.utf8Start.getBytes(count: Int32(self.utf8CodeUnitCount))
-    }
-}
-
-extension Tuple: FDBKey {
-    public func asFDBKey() -> Bytes {
-        return self.pack()
-    }
-}
-
-extension Subspace: FDBKey {
-    public func asFDBKey() -> Bytes {
-        return self.prefix
     }
 }
 

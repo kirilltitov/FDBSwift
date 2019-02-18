@@ -37,8 +37,8 @@ public class FDB {
     private let version: Int32
     private let networkStopTimeout: Int
     private let clusterFile: String
-    private var cluster: Cluster?
-    private var db: Database?
+    private var cluster: FDB.Cluster?
+    private var db: FDB.Database?
 
     private var isConnected = false
 
@@ -98,7 +98,7 @@ public class FDB {
         self.isConnected = false
     }
 
-    private func selectApiVersion() throws -> FDB {
+    private func selectAPIVersion() throws -> FDB {
         self.debug("API version is \(self.version)")
         try fdb_select_api_version_impl(self.version, FDB_API_VERSION).orThrow()
         return self
@@ -185,7 +185,7 @@ public class FDB {
             return db
         }
         _ = try self
-            .selectApiVersion()
+            .selectAPIVersion()
             .initNetwork()
             .initCluster()
             .initDB()
@@ -200,14 +200,14 @@ public class FDB {
         }
     }
 
-    public func begin() throws -> Transaction {
-        return try Transaction.begin(try self.getDB())
+    public func begin() throws -> FDB.Transaction {
+        return try FDB.Transaction.begin(try self.getDB())
     }
 
-    public func begin(eventLoop: EventLoop) -> EventLoopFuture<Transaction> {
+    public func begin(eventLoop: EventLoop) -> EventLoopFuture<FDB.Transaction> {
         do {
             return eventLoop.newSucceededFuture(
-                result: try Transaction.begin(
+                result: try FDB.Transaction.begin(
                     try self.getDB(),
                     eventLoop
                 )
@@ -234,7 +234,7 @@ public class FDB {
         return try self.begin().clear(begin: begin, end: end, commit: true)
     }
 
-    public func clear(range: RangeFDBKey) throws {
+    public func clear(range: FDB.RangeKey) throws {
         return try self.clear(begin: range.begin, end: range.end)
     }
 
@@ -263,7 +263,7 @@ public class FDB {
         iteration: Int32 = 1,
         snapshot: Int32 = 0,
         reverse: Bool = false
-    ) throws -> KeyValuesResult {
+    ) throws -> FDB.KeyValuesResult {
         return try self.begin().get(
             begin: begin,
             end: end,
@@ -282,7 +282,7 @@ public class FDB {
     }
 
     public func get(
-        range: RangeFDBKey,
+        range: FDB.RangeKey,
         beginEqual: Bool = false,
         beginOffset: Int32 = 1,
         endEqual: Bool = false,
@@ -293,7 +293,7 @@ public class FDB {
         iteration: Int32 = 1,
         snapshot: Int32 = 0,
         reverse: Bool = false
-    ) throws -> KeyValuesResult {
+    ) throws -> FDB.KeyValuesResult {
         return try self.get(
             begin: range.begin,
             end: range.end,
@@ -310,11 +310,11 @@ public class FDB {
         )
     }
 
-    public func atomic(_ op: MutationType, key: FDBKey, value: Bytes) throws {
+    public func atomic(_ op: FDB.MutationType, key: FDBKey, value: Bytes) throws {
         try self.begin().atomic(op, key: key, value: value, commit: true) as Void
     }
 
-    public func atomic<T: SignedInteger>(_ op: MutationType, key: FDBKey, value: T) throws {
+    public func atomic<T: SignedInteger>(_ op: FDB.MutationType, key: FDBKey, value: T) throws {
         try self.atomic(op, key: key, value: getBytes(value))
     }
 

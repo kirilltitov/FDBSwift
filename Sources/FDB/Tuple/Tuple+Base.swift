@@ -11,7 +11,7 @@
 // will be incorrect, but most importantly - unpacking will
 // fail with a fatal error.
 // Example of custom pack() implementation:
-// extension MyValue: TuplePackable {
+// extension MyValue: FDBTuplePackable {
 //     public func pack() -> Bytes {
 //         self
 //             .getBytesSomehow() // your method returns [UInt8]
@@ -19,12 +19,12 @@
 //                                // with tuple binary string magic :)
 //     }
 // }
-public protocol TuplePackable {
+public protocol FDBTuplePackable {
     func pack() -> Bytes
     func _pack() -> Bytes
 }
 
-public extension TuplePackable {
+public extension FDBTuplePackable {
     public func _pack() -> Bytes {
         return self.pack()
     }
@@ -40,49 +40,57 @@ internal let PREFIX_NEG_INT_START: Byte = 0x0b
 
 internal let NULL_ESCAPE_SEQUENCE: Bytes = [NULL, 0xFF]
 
-public struct Null: TuplePackable {
-    public func pack() -> Bytes {
-        return [NULL]
+public extension FDB {
+    public struct Null: FDBTuplePackable {
+        public func pack() -> Bytes {
+            return [NULL]
+        }
+    }
+    
+    public struct Tuple: FDBTuplePackable {
+        public private(set) var tuple: [FDBTuplePackable]
+        
+        public init(_ input: [FDBTuplePackable]) {
+            self.tuple = input
+        }
+        
+        public init(_ input: FDBTuplePackable...) {
+            self.init(input)
+        }
+        
+        public func pack() -> Bytes {
+            var result = Bytes()
+            self.tuple.forEach {
+                result.append(contentsOf: $0._pack())
+            }
+            return result
+        }
+        
+        public func _pack() -> Bytes {
+            var result = Bytes()
+            result.append(PREFIX_NESTED_TUPLE)
+            self.tuple.forEach {
+                if $0 is Null {
+                    result.append(contentsOf: NULL_ESCAPE_SEQUENCE)
+                } else {
+                    result.append(contentsOf: $0._pack())
+                }
+            }
+            result.append(NULL)
+            return result
+        }
     }
 }
 
-public struct Tuple: TuplePackable {
-    public private(set) var tuple: [TuplePackable]
-
-    public init(_ input: [TuplePackable]) {
-        self.tuple = input
-    }
-
-    public init(_ input: TuplePackable...) {
-        self.init(input)
-    }
-
-    public func pack() -> Bytes {
-        var result = Bytes()
-        self.tuple.forEach {
-            result.append(contentsOf: $0._pack())
-        }
-        return result
-    }
-
-    public func _pack() -> Bytes {
-        var result = Bytes()
-        result.append(PREFIX_NESTED_TUPLE)
-        self.tuple.forEach {
-            if $0 is Null {
-                result.append(contentsOf: NULL_ESCAPE_SEQUENCE)
-            } else {
-                result.append(contentsOf: $0._pack())
-            }
-        }
-        result.append(NULL)
-        return result
+extension FDB.Tuple: FDBKey {
+    public func asFDBKey() -> Bytes {
+        return self.pack()
     }
 }
 
 // I DON'T LIKE IT SO MUCH
-extension Tuple: Hashable {
-    public static func == (lhs: Tuple, rhs: Tuple) -> Bool {
+extension FDB.Tuple: Hashable {
+    public static func == (lhs: FDB.Tuple, rhs: FDB.Tuple) -> Bool {
         return lhs.pack() == rhs.pack()
     }
 

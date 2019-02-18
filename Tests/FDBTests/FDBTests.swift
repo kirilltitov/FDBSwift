@@ -4,7 +4,7 @@ import XCTest
 
 class FDBTests: XCTestCase {
     static var fdb: FDB!
-    static var subspace: Subspace!
+    static var subspace: FDB.Subspace!
 
     let eventLoop = EmbeddedEventLoop()
 
@@ -15,7 +15,7 @@ class FDBTests: XCTestCase {
     override class func setUp() {
         super.setUp()
         self.fdb = FDB()
-        self.subspace = Subspace("test \(Int.random(in: 0 ..< Int.max))")
+        self.subspace = FDB.Subspace("test \(Int.random(in: 0 ..< Int.max))")
     }
 
     override class func tearDown() {
@@ -42,7 +42,7 @@ class FDBTests: XCTestCase {
     }
 
     func testEmptyValue() throws {
-        XCTAssertNil(try FDBTests.fdb.get(key: FDBTests.subspace[Null()]), "Non-nil value returned")
+        XCTAssertNil(try FDBTests.fdb.get(key: FDBTests.subspace[FDB.Null()]), "Non-nil value returned")
     }
 
     func testSetGetBytes() throws {
@@ -66,14 +66,14 @@ class FDBTests: XCTestCase {
     func testGetRange() throws {
         let limit = 2
         let subspace = FDBTests.subspace["range"]
-        var values: [KeyValue] = []
+        var values: [FDB.KeyValue] = []
         for i in 0 ..< limit {
             let key = subspace["sub \(i)"].asFDBKey()
             let value = self.getRandomBytes()
-            values.append(KeyValue(key: key, value: value))
+            values.append(FDB.KeyValue(key: key, value: value))
             try FDBTests.fdb.set(key: key, value: value)
         }
-        let expected = KeyValuesResult(records: values, hasMore: false)
+        let expected = FDB.KeyValuesResult(records: values, hasMore: false)
         XCTAssertEqual(try FDBTests.fdb.get(subspace: subspace), expected)
         XCTAssertEqual(try FDBTests.fdb.get(range: subspace.range), expected)
         XCTAssertEqual(try FDBTests.fdb.get(begin: subspace.range.begin, end: subspace.range.end), expected)
@@ -126,11 +126,11 @@ class FDBTests: XCTestCase {
         XCTAssertEqual(error.unexpectedError.getDescription(), "Error is unexpected, it shouldn't really happen")
     }
 
-    func begin() throws -> EventLoopFuture<Transaction> {
+    func begin() throws -> EventLoopFuture<FDB.Transaction> {
         return FDBTests.fdb.begin(eventLoop: self.eventLoop)
     }
 
-    func genericTestCommit() throws -> Transaction {
+    func genericTestCommit() throws -> FDB.Transaction {
         let tr = try self.begin().wait()
         var ran = false
         let semaphore = self.semaphore
@@ -186,16 +186,16 @@ class FDBTests: XCTestCase {
         let tr = try self.begin().wait()
         let limit = 2
         let subspace = FDBTests.subspace["range"]
-        var values: [KeyValue] = []
+        var values: [FDB.KeyValue] = []
         for i in 0 ..< limit {
             let key = subspace["sub \(i)"].asFDBKey()
             let value = self.getRandomBytes()
-            values.append(KeyValue(key: key, value: value))
+            values.append(FDB.KeyValue(key: key, value: value))
             _ = try tr.set(key: key, value: value).wait()
         }
         let _: Void = try tr.commit().wait()
         let tr2 = try self.begin().wait()
-        let expected = KeyValuesResult(records: values, hasMore: false)
+        let expected = FDB.KeyValuesResult(records: values, hasMore: false)
         XCTAssertEqual(try tr2.get(range: subspace.range).wait(), expected)
         _ = tr2
             .get(begin: subspace.range.begin, end: subspace.range.end)

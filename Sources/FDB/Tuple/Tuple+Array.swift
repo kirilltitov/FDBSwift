@@ -12,7 +12,7 @@ internal func packBytes(_ bytes: Bytes) -> Bytes {
     return result
 }
 
-extension Array: TuplePackable where Element == Byte {
+extension Array: FDBTuplePackable where Element == Byte {
     public func pack() -> Bytes {
         return packBytes(self)
     }

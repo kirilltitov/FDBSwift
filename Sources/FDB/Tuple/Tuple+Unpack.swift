@@ -39,27 +39,27 @@ extension ArraySlice where Element == Byte {
     }
 }
 
-extension Tuple {
+extension FDB.Tuple {
     public init(from bytes: Bytes) {
-        var result: [TuplePackable] = []
+        var result: [FDBTuplePackable] = []
         var pos = 0
         let length = bytes.count
         while pos < length {
             let slice = Bytes(bytes[pos...])
-            let res = Tuple._unpack(slice)
+            let res = FDB.Tuple._unpack(slice)
             pos += res.1
             result.append(res.0)
         }
         self.init(result)
     }
-
-    internal static func _unpack(_ input: Bytes, _ pos: Int = 0) -> (TuplePackable, Int) {
+    
+    internal static func _unpack(_ input: Bytes, _ pos: Int = 0) -> (FDBTuplePackable, Int) {
         guard input.count > 0 else {
             fatalError("Input is empty")
         }
         let code = input[pos]
         if code == NULL {
-            return (Null(), pos + 1)
+            return (FDB.Null(), pos + 1)
         } else if code == PREFIX_BYTE_STRING {
             let end = findTerminator(input: input, pos: pos + 1)
             return (input[(pos + 1) ..< end].replaceEscapes(), end + 1)
@@ -83,25 +83,30 @@ extension Tuple {
             guard sizeLimits.count >= n else {
                 fatalError("Int too large to unpack")
             }
-            return (((Array<Byte>(repeating: 0x00, count: 8 - n) + input[begin ..< end]).reversed().cast() as Int) - sizeLimits[n], end)
+            return (
+                (
+                    (Array<Byte>(repeating: 0x00, count: 8 - n) + input[begin ..< end]).reversed().cast() as Int
+                    ) - sizeLimits[n],
+                end
+            )
         } else if code == PREFIX_NESTED_TUPLE {
-            var result: [TuplePackable] = []
+            var result: [FDBTuplePackable] = []
             var end = pos + 1
             while end < input.count {
                 if input[end] == 0x00 {
                     if end + 1 < input.count && input[end + 1] == 0xFF {
-                        result.append(Null())
+                        result.append(FDB.Null())
                         end += 2
                     } else {
                         break
                     }
                 } else {
-                    let _res = _unpack(input, end)
+                    let _res = FDB.Tuple._unpack(input, end)
                     result.append(_res.0)
                     end = _res.1
                 }
             }
-            return (Tuple(result), end + 1)
+            return (FDB.Tuple(result), end + 1)
         }
         fatalError("Unknown code '\(code)'")
     }
