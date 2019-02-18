@@ -37,7 +37,7 @@ public extension FDB {
     }
 }
 
-extension FDB.Subspace: FDBKey {
+extension FDB.Subspace: AnyFDBKey {
     public func asFDBKey() -> Bytes {
         return self.prefix
     }

@@ -82,7 +82,7 @@ public extension FDB {
     }
 }
 
-extension FDB.Tuple: FDBKey {
+extension FDB.Tuple: AnyFDBKey {
     public func asFDBKey() -> Bytes {
         return self.pack()
     }

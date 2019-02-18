@@ -222,15 +222,15 @@ public class FDB {
         self.debug("Connected")
     }
 
-    public func set(key: FDBKey, value: Bytes) throws {
+    public func set(key: AnyFDBKey, value: Bytes) throws {
         try self.begin().set(key: key, value: value, commit: true) as Void
     }
 
-    public func clear(key: FDBKey) throws {
+    public func clear(key: AnyFDBKey) throws {
         return try self.begin().clear(key: key, commit: true)
     }
 
-    public func clear(begin: FDBKey, end: FDBKey) throws {
+    public func clear(begin: AnyFDBKey, end: AnyFDBKey) throws {
         return try self.begin().clear(begin: begin, end: end, commit: true)
     }
 
@@ -242,7 +242,7 @@ public class FDB {
         return try self.clear(range: subspace.range)
     }
 
-    public func get(key: FDBKey, snapshot: Int32 = 0) throws -> Bytes? {
+    public func get(key: AnyFDBKey, snapshot: Int32 = 0) throws -> Bytes? {
         return try self.begin().get(key: key, snapshot: snapshot, commit: true)
     }
 
@@ -251,8 +251,8 @@ public class FDB {
     }
 
     public func get(
-        begin: FDBKey,
-        end: FDBKey,
+        begin: AnyFDBKey,
+        end: AnyFDBKey,
         beginEqual: Bool = false,
         beginOffset: Int32 = 1,
         endEqual: Bool = false,
@@ -310,15 +310,15 @@ public class FDB {
         )
     }
 
-    public func atomic(_ op: FDB.MutationType, key: FDBKey, value: Bytes) throws {
+    public func atomic(_ op: FDB.MutationType, key: AnyFDBKey, value: Bytes) throws {
         try self.begin().atomic(op, key: key, value: value, commit: true) as Void
     }
 
-    public func atomic<T: SignedInteger>(_ op: FDB.MutationType, key: FDBKey, value: T) throws {
+    public func atomic<T: SignedInteger>(_ op: FDB.MutationType, key: AnyFDBKey, value: T) throws {
         try self.atomic(op, key: key, value: getBytes(value))
     }
 
-    @discardableResult public func increment(key: FDBKey, value: Int64 = 1) throws -> Int64 {
+    @discardableResult public func increment(key: AnyFDBKey, value: Int64 = 1) throws -> Int64 {
         let transaction = try self.begin()
         try transaction.atomic(.add, key: key, value: getBytes(value), commit: false) as Void
         guard let bytes: Bytes = try transaction.get(key: key) else {
@@ -328,7 +328,7 @@ public class FDB {
         return bytes.cast()
     }
 
-    @discardableResult public func decrement(key: FDBKey, value: Int64 = 1) throws -> Int64 {
+    @discardableResult public func decrement(key: AnyFDBKey, value: Int64 = 1) throws -> Int64 {
         return try self.increment(key: key, value: -value)
     }
 }

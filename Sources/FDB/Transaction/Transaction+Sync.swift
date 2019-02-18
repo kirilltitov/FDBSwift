@@ -11,14 +11,14 @@ public extension FDB.Transaction {
         }
     }
 
-    public func set(key: FDBKey, value: Bytes, commit: Bool = false) throws {
+    public func set(key: AnyFDBKey, value: Bytes, commit: Bool = false) throws {
         self.set(key: key, value: value)
         if commit {
             try self.commitSync()
         }
     }
 
-    public func get(key: FDBKey, snapshot: Int32 = 0, commit: Bool = false) throws -> Bytes? {
+    public func get(key: AnyFDBKey, snapshot: Int32 = 0, commit: Bool = false) throws -> Bytes? {
         let result = try self.get(key: key, snapshot: snapshot).wait()
         if commit {
             try self.commitSync()
@@ -27,8 +27,8 @@ public extension FDB.Transaction {
     }
 
     public func get(
-        begin: FDBKey,
-        end: FDBKey,
+        begin: AnyFDBKey,
+        end: AnyFDBKey,
         beginEqual: Bool = false,
         beginOffset: Int32 = 1,
         endEqual: Bool = false,
@@ -95,14 +95,14 @@ public extension FDB.Transaction {
         return try future.wait()
     }
 
-    public func clear(key: FDBKey, commit: Bool = false) throws {
+    public func clear(key: AnyFDBKey, commit: Bool = false) throws {
         self.clear(key: key)
         if commit {
             try self.commitSync()
         }
     }
 
-    public func clear(begin: FDBKey, end: FDBKey, commit: Bool = false) throws {
+    public func clear(begin: AnyFDBKey, end: AnyFDBKey, commit: Bool = false) throws {
         self.clear(begin: begin, end: end)
         if commit {
             try self.commitSync()
@@ -113,14 +113,14 @@ public extension FDB.Transaction {
         try self.clear(begin: range.begin, end: range.end, commit: commit) as Void
     }
 
-    public func atomic(_ op: FDB.MutationType, key: FDBKey, value: Bytes, commit: Bool = false) throws {
+    public func atomic(_ op: FDB.MutationType, key: AnyFDBKey, value: Bytes, commit: Bool = false) throws {
         self.atomic(op, key: key, value: value)
         if commit {
             try self.commitSync()
         }
     }
 
-    public func atomic<T>(_ op: FDB.MutationType, key: FDBKey, value: T, commit: Bool = false) throws {
+    public func atomic<T>(_ op: FDB.MutationType, key: AnyFDBKey, value: T, commit: Bool = false) throws {
         self.atomic(op, key: key, value: getBytes(value))
         if commit {
             try self.commitSync()

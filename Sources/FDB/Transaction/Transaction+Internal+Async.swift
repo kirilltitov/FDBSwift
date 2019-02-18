@@ -5,19 +5,19 @@ internal extension FDB.Transaction {
         return fdb_transaction_commit(self.DBPointer).asFuture()
     }
 
-    internal func set(key: FDBKey, value: Bytes) {
+    internal func set(key: AnyFDBKey, value: Bytes) {
         let keyBytes = key.asFDBKey()
         fdb_transaction_set(self.DBPointer, keyBytes, keyBytes.length, value, value.length)
     }
 
-    internal func get(key: FDBKey, snapshot: Int32 = 0) -> Future<Bytes?> {
+    internal func get(key: AnyFDBKey, snapshot: Int32 = 0) -> Future<Bytes?> {
         let keyBytes = key.asFDBKey()
         return fdb_transaction_get(self.DBPointer, keyBytes, keyBytes.length, snapshot).asFuture()
     }
 
     internal func get(
-        begin: FDBKey,
-        end: FDBKey,
+        begin: AnyFDBKey,
+        end: AnyFDBKey,
         beginEqual: Bool = false,
         beginOffset: Int32 = 1,
         endEqual: Bool = false,

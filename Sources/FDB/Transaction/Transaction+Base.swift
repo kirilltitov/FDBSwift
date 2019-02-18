@@ -29,12 +29,12 @@ public extension FDB {
             fdb_transaction_reset(self.DBPointer)
         }
         
-        public func clear(key: FDBKey) {
+        public func clear(key: AnyFDBKey) {
             let keyBytes = key.asFDBKey()
             fdb_transaction_clear(self.DBPointer, keyBytes, keyBytes.length)
         }
         
-        public func clear(begin: FDBKey, end: FDBKey) {
+        public func clear(begin: AnyFDBKey, end: AnyFDBKey) {
             let beginBytes = begin.asFDBKey()
             let endBytes = end.asFDBKey()
             fdb_transaction_clear_range(self.DBPointer, beginBytes, beginBytes.length, endBytes, endBytes.length)
@@ -44,7 +44,7 @@ public extension FDB {
             self.clear(begin: range.begin, end: range.end)
         }
         
-        public func atomic(_ op: FDB.MutationType, key: FDBKey, value: Bytes) {
+        public func atomic(_ op: FDB.MutationType, key: AnyFDBKey, value: Bytes) {
             let keyBytes = key.asFDBKey()
             fdb_transaction_atomic_op(
                 self.DBPointer,

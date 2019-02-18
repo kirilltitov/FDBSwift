@@ -34,7 +34,7 @@ public extension FDB.Transaction {
         }
     }
 
-    public func set(key: FDBKey, value: Bytes, commit: Bool = false) -> EventLoopFuture<FDB.Transaction> {
+    public func set(key: AnyFDBKey, value: Bytes, commit: Bool = false) -> EventLoopFuture<FDB.Transaction> {
         guard let eventLoop = self.eventLoop else {
             return FDB.dummyEventLoop.newFailedFuture(error: FDB.Error.noEventLoopProvided)
         }
@@ -49,7 +49,7 @@ public extension FDB.Transaction {
     }
 
     public func get(
-        key: FDBKey,
+        key: AnyFDBKey,
         snapshot: Int32 = 0,
         commit: Bool = false
     ) -> EventLoopFuture<(Bytes?, FDB.Transaction)> {
@@ -77,8 +77,8 @@ public extension FDB.Transaction {
     }
 
     public func get(
-        begin: FDBKey,
-        end: FDBKey,
+        begin: AnyFDBKey,
+        end: AnyFDBKey,
         beginEqual: Bool = false,
         beginOffset: Int32 = 1,
         endEqual: Bool = false,
@@ -171,13 +171,13 @@ public extension FDB.Transaction {
         return future
     }
 
-    public func clear(key: FDBKey, commit: Bool = false) -> EventLoopFuture<FDB.Transaction> {
+    public func clear(key: AnyFDBKey, commit: Bool = false) -> EventLoopFuture<FDB.Transaction> {
         return self.genericAction(commit: commit) {
             self.clear(key: key)
         }
     }
 
-    public func clear(begin: FDBKey, end: FDBKey, commit: Bool = false) -> EventLoopFuture<FDB.Transaction> {
+    public func clear(begin: AnyFDBKey, end: AnyFDBKey, commit: Bool = false) -> EventLoopFuture<FDB.Transaction> {
         return self.genericAction(commit: commit) {
             self.clear(begin: begin, end: end)
         }
@@ -191,7 +191,7 @@ public extension FDB.Transaction {
 
     public func atomic(
         _ op: FDB.MutationType,
-        key: FDBKey,
+        key: AnyFDBKey,
         value: Bytes,
         commit: Bool = false
     ) -> EventLoopFuture<FDB.Transaction> {
@@ -202,7 +202,7 @@ public extension FDB.Transaction {
 
     public func atomic<T>(
         _ op: FDB.MutationType,
-        key: FDBKey,
+        key: AnyFDBKey,
         value: T,
         commit: Bool = false
     ) -> EventLoopFuture<FDB.Transaction> {
