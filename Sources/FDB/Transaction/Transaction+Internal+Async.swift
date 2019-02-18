@@ -2,17 +2,17 @@ import CFDB
 
 internal extension FDB.Transaction {
     internal func commit() throws -> Future<Void> {
-        return fdb_transaction_commit(self.DBPointer).asFuture()
+        return fdb_transaction_commit(self.pointer).asFuture()
     }
 
     internal func set(key: AnyFDBKey, value: Bytes) {
         let keyBytes = key.asFDBKey()
-        fdb_transaction_set(self.DBPointer, keyBytes, keyBytes.length, value, value.length)
+        fdb_transaction_set(self.pointer, keyBytes, keyBytes.length, value, value.length)
     }
 
     internal func get(key: AnyFDBKey, snapshot: Int32 = 0) -> Future<Bytes?> {
         let keyBytes = key.asFDBKey()
-        return fdb_transaction_get(self.DBPointer, keyBytes, keyBytes.length, snapshot).asFuture()
+        return fdb_transaction_get(self.pointer, keyBytes, keyBytes.length, snapshot).asFuture()
     }
 
     internal func get(
@@ -32,7 +32,7 @@ internal extension FDB.Transaction {
         let beginBytes = begin.asFDBKey()
         let endBytes = end.asFDBKey()
         return fdb_transaction_get_range(
-            self.DBPointer,
+            self.pointer,
             beginBytes,
             beginBytes.length,
             beginEqual.int,
