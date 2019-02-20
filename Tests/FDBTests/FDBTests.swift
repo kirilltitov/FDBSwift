@@ -248,6 +248,19 @@ class FDBTests: XCTestCase {
         semaphore.wait()
     }
 
+    func testTransactionOptions() throws {
+        let tr = try self.begin().wait()
+        let key = FDBTests.subspace["troptions"]
+        XCTAssertNoThrow(try tr.setDebugRetryLogging(transactionName: "testtransactionname").wait())
+        XCTAssertNoThrow(try tr.enableLogging(identifier: "identifier").wait())
+        XCTAssertNoThrow(try tr.setTimeout(1000).wait())
+        XCTAssertNoThrow(try tr.setRetryLimit(5).wait())
+        XCTAssertNoThrow(try tr.setMaxRetryDelay(1000).wait())
+        XCTAssertNoThrow(try tr.set(key: key, value: Bytes([1,2,3])).wait())
+        XCTAssertEqual(Bytes([1,2,3]), try tr.get(key: key).wait())
+        try tr.commit().wait()
+    }
+
     static var allTests = [
         ("testEmptyValue", testEmptyValue),
         ("testSetGetBytes", testSetGetBytes),
@@ -264,5 +277,6 @@ class FDBTests: XCTestCase {
         ("testNIOGetRange", testNIOGetRange),
         ("testNIOAtomicAdd", testNIOAtomicAdd),
         ("testNIOClear", testNIOClear),
+        ("testTransactionOptions", testTransactionOptions),
     ]
 }
