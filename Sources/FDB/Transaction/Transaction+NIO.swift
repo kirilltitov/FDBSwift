@@ -20,7 +20,7 @@ public extension FDB.Transaction {
                 return eventLoop.newSucceededFuture(result: ())
             }
             let retryPromise: EventLoopPromise<Void> = eventLoop.newPromise()
-            let retryFuture: Future<Void> = fdb_transaction_on_error(self.DBPointer, commitError).asFuture()
+            let retryFuture: Future<Void> = fdb_transaction_on_error(self.pointer, commitError).asFuture()
             do {
                 try retryFuture.whenReady { _retryFuture in
                     try fdb_future_get_error(_retryFuture.pointer).orThrow()
@@ -157,12 +157,20 @@ public extension FDB.Transaction {
         )
     }
 
-    fileprivate func genericAction(commit: Bool, _ closure: () -> Void) -> EventLoopFuture<FDB.Transaction> {
+    fileprivate func genericAction(
+        commit: Bool,
+        _ closure: () throws -> Void
+    ) -> EventLoopFuture<FDB.Transaction> {
         guard let eventLoop = self.eventLoop else {
             return FDB.dummyEventLoop.newFailedFuture(error: FDB.Error.noEventLoopProvided)
         }
-        let future = eventLoop.newSucceededFuture(result: self)
-        closure()
+        let future: EventLoopFuture<FDB.Transaction>
+        do {
+            try closure()
+            future = eventLoop.newSucceededFuture(result: self)
+        } catch {
+            return eventLoop.newFailedFuture(error: error)
+        }
         if commit {
             return future.then { _ in
                 self.commit()
@@ -208,6 +216,46 @@ public extension FDB.Transaction {
     ) -> EventLoopFuture<FDB.Transaction> {
         return self.genericAction(commit: commit) {
             self.atomic(op, key: key, value: getBytes(value))
+        }
+    }
+    
+    public func setOption(
+        _ option: FDB.Transaction.Option,
+        param: UnsafePointer<Byte>? = nil,
+        paramLength: Int32 = 0
+    ) -> EventLoopFuture<FDB.Transaction> {
+        return self.genericAction(commit: false) {
+            try self.setOption(option, param: param, paramLength: paramLength)
+        }
+    }
+
+    public func setDebugRetryLogging(transactionName: StaticString) -> EventLoopFuture<FDB.Transaction> {
+        return self.genericAction(commit: false) {
+            try self.setDebugRetryLogging(transactionName: transactionName)
+        }
+    }
+
+    public func enableLogging(identifier: StaticString) -> EventLoopFuture<FDB.Transaction> {
+        return self.genericAction(commit: false) {
+            try self.enableLogging(identifier: identifier)
+        }
+    }
+
+    public func setTimeout(_ timeout: Int64) -> EventLoopFuture<FDB.Transaction> {
+        return self.genericAction(commit: false) {
+            try self.setTimeout(timeout)
+        }
+    }
+    
+    public func setRetryLimit(_ retries: Int64) -> EventLoopFuture<FDB.Transaction> {
+        return self.genericAction(commit: false) {
+            try self.setRetryLimit(retries)
+        }
+    }
+    
+    public func setMaxRetryDelay(_ delay: Int64) -> EventLoopFuture<FDB.Transaction> {
+        return self.genericAction(commit: false) {
+            try self.setRetryLimit(delay)
         }
     }
 }
