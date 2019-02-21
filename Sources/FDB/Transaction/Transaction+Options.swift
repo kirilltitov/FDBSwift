@@ -29,44 +29,57 @@ public extension FDB.Transaction {
         case readAheadDisable            = 52  // FDB_TR_OPTION_READ_AHEAD_DISABLE
         case durabilityDevNullIsWebScale = 130 // FDB_TR_OPTION_DURABILITY_DEV_NULL_IS_WEB_SCALE
     }
+    
+    internal func setOption(
+        _ option: FDB.Transaction.Option,
+        param: UnsafePointer<Byte>? = nil,
+        paramLength: Int32 = 0
+    ) throws -> FDB.Transaction {
+        try fdb_transaction_set_option(
+            self.pointer,
+            FDBTransactionOption(option.rawValue),
+            param,
+            paramLength
+        ).orThrow()
+        return self
+    }
+    
+    public func setOption(
+        _ option: FDB.Transaction.Option,
+        param bytes: Bytes
+    ) throws -> FDB.Transaction {
+        return try self.setOption(
+            option,
+            param: UnsafePointer<UInt8>(bytes),
+            paramLength: Int32(bytes.count)
+        )
+    }
+    
+    public func setOption(_ option: FDB.Transaction.Option, param string: String) throws -> FDB.Transaction {
+        return try self.setOption(option, param: string.bytes)
+    }
+    
+    public func setOption(_ option: FDB.Transaction.Option, param int: Int64) throws -> FDB.Transaction {
+        return try self.setOption(option, param: getBytes(int))
+    }
 
-    public func setDebugRetryLogging(transactionName: StaticString) throws -> Void {
-        return try self.setOption(
-            .debugRetryLogging,
-            param: transactionName.utf8Start,
-            paramLength: Int32(transactionName.utf8CodeUnitCount)
-        )
+    public func setDebugRetryLogging(transactionName: String) throws -> FDB.Transaction {
+        return try self.setOption(.debugRetryLogging, param: transactionName)
     }
     
-    public func enableLogging(identifier: StaticString) throws -> Void {
-        return try self.setOption(
-            .transactionLoggingEnable,
-            param: identifier.utf8Start,
-            paramLength: Int32(identifier.utf8CodeUnitCount)
-        )
+    public func enableLogging(identifier: String) throws -> FDB.Transaction {
+        return try self.setOption(.transactionLoggingEnable, param: identifier)
     }
     
-    public func setTimeout(_ timeout: Int64) throws -> Void {
-        return try self.setOption(
-            .timeout,
-            param: getBytes(timeout.littleEndian),
-            paramLength: 8
-        )
+    public func setTimeout(_ timeout: Int64) throws -> FDB.Transaction {
+        return try self.setOption(.timeout, param: timeout)
     }
     
-    public func setRetryLimit(_ retries: Int64) throws -> Void {
-        return try self.setOption(
-            .retryLimit,
-            param: getBytes(retries.littleEndian),
-            paramLength: 8
-        )
+    public func setRetryLimit(_ retries: Int64) throws -> FDB.Transaction {
+        return try self.setOption(.retryLimit, param: retries)
     }
     
-    public func setMaxRetryDelay(_ delay: Int64) throws -> Void {
-        return try self.setOption(
-            .maxRetryDelay,
-            param: getBytes(delay.littleEndian),
-            paramLength: 8
-        )
+    public func setMaxRetryDelay(_ delay: Int64) throws -> FDB.Transaction {
+        return try self.setOption(.maxRetryDelay, param: delay)
     }
 }

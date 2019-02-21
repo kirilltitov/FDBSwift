@@ -260,6 +260,13 @@ class FDBTests: XCTestCase {
         XCTAssertEqual(Bytes([1,2,3]), try tr.get(key: key).wait())
         try tr.commit().wait()
     }
+    
+    func testNetworkOptions() throws {
+        XCTAssertThrowsError(try FDBTests.fdb.setTLSCert(path: "/tmp/invalidname"))
+        XCTAssertThrowsError(try FDBTests.fdb.setTLSCA(bytes: Bytes([1,2,3])))
+        XCTAssertNoThrow(try FDBTests.fdb.disableBuggify())
+        XCTAssertNoThrow(try FDBTests.fdb.setBuggifyActivated(probability: 0))
+    }
 
     static var allTests = [
         ("testEmptyValue", testEmptyValue),
@@ -278,5 +285,6 @@ class FDBTests: XCTestCase {
         ("testNIOAtomicAdd", testNIOAtomicAdd),
         ("testNIOClear", testNIOClear),
         ("testTransactionOptions", testTransactionOptions),
+        ("testNetworkOptions", testNetworkOptions),
     ]
 }

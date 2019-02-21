@@ -21,19 +21,6 @@ public extension FDB {
             return FDB.Transaction(ptr, eventLoop)
         }
         
-        public func setOption(
-            _ option: FDB.Transaction.Option,
-            param: UnsafePointer<Byte>? = nil,
-            paramLength: Int32 = 0
-        ) throws -> Void {
-            try fdb_transaction_set_option(
-                self.pointer,
-                FDBTransactionOption(option.rawValue),
-                param,
-                paramLength
-            ).orThrow()
-        }
-        
         public func cancel() {
             fdb_transaction_cancel(self.pointer)
         }

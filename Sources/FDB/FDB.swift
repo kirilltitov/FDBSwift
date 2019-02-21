@@ -62,6 +62,8 @@ public class FDB {
         }
         self.networkStopTimeout = networkStopTimeout
         self.version = version
+        
+        self.selectAPIVersion()
     }
 
     deinit {
@@ -88,10 +90,9 @@ public class FDB {
         self.isConnected = false
     }
 
-    private func selectAPIVersion() throws -> FDB {
+    private func selectAPIVersion() {
         self.debug("API version is \(self.version)")
-        try fdb_select_api_version_impl(self.version, FDB_API_VERSION).orThrow()
-        return self
+        fdb_select_api_version_impl(self.version, FDB_API_VERSION).orDie()
     }
 
     private func initNetwork() throws -> FDB {
@@ -175,7 +176,6 @@ public class FDB {
             return db
         }
         _ = try self
-            .selectAPIVersion()
             .initNetwork()
             .initCluster()
             .initDB()
