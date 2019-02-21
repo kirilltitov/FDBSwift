@@ -225,37 +225,55 @@ public extension FDB.Transaction {
         paramLength: Int32 = 0
     ) -> EventLoopFuture<FDB.Transaction> {
         return self.genericAction(commit: false) {
-            try self.setOption(option, param: param, paramLength: paramLength)
+            let _: FDB.Transaction = try self.setOption(option, param: param, paramLength: paramLength)
+        }
+    }
+    
+    public func setOption(
+        _ option: FDB.Transaction.Option,
+        param: String
+    ) -> EventLoopFuture<FDB.Transaction> {
+        return self.genericAction(commit: false) {
+            let _: FDB.Transaction = try self.setOption(option, param: param)
+        }
+    }
+    
+    public func setOption(
+        _ option: FDB.Transaction.Option,
+        param: Int64
+    ) -> EventLoopFuture<FDB.Transaction> {
+        return self.genericAction(commit: false) {
+            let _: FDB.Transaction = try self.setOption(option, param: param)
         }
     }
 
-    public func setDebugRetryLogging(transactionName: StaticString) -> EventLoopFuture<FDB.Transaction> {
+    public func setDebugRetryLogging(transactionName: String) -> EventLoopFuture<FDB.Transaction> {
         return self.genericAction(commit: false) {
-            try self.setDebugRetryLogging(transactionName: transactionName)
+            let _: FDB.Transaction = try self.setDebugRetryLogging(transactionName: transactionName)
         }
     }
 
-    public func enableLogging(identifier: StaticString) -> EventLoopFuture<FDB.Transaction> {
+    public func enableLogging(identifier: String) -> EventLoopFuture<FDB.Transaction> {
         return self.genericAction(commit: false) {
-            try self.enableLogging(identifier: identifier)
+            let _: FDB.Transaction = try self.enableLogging(identifier: identifier)
         }
     }
 
     public func setTimeout(_ timeout: Int64) -> EventLoopFuture<FDB.Transaction> {
         return self.genericAction(commit: false) {
-            try self.setTimeout(timeout)
+            let _: FDB.Transaction = try self.setTimeout(timeout)
         }
     }
     
     public func setRetryLimit(_ retries: Int64) -> EventLoopFuture<FDB.Transaction> {
         return self.genericAction(commit: false) {
-            try self.setRetryLimit(retries)
+            let _: FDB.Transaction = try self.setRetryLimit(retries)
         }
     }
     
     public func setMaxRetryDelay(_ delay: Int64) -> EventLoopFuture<FDB.Transaction> {
         return self.genericAction(commit: false) {
-            try self.setRetryLimit(delay)
+            let _: FDB.Transaction = try self.setRetryLimit(delay)
         }
     }
 }
