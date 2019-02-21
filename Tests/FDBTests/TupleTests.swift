@@ -111,7 +111,7 @@ class TupleTests: XCTestCase {
         XCTAssertEqual(FDB.Tuple(-1, 0, 5, FDB.Tuple("foo"), FDB.Null()).pack(), expected)
     }
 
-    func testUnpack() {
+    func testUnpack() throws {
         var input: [FDBTuplePackable] = [
             Bytes([0, 1, 2]),
             322,
@@ -129,15 +129,25 @@ class TupleTests: XCTestCase {
         #endif
         let etalonTuple = FDB.Tuple(input)
         let packed = etalonTuple.pack()
-        let repacked = FDB.Tuple(from: packed).pack()
+        let repacked = try FDB.Tuple(from: packed).pack()
         XCTAssertEqual(packed, repacked)
     }
 
     // Fixes https://github.com/kirilltitov/FDBSwift/issues/10
-    func testNullEscapes() {
+    func testNullEscapes() throws {
         let packed = Bytes([0, 0, 0,]).pack()
-        let repacked = FDB.Tuple(from: packed).pack()
+        let repacked = try FDB.Tuple(from: packed).pack()
         XCTAssertEqual(packed, repacked)
+    }
+    
+    func testUnpackSanity() {
+        for _ in 1...10000 {
+            do {
+                let _ = try FDB.Tuple(
+                    from: (1...UInt8.random(in: 10..<UInt8.max)).map { _ in UInt8.random(in: 0..<UInt8.max) }
+                )
+            } catch {}
+        }
     }
 
     static var allTests = [
@@ -148,5 +158,6 @@ class TupleTests: XCTestCase {
         ("testUnofficialCases", testUnofficialCases),
         ("testUnpack", testUnpack),
         ("testNullEscapes", testNullEscapes),
+        ("testUnpackSanity", testUnpackSanity),
     ]
 }

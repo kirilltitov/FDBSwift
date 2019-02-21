@@ -87,6 +87,11 @@ public extension FDB {
         case unexpectedError = 9000
         case noEventLoopProvided = 9500
         case connectionError = 9600
+        case unpackEmptyInput = 9701
+        case unpackTooLargeInt = 9702
+        case unpackUnknownCode = 9703
+        case unpackInvalidBoundaries = 9704
+        case unpackInvalidString = 9705
 
         public static func from(errno: FDB.Errno) -> Error {
             guard let error = FDB.Error(rawValue: errno) else {

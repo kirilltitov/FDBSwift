@@ -42,7 +42,7 @@ public class FDB {
 
     private var isConnected = false
 
-    public var verbose = false
+    public static var verbose = false
 
     private let semaphore = DispatchSemaphore(value: 0)
 
@@ -183,11 +183,15 @@ public class FDB {
         self.isConnected = true
         return try self.getDB()
     }
+    
+    internal static func debug(_ message: String) {
+        if self.verbose {
+            print(message)
+        }
+    }
 
     internal func debug(_ message: String) {
-        if self.verbose {
-            print("[FDB \(ObjectIdentifier(self))] \(message)")
-        }
+        FDB.debug("[FDB \(ObjectIdentifier(self))] \(message)")
     }
 
     public func begin() throws -> FDB.Transaction {
