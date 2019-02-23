@@ -33,7 +33,12 @@ public extension FDB {
         param: UnsafePointer<Byte>! = nil,
         paramLength: Int32 = 0
     ) throws -> FDB {
+        if param == nil {
+            self.debug("Trying to set network option \(option) (no params)")
+        }
+
         try fdb_network_set_option(FDBNetworkOption(option.rawValue), param, paramLength).orThrow()
+
         return self
     }
 
@@ -44,6 +49,8 @@ public extension FDB {
     /// - Parameter param: Option value
     /// - Returns: FDB.self
     @discardableResult public func setOption(_ option: FDB.NetworkOption, param int: Int64) throws -> FDB {
+        self.debug("Trying to set network option \(option) with int param \(int)")
+
         return try self.setOption(option, param: getBytes(int))
     }
     
@@ -54,6 +61,8 @@ public extension FDB {
     /// - Parameter param: Option value
     /// - Returns: FDB.self
     @discardableResult public func setOption(_ option: FDB.NetworkOption, param bytes: Bytes) throws -> FDB {
+        self.debug("Trying to set network option \(option) with bytes param \(bytes)")
+
         return try self.setOption(
             option,
             param: UnsafePointer<UInt8>(bytes),
@@ -68,6 +77,8 @@ public extension FDB {
     /// - Parameter param: Option value
     /// - Returns: FDB.self
     @discardableResult public func setOption(_ option: FDB.NetworkOption, param string: String) throws -> FDB {
+        self.debug("Trying to set network option \(option) with string param \(string)")
+
         return try self.setOption(option, param: string.bytes)
     }
 

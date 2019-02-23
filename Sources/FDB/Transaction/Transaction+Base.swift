@@ -9,15 +9,30 @@ public extension FDB {
         internal init(_ DBPointer: OpaquePointer, _ eventLoop: EventLoop? = nil) {
             self.pointer = DBPointer
             self.eventLoop = eventLoop
+
+            let debugInfoSuffix: String
+            if let el = eventLoop {
+                debugInfoSuffix = "on \(Swift.type(of: el))"
+            } else {
+                debugInfoSuffix = "without event loop"
+            }
+
+            self.debug("Started transaction \(debugInfoSuffix)")
         }
         
         deinit {
             fdb_transaction_destroy(self.pointer)
         }
+
+        internal func debug(_ message: String) {
+            FDB.debug("[Transaction] [\(ObjectIdentifier(self).hashValue)] \(message)")
+        }
         
-        public class func begin(_ db: FDB.Database, _ eventLoop: EventLoop? = nil) throws -> FDB.Transaction {
+        internal class func begin(_ db: FDB.Database, _ eventLoop: EventLoop? = nil) throws -> FDB.Transaction {
             var ptr: OpaquePointer!
+
             try fdb_database_create_transaction(db, &ptr).orThrow()
+
             return FDB.Transaction(ptr, eventLoop)
         }
         

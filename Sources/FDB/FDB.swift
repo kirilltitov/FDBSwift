@@ -34,7 +34,7 @@ public class FDB {
 
     internal static let dummyEventLoop = EmbeddedEventLoop()
 
-    private let version: Int32
+    private let version: Int32 = FDB_API_VERSION
     private let networkStopTimeout: Int
     private let clusterFile: String
     private var cluster: FDB.Cluster?
@@ -48,8 +48,7 @@ public class FDB {
 
     public init(
         cluster: String? = nil,
-        networkStopTimeout: Int = 10,
-        version: Int32 = FDB_API_VERSION
+        networkStopTimeout: Int = 10
     ) {
         if let cluster = cluster {
             self.clusterFile = cluster
@@ -61,8 +60,10 @@ public class FDB {
             #endif
         }
         self.networkStopTimeout = networkStopTimeout
-        self.version = version
-        
+
+        self.debug("Using cluster file '\(self.clusterFile)'")
+        self.debug("Network stop timeout is \(self.networkStopTimeout) seconds")
+
         self.selectAPIVersion()
     }
 
@@ -91,8 +92,8 @@ public class FDB {
     }
 
     private func selectAPIVersion() {
-        self.debug("API version is \(self.version)")
         fdb_select_api_version_impl(self.version, FDB_API_VERSION).orDie()
+        self.debug("API version is \(self.version)")
     }
 
     private func initNetwork() throws -> FDB {
@@ -131,6 +132,8 @@ public class FDB {
             ptr
         )
 
+        self.debug("Thread started")
+
         return self
     }
 
@@ -154,9 +157,11 @@ public class FDB {
 
     private func checkIsAlive() throws -> FDB {
         guard let statusBytes = try self.get(key: [0xFF, 0xFF] + "/status/json".bytes) else {
+            self.debug("Could not get system status key")
             throw FDB.Error.connectionError
         }
         guard let json = try JSONSerialization.jsonObject(with: Data(statusBytes)) as? [String: Any] else {
+            self.debug("Could not parse JSON from system status: \(statusBytes)")
             throw FDB.Error.connectionError
         }
         guard
@@ -165,6 +170,7 @@ public class FDB {
             let available = dbStatus["available"],
             available == true
         else {
+            self.debug("DB is not available according to system status info: \(json)")
             throw FDB.Error.connectionError
         }
         self.debug("Client is healthy")
@@ -181,25 +187,32 @@ public class FDB {
             .initDB()
             .checkIsAlive()
         self.isConnected = true
+
+        self.debug("Successfully connected to FoundationDB, DB is healthy")
+
         return try self.getDB()
     }
     
     internal static func debug(_ message: String) {
         if self.verbose {
-            print(message)
+            print("[FDB] \(message)")
         }
     }
 
     internal func debug(_ message: String) {
-        FDB.debug("[FDB \(ObjectIdentifier(self))] \(message)")
+        FDB.debug("[\(ObjectIdentifier(self).hashValue)] \(message)")
     }
 
     public func begin() throws -> FDB.Transaction {
+        self.debug("Trying to start transaction without eventloop")
+
         return try FDB.Transaction.begin(try self.getDB())
     }
 
     public func begin(eventLoop: EventLoop) -> EventLoopFuture<FDB.Transaction> {
         do {
+            self.debug("Trying to start transaction with eventloop \(Swift.type(of: eventLoop))")
+
             return eventLoop.newSucceededFuture(
                 result: try FDB.Transaction.begin(
                     try self.getDB(),
@@ -207,6 +220,7 @@ public class FDB {
                 )
             )
         } catch {
+            self.debug("Failed to start transaction with eventloop \(Swift.type(of: eventLoop)): \(error)")
             return FDB.dummyEventLoop.newFailedFuture(error: error)
         }
     }

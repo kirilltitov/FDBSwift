@@ -14,6 +14,7 @@ class FDBTests: XCTestCase {
 
     override class func setUp() {
         super.setUp()
+        FDB.verbose = true
         self.fdb = FDB()
         self.subspace = FDB.Subspace("test \(Int.random(in: 0 ..< Int.max))")
     }
