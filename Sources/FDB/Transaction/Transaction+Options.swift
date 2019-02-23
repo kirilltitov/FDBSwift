@@ -41,6 +41,7 @@ public extension FDB.Transaction {
             param,
             paramLength
         ).orThrow()
+
         return self
     }
     
@@ -48,6 +49,8 @@ public extension FDB.Transaction {
         _ option: FDB.Transaction.Option,
         param bytes: Bytes
     ) throws -> FDB.Transaction {
+        self.debug("Trying to set option \(option) with bytes param \(bytes)")
+
         return try self.setOption(
             option,
             param: UnsafePointer<UInt8>(bytes),
@@ -56,10 +59,14 @@ public extension FDB.Transaction {
     }
     
     public func setOption(_ option: FDB.Transaction.Option, param string: String) throws -> FDB.Transaction {
+        self.debug("Trying to set option \(option) with string param \(string)")
+
         return try self.setOption(option, param: string.bytes)
     }
     
     public func setOption(_ option: FDB.Transaction.Option, param int: Int64) throws -> FDB.Transaction {
+        self.debug("Trying to set option \(option) with int param \(int)")
+
         return try self.setOption(option, param: getBytes(int))
     }
 

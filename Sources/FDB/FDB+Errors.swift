@@ -95,7 +95,7 @@ public extension FDB {
 
         public static func from(errno: FDB.Errno) -> Error {
             guard let error = FDB.Error(rawValue: errno) else {
-                print("Unexpected error \(errno)")
+                FDB.debug("Unexpected error \(errno)")
                 return FDB.Error.unexpectedError
             }
             return error

@@ -4,6 +4,7 @@ import NIO
 public extension FDB.Transaction {
     public func commit() -> EventLoopFuture<Void> {
         guard let eventLoop = self.eventLoop else {
+            self.debug("[commit] No event loop")
             return FDB.dummyEventLoop.newFailedFuture(error: FDB.Error.noEventLoopProvided)
         }
         let promise: EventLoopPromise<Future<Void>> = eventLoop.newPromise()
@@ -19,6 +20,7 @@ public extension FDB.Transaction {
             if commitError == 0 {
                 return eventLoop.newSucceededFuture(result: ())
             }
+            self.debug("Retrying transaction (commit error \(commitError)")
             let retryPromise: EventLoopPromise<Void> = eventLoop.newPromise()
             let retryFuture: Future<Void> = fdb_transaction_on_error(self.pointer, commitError).asFuture()
             do {
@@ -36,6 +38,7 @@ public extension FDB.Transaction {
 
     public func set(key: AnyFDBKey, value: Bytes, commit: Bool = false) -> EventLoopFuture<FDB.Transaction> {
         guard let eventLoop = self.eventLoop else {
+            self.debug("[set] No event loop")
             return FDB.dummyEventLoop.newFailedFuture(error: FDB.Error.noEventLoopProvided)
         }
         self.set(key: key, value: value)
@@ -54,6 +57,7 @@ public extension FDB.Transaction {
         commit: Bool = false
     ) -> EventLoopFuture<(Bytes?, FDB.Transaction)> {
         guard let eventLoop = self.eventLoop else {
+            self.debug("[get] No event loop")
             return FDB.dummyEventLoop.newFailedFuture(error: FDB.Error.noEventLoopProvided)
         }
         let promise: EventLoopPromise<(Bytes?, FDB.Transaction)> = eventLoop.newPromise()
@@ -92,6 +96,7 @@ public extension FDB.Transaction {
         commit: Bool = false
     ) -> EventLoopFuture<(FDB.KeyValuesResult, FDB.Transaction)> {
         guard let eventLoop = self.eventLoop else {
+            self.debug("[get range] No event loop")
             return FDB.dummyEventLoop.newFailedFuture(error: FDB.Error.noEventLoopProvided)
         }
         let promise: EventLoopPromise<(FDB.KeyValuesResult, FDB.Transaction)> = eventLoop.newPromise()
@@ -162,6 +167,7 @@ public extension FDB.Transaction {
         _ closure: () throws -> Void
     ) -> EventLoopFuture<FDB.Transaction> {
         guard let eventLoop = self.eventLoop else {
+            self.debug("[generic action] No event loop")
             return FDB.dummyEventLoop.newFailedFuture(error: FDB.Error.noEventLoopProvided)
         }
         let future: EventLoopFuture<FDB.Transaction>

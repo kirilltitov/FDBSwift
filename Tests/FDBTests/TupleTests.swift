@@ -2,6 +2,10 @@
 import XCTest
 
 class TupleTests: XCTestCase {
+    override func setUp() {
+        FDB.verbose = false
+    }
+
     func testPackUnicodeString() {
         var expected = Bytes()
         expected.append(0x02)
