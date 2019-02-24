@@ -252,21 +252,21 @@ class FDBTests: XCTestCase {
     func testTransactionOptions() throws {
         let tr = try self.begin().wait()
         let key = FDBTests.subspace["troptions"]
-        XCTAssertNoThrow(try tr.setDebugRetryLogging(transactionName: "testtransactionname").wait())
-        XCTAssertNoThrow(try tr.enableLogging(identifier: "identifier").wait())
-        XCTAssertNoThrow(try tr.setTimeout(1000).wait())
-        XCTAssertNoThrow(try tr.setRetryLimit(5).wait())
-        XCTAssertNoThrow(try tr.setMaxRetryDelay(1000).wait())
+        XCTAssertNoThrow(try tr.setOption(.debugRetryLogging(transactionName: "testtransactionname")).wait())
+        XCTAssertNoThrow(try tr.setOption(.transactionLoggingEnable(identifier: "identifier")).wait())
+        XCTAssertNoThrow(try tr.setOption(.timeout(milliseconds: 1000)).wait())
+        XCTAssertNoThrow(try tr.setOption(.retryLimit(retries: 4)).wait())
+        XCTAssertNoThrow(try tr.setOption(.maxRetryDelay(milliseconds: 5000)).wait())
         XCTAssertNoThrow(try tr.set(key: key, value: Bytes([1,2,3])).wait())
         XCTAssertEqual(Bytes([1,2,3]), try tr.get(key: key).wait())
         try tr.commit().wait()
     }
     
     func testNetworkOptions() throws {
-        XCTAssertThrowsError(try FDBTests.fdb.setTLSCert(path: "/tmp/invalidname"))
-        XCTAssertThrowsError(try FDBTests.fdb.setTLSCA(bytes: Bytes([1,2,3])))
-        XCTAssertNoThrow(try FDBTests.fdb.disableBuggify())
-        XCTAssertNoThrow(try FDBTests.fdb.setBuggifyActivated(probability: 0))
+        XCTAssertThrowsError(try FDBTests.fdb.setOption(.TLSCertPath(path: "/tmp/invalidname")))
+        XCTAssertThrowsError(try FDBTests.fdb.setOption(.TLSCABytes(bytes: Bytes([1,2,3]))))
+        XCTAssertNoThrow(try FDBTests.fdb.setOption(.buggifyDisable))
+        XCTAssertNoThrow(try FDBTests.fdb.setOption(.buggifySectionActivatedProbability(probability: 0)))
     }
 
     static var allTests = [
