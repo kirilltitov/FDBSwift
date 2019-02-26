@@ -4,6 +4,8 @@ public extension FDB {
         public let value: Bytes
     }
     
+    public typealias KeyValues = [KeyValue]
+    
     public struct KeyValuesResult {
         public let records: [FDB.KeyValue]
         public let hasMore: Bool

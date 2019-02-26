@@ -268,6 +268,34 @@ class FDBTests: XCTestCase {
         XCTAssertNoThrow(try FDBTests.fdb.setOption(.buggifyDisable))
         XCTAssertNoThrow(try FDBTests.fdb.setOption(.buggifySectionActivatedProbability(probability: 0)))
     }
+    
+    func testRangeIterator() throws {
+        let keySubspace = FDBTests.subspace["rangeiterator"]
+        let tr1 = try self.begin().wait()
+        var etalon: [Bytes] = []
+        for i: UInt8 in 1...10 {
+            let payload = Bytes([i])
+            etalon.append(payload)
+            tr1.set(key: keySubspace[Int(i)], value: payload)
+        }
+        try tr1.commitSync()
+        let tr2 = try self.begin().wait()
+        let results: FDB.KeyValuesResult = try self.begin().wait().get(range: keySubspace.range)
+        print(["all": results.records.map { $0.value }])
+        var iterator: FDB.Transaction.RangeIterator = tr2.get(range: keySubspace.range)
+        try iterator.next()
+        try iterator.next()
+        try iterator.next()
+        try iterator.next()
+        exit(0)
+//        exit(0)
+//        var results: [Bytes] = []
+//        while let bulk = try iterator.next() {
+//            dump(bulk)
+//            bulk.forEach { kv in results.append(kv.value)}
+//        }
+//        XCTAssertEqual(etalon, results)
+    }
 
     static var allTests = [
         ("testEmptyValue", testEmptyValue),
@@ -287,5 +315,6 @@ class FDBTests: XCTestCase {
         ("testNIOClear", testNIOClear),
         ("testTransactionOptions", testTransactionOptions),
         ("testNetworkOptions", testNetworkOptions),
+        ("testRangeIterator", testRangeIterator),
     ]
 }
