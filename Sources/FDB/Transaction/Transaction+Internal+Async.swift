@@ -31,6 +31,27 @@ internal extension FDB.Transaction {
     ) -> Future<FDB.KeyValuesResult> {
         let beginBytes = begin.asFDBKey()
         let endBytes = end.asFDBKey()
+        
+        self.debug("""
+        Calling C function fdb_transaction_get_range(
+            FDBTransaction* tr: \(self.pointer)
+            uint8_t const* begin_key_name: \(beginBytes)
+            int begin_key_name_length: \(beginBytes.length)
+            fdb_bool_t begin_or_equal: \(beginEqual.int)
+            int begin_offset: \(beginOffset)
+            uint8_t const* end_key_name: \(endBytes)
+            int end_key_name_length: \(endBytes.length)
+            fdb_bool_t end_or_equal: \(endEqual.int)
+            int end_offset: \(endOffset)
+            int limit: \(limit)
+            int target_bytes: \(targetBytes)
+            FDBStreamingMode mode: \(FDBStreamingMode(mode.rawValue))
+            int iteration: \(iteration)
+            fdb_bool_t snapshot: \(snapshot)
+            fdb_bool_t reverse: \(reverse.int)
+        )
+        """)
+        
         return fdb_transaction_get_range(
             self.pointer,
             beginBytes,
