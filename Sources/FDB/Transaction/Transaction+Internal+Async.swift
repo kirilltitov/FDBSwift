@@ -10,9 +10,9 @@ internal extension FDB.Transaction {
         fdb_transaction_set(self.pointer, keyBytes, keyBytes.length, value, value.length)
     }
 
-    internal func get(key: AnyFDBKey, snapshot: Int32 = 0) -> Future<Bytes?> {
+    internal func get(key: AnyFDBKey, snapshot: Bool = false) -> Future<Bytes?> {
         let keyBytes = key.asFDBKey()
-        return fdb_transaction_get(self.pointer, keyBytes, keyBytes.length, snapshot).asFuture()
+        return fdb_transaction_get(self.pointer, keyBytes, keyBytes.length, snapshot.int).asFuture()
     }
 
     internal func get(
@@ -26,7 +26,7 @@ internal extension FDB.Transaction {
         targetBytes: Int32 = 0,
         mode: FDB.StreamingMode = .wantAll,
         iteration: Int32 = 1,
-        snapshot: Int32 = 0,
+        snapshot: Bool = false,
         reverse: Bool = false
     ) -> Future<FDB.KeyValuesResult> {
         let beginBytes = begin.asFDBKey()
@@ -45,7 +45,7 @@ internal extension FDB.Transaction {
             targetBytes,
             FDBStreamingMode(mode.rawValue),
             iteration,
-            snapshot,
+            snapshot.int,
             reverse.int
         ).asFuture()
     }
@@ -60,7 +60,7 @@ internal extension FDB.Transaction {
         targetBytes: Int32 = 0,
         mode: FDB.StreamingMode = .wantAll,
         iteration: Int32 = 1,
-        snapshot: Int32 = 0,
+        snapshot: Bool = false,
         reverse: Bool = false
     ) -> Future<FDB.KeyValuesResult> {
         return self.get(

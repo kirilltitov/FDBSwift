@@ -250,11 +250,11 @@ public class FDB {
         return try self.clear(range: subspace.range)
     }
 
-    public func get(key: AnyFDBKey, snapshot: Int32 = 0) throws -> Bytes? {
+    public func get(key: AnyFDBKey, snapshot: Bool = false) throws -> Bytes? {
         return try self.begin().get(key: key, snapshot: snapshot, commit: true)
     }
 
-    public func get(subspace: Subspace, snapshot: Int32 = 0) throws -> KeyValuesResult {
+    public func get(subspace: Subspace, snapshot: Bool = false) throws -> KeyValuesResult {
         return try self.begin().get(range: subspace.range, snapshot: snapshot)
     }
 
@@ -269,7 +269,7 @@ public class FDB {
         targetBytes: Int32 = 0,
         mode: FDB.StreamingMode = .wantAll,
         iteration: Int32 = 1,
-        snapshot: Int32 = 0,
+        snapshot: Bool = false,
         reverse: Bool = false
     ) throws -> FDB.KeyValuesResult {
         return try self.begin().get(
@@ -299,7 +299,7 @@ public class FDB {
         targetBytes: Int32 = 0,
         mode: FDB.StreamingMode = .wantAll,
         iteration: Int32 = 1,
-        snapshot: Int32 = 0,
+        snapshot: Bool = false,
         reverse: Bool = false
     ) throws -> FDB.KeyValuesResult {
         return try self.get(
