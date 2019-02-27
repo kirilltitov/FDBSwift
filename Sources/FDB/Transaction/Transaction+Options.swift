@@ -27,10 +27,8 @@ public extension FDB.Transaction {
         /// the same keys within a single transaction.
         case readYourWritesDisable
         
-        /// 
         case durabilityDatacenter
         
-        /// 
         case durabilityRisky
         
         /// Specifies that this transaction should be treated as highest priority and that lower priority
@@ -71,7 +69,6 @@ public extension FDB.Transaction {
         /// The transaction can read from locked databases.
         case readLockAware
         
-        /// 
         case debugRetryLogging(transactionName: String)
         
         /// Enables tracing for this transaction and logs results to the client trace logs.
@@ -164,6 +161,11 @@ public extension FDB.Transaction {
         }
     }
     
+    /// Sets a transaction option to current transaction
+    ///
+    /// - parameters:
+    ///   - option: Transaction option
+    /// - returns: current transaction (`self`)
     public func setOption(_ option: FDB.Transaction.Option) throws -> FDB.Transaction {
         try option.setOption(transaction: self)
 

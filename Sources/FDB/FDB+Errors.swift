@@ -1,10 +1,12 @@
 import CFDB
 
 public extension FDB {
+    /// Internal FDB error type (`fdb_error_t` aka `Int32`)
     public typealias Errno = fdb_error_t
 }
 
 extension FDB.Errno {
+    /// Converts non-zero error number to throwable error
     public func orThrow() throws {
         if self == 0 {
             return
@@ -12,12 +14,14 @@ extension FDB.Errno {
         throw FDB.Error.from(errno: self)
     }
 
+    /// Converts non-zero error number to fatal runtime error
     public func orDie() {
         try! self.orThrow()
     }
 }
 
 public extension FDB {
+    /// Error type for both FDB errors and FDBSwift errors
     public enum Error: Errno, Swift.Error {
         case operationFailed                        = 1000
         case timedOut                               = 1004
@@ -93,6 +97,7 @@ public extension FDB {
         case unpackInvalidBoundaries = 9704
         case unpackInvalidString = 9705
 
+        /// Returns and instance of FDB.Error from FDB error number
         public static func from(errno: FDB.Errno) -> Error {
             guard let error = FDB.Error(rawValue: errno) else {
                 FDB.debug("Unexpected error \(errno)")
@@ -101,6 +106,7 @@ public extension FDB {
             return error
         }
 
+        /// Returns human-readable description of current FDB error
         public func getDescription() -> String {
             if self.rawValue == 8000 {
                 return "You should replay this transaction"
@@ -111,6 +117,7 @@ public extension FDB {
             return FDB.Error.getErrorInfo(for: self.rawValue)
         }
 
+        /// Returns FDB error description from error number
         private static func getErrorInfo(for errno: fdb_error_t) -> String {
             return String(cString: fdb_get_error(errno))
         }

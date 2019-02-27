@@ -168,6 +168,12 @@ public extension FDB {
         }
     }
     
+    /// Sets a network option
+    /// Warning: options must be set before connection. Otherwise behaviour is undefined.
+    ///
+    /// - parameters:
+    ///   - option: Network option
+    /// - returns: current FDB instance (`self`)
     public func setOption(_ option: FDB.NetworkOption) throws -> FDB {
         self.debug("Trying to set network option \(option)")
 

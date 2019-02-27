@@ -1,9 +1,11 @@
 internal extension OpaquePointer {
-    internal func asFuture<R>() -> Future<R> {
-        return Future<R>(self)
+    /// Creates an FDB.Future from current pointer
+    internal func asFuture<R>() -> FDB.Future<R> {
+        return FDB.Future<R>(self)
     }
 
-    @discardableResult internal func waitForFuture<R>() throws -> Future<R> {
+    /// Creates an FDB.Future from current pointer and blocks current thread until future is resolved (or failed)
+    @discardableResult internal func waitForFuture<R>() throws -> FDB.Future<R> {
         return try self.asFuture().waitAndCheck()
     }
 }
