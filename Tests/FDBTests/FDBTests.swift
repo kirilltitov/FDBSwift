@@ -4,7 +4,7 @@ import XCTest
 
 class FDBTests: XCTestCase {
     static var fdb: FDB!
-    static var subspace: Subspace!
+    static var subspace: FDB.Subspace!
 
     let eventLoop = EmbeddedEventLoop()
 
@@ -14,8 +14,9 @@ class FDBTests: XCTestCase {
 
     override class func setUp() {
         super.setUp()
+        FDB.verbose = true
         self.fdb = FDB()
-        self.subspace = Subspace("test \(Int.random(in: 0 ..< Int.max))")
+        self.subspace = FDB.Subspace("test \(Int.random(in: 0 ..< Int.max))")
     }
 
     override class func tearDown() {
@@ -42,7 +43,7 @@ class FDBTests: XCTestCase {
     }
 
     func testEmptyValue() throws {
-        XCTAssertNil(try FDBTests.fdb.get(key: FDBTests.subspace[nil]), "Non-nil value returned")
+        XCTAssertNil(try FDBTests.fdb.get(key: FDBTests.subspace[FDB.Null()]), "Non-nil value returned")
     }
 
     func testSetGetBytes() throws {
@@ -66,14 +67,14 @@ class FDBTests: XCTestCase {
     func testGetRange() throws {
         let limit = 2
         let subspace = FDBTests.subspace["range"]
-        var values: [KeyValue] = []
+        var values: [FDB.KeyValue] = []
         for i in 0 ..< limit {
             let key = subspace["sub \(i)"].asFDBKey()
             let value = self.getRandomBytes()
-            values.append(KeyValue(key: key, value: value))
+            values.append(FDB.KeyValue(key: key, value: value))
             try FDBTests.fdb.set(key: key, value: value)
         }
-        let expected = KeyValuesResult(records: values, hasMore: false)
+        let expected = FDB.KeyValuesResult(records: values, hasMore: false)
         XCTAssertEqual(try FDBTests.fdb.get(subspace: subspace), expected)
         XCTAssertEqual(try FDBTests.fdb.get(range: subspace.range), expected)
         XCTAssertEqual(try FDBTests.fdb.get(begin: subspace.range.begin, end: subspace.range.end), expected)
@@ -85,7 +86,7 @@ class FDBTests: XCTestCase {
         let step: Int64 = 1
         let expected = step + 1
         for _ in 0 ..< expected - 1 {
-            XCTAssertNoThrow(try fdb.atomic(.Add, key: key, value: step))
+            XCTAssertNoThrow(try fdb.atomic(.add, key: key, value: step))
         }
         XCTAssertNoThrow(try fdb.increment(key: key))
         let result = try fdb.get(key: key)
@@ -120,17 +121,17 @@ class FDBTests: XCTestCase {
 
     func testErrorDescription() {
         let error = FDB.Error.self
-        XCTAssertEqual(error.TransactionReadOnly.rawValue, 2021)
-        XCTAssertEqual(error.TransactionReadOnly.getDescription(), "Transaction is read-only and therefore does not have a commit version")
-        XCTAssertEqual(error.TransactionRetry.getDescription(), "You should replay this transaction")
-        XCTAssertEqual(error.UnexpectedError.getDescription(), "Error is unexpected, it shouldn't really happen")
+        XCTAssertEqual(error.transactionReadOnly.rawValue, 2021)
+        XCTAssertEqual(error.transactionReadOnly.getDescription(), "Transaction is read-only and therefore does not have a commit version")
+        XCTAssertEqual(error.transactionRetry.getDescription(), "You should replay this transaction")
+        XCTAssertEqual(error.unexpectedError.getDescription(), "Error is unexpected, it shouldn't really happen")
     }
 
-    func begin() throws -> EventLoopFuture<Transaction> {
+    func begin() throws -> EventLoopFuture<FDB.Transaction> {
         return FDBTests.fdb.begin(eventLoop: self.eventLoop)
     }
 
-    func genericTestCommit() throws -> Transaction {
+    func genericTestCommit() throws -> FDB.Transaction {
         let tr = try self.begin().wait()
         var ran = false
         let semaphore = self.semaphore
@@ -153,7 +154,7 @@ class FDBTests: XCTestCase {
         var counter: Int = 0
         tr.commit().whenFailure { error in
             counter += 1
-            guard case FDB.Error.UsedDuringCommit = error else {
+            guard case FDB.Error.usedDuringCommit = error else {
                 XCTFail("Error must be UsedDuringCommit")
                 semaphore.signal()
                 return
@@ -186,16 +187,16 @@ class FDBTests: XCTestCase {
         let tr = try self.begin().wait()
         let limit = 2
         let subspace = FDBTests.subspace["range"]
-        var values: [KeyValue] = []
+        var values: [FDB.KeyValue] = []
         for i in 0 ..< limit {
             let key = subspace["sub \(i)"].asFDBKey()
             let value = self.getRandomBytes()
-            values.append(KeyValue(key: key, value: value))
+            values.append(FDB.KeyValue(key: key, value: value))
             _ = try tr.set(key: key, value: value).wait()
         }
         let _: Void = try tr.commit().wait()
         let tr2 = try self.begin().wait()
-        let expected = KeyValuesResult(records: values, hasMore: false)
+        let expected = FDB.KeyValuesResult(records: values, hasMore: false)
         XCTAssertEqual(try tr2.get(range: subspace.range).wait(), expected)
         _ = tr2
             .get(begin: subspace.range.begin, end: subspace.range.end)
@@ -214,11 +215,11 @@ class FDBTests: XCTestCase {
         let step: Int64 = 1
         let expected = step + 1
         for _ in 0 ..< expected - 1 {
-            _ = try tr.atomic(.Add, key: key, value: step).wait()
+            _ = try tr.atomic(.add, key: key, value: step).wait()
         }
 //      TODO:
 //      XCTAssertNoThrow(try tr.increment(key: key))
-        tr.atomic(.Add, key: key, value: step).whenComplete {
+        tr.atomic(.add, key: key, value: step).whenComplete {
             semaphore.signal()
         }
         semaphore.wait()
@@ -248,6 +249,26 @@ class FDBTests: XCTestCase {
         semaphore.wait()
     }
 
+    func testTransactionOptions() throws {
+        let tr = try self.begin().wait()
+        let key = FDBTests.subspace["troptions"]
+        XCTAssertNoThrow(try tr.setOption(.debugRetryLogging(transactionName: "testtransactionname")).wait())
+        XCTAssertNoThrow(try tr.setOption(.transactionLoggingEnable(identifier: "identifier")).wait())
+        XCTAssertNoThrow(try tr.setOption(.timeout(milliseconds: 1000)).wait())
+        XCTAssertNoThrow(try tr.setOption(.retryLimit(retries: 4)).wait())
+        XCTAssertNoThrow(try tr.setOption(.maxRetryDelay(milliseconds: 5000)).wait())
+        XCTAssertNoThrow(try tr.set(key: key, value: Bytes([1,2,3])).wait())
+        XCTAssertEqual(Bytes([1,2,3]), try tr.get(key: key).wait())
+        try tr.commit().wait()
+    }
+    
+    func testNetworkOptions() throws {
+        XCTAssertThrowsError(try FDBTests.fdb.setOption(.TLSCertPath(path: "/tmp/invalidname")))
+        XCTAssertThrowsError(try FDBTests.fdb.setOption(.TLSCABytes(bytes: Bytes([1,2,3]))))
+        XCTAssertNoThrow(try FDBTests.fdb.setOption(.buggifyDisable))
+        XCTAssertNoThrow(try FDBTests.fdb.setOption(.buggifySectionActivatedProbability(probability: 0)))
+    }
+
     static var allTests = [
         ("testEmptyValue", testEmptyValue),
         ("testSetGetBytes", testSetGetBytes),
@@ -264,5 +285,7 @@ class FDBTests: XCTestCase {
         ("testNIOGetRange", testNIOGetRange),
         ("testNIOAtomicAdd", testNIOAtomicAdd),
         ("testNIOClear", testNIOClear),
+        ("testTransactionOptions", testTransactionOptions),
+        ("testNetworkOptions", testNetworkOptions),
     ]
 }

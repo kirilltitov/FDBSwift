@@ -1,3 +1,4 @@
+/// Packs input bytes as BYTE STRING tuple value with null bytes escaping preprocessing
 internal func packBytes(_ bytes: Bytes) -> Bytes {
     var result = Bytes()
     result.append(PREFIX_BYTE_STRING)
@@ -12,7 +13,7 @@ internal func packBytes(_ bytes: Bytes) -> Bytes {
     return result
 }
 
-extension Array: TuplePackable where Element == Byte {
+extension Array: FDBTuplePackable where Element == Byte {
     public func pack() -> Bytes {
         return packBytes(self)
     }

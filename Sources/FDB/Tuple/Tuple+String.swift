@@ -1,4 +1,4 @@
-extension String: TuplePackable {
+extension String: FDBTuplePackable {
     public func pack() -> Bytes {
         let bytes = Bytes(self.utf8)
         var result = Bytes()

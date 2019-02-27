@@ -1,23 +1,25 @@
 import CFDB
 
+/// A context wrapper (box) for passing to a CFDB function as `*void`
 fileprivate class VoidContext {
-    internal typealias Closure = Future<Void>.ReadyVoidClosure
+    internal typealias Closure = FDB.Future<Void>.ReadyVoidClosure
 
     internal let callback: Closure
-    internal let ctx: Future<Void>
+    internal let ctx: FDB.Future<Void>
 
     internal init(
         _ callback: @escaping Closure,
-        _ ctx: Future<Void>
+        _ ctx: FDB.Future<Void>
     ) {
         self.callback = callback
         self.ctx = ctx
     }
 }
 
-internal extension Future where R == Void {
-    internal typealias ReadyVoidClosure = (_ future: Future<Void>) throws -> Void
+internal extension FDB.Future where R == Void {
+    internal typealias ReadyVoidClosure = (_ future: FDB.Future<Void>) throws -> Void
 
+    /// Sets a closure to be executed when current future is resolved
     internal func whenReady(_ callback: @escaping ReadyVoidClosure) throws {
         try fdb_future_set_callback(
             self.pointer,

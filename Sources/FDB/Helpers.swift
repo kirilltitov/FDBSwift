@@ -1,5 +1,38 @@
 import CFDB
 import Dispatch
+import NIO
+
+public typealias Byte = UInt8
+public typealias Bytes = [Byte]
+
+internal extension FDB {
+    internal struct OptionsHelper {
+        internal static func stringOptionToPointer(
+            string: String,
+            pointer: inout UnsafePointer<Byte>?,
+            length: inout Int32
+        ) {
+            self.bytesOptionToPointer(bytes: string.bytes, pointer: &pointer, length: &length)
+        }
+
+        internal static func intOptionToPointer(
+            int: Int64,
+            pointer: inout UnsafePointer<Byte>?,
+            length: inout Int32
+        ) {
+            self.bytesOptionToPointer(bytes: getBytes(int), pointer: &pointer, length: &length)
+        }
+
+        internal static func bytesOptionToPointer(
+            bytes: Bytes,
+            pointer: inout UnsafePointer<Byte>?,
+            length: inout Int32
+        ) {
+            pointer = UnsafePointer<Byte>(bytes)
+            length = Int32(bytes.count)
+        }
+    }
+}
 
 internal extension String {
     var bytes: Bytes {
