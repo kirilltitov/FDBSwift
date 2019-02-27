@@ -71,7 +71,16 @@ let childSubspace = rootSubspace["child"]["subspace"]
 let childSubspace = rootSubspace["child", "subspace"]
 
 // Talking about tuples:
-let tuple = FDB.Tuple(Bytes([0, 1, 2]), 322, -322, FDB.Null(), "foo", FDB.Tuple("bar", 1337, "baz"), FDB.Tuple(), FDB.Null())
+let tuple = FDB.Tuple(
+    Bytes([0, 1, 2]),
+    322,
+    -322,
+    FDB.Null(),
+    "foo",
+    FDB.Tuple("bar", 1337, "baz"),
+    FDB.Tuple(),
+    FDB.Null()
+)
 let packed: Bytes = tuple.pack()
 let unpacked: FDB.Tuple = FDB.Tuple(from: packed)
 let tupleBytes: Bytes = unpacked.tuple[0]
