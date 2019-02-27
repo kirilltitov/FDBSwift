@@ -18,7 +18,7 @@ public extension FDB.Transaction {
         }
     }
 
-    public func get(key: AnyFDBKey, snapshot: Int32 = 0, commit: Bool = false) throws -> Bytes? {
+    public func get(key: AnyFDBKey, snapshot: Bool = false, commit: Bool = false) throws -> Bytes? {
         let result = try self.get(key: key, snapshot: snapshot).wait()
         if commit {
             try self.commitSync()
@@ -37,7 +37,7 @@ public extension FDB.Transaction {
         targetBytes: Int32 = 0,
         mode: FDB.StreamingMode = .wantAll,
         iteration: Int32 = 1,
-        snapshot: Int32 = 0,
+        snapshot: Bool = false,
         reverse: Bool = false,
         commit: Bool = false
     ) throws -> FDB.KeyValuesResult {
@@ -71,7 +71,7 @@ public extension FDB.Transaction {
         targetBytes: Int32 = 0,
         mode: FDB.StreamingMode = .wantAll,
         iteration: Int32 = 1,
-        snapshot: Int32 = 0,
+        snapshot: Bool = false,
         reverse: Bool = false,
         commit: Bool = false
     ) throws -> FDB.KeyValuesResult {

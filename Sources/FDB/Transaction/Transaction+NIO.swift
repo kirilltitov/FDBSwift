@@ -53,7 +53,7 @@ public extension FDB.Transaction {
 
     public func get(
         key: AnyFDBKey,
-        snapshot: Int32 = 0,
+        snapshot: Bool = false,
         commit: Bool = false
     ) -> EventLoopFuture<(Bytes?, FDB.Transaction)> {
         guard let eventLoop = self.eventLoop else {
@@ -91,7 +91,7 @@ public extension FDB.Transaction {
         targetBytes: Int32 = 0,
         mode: FDB.StreamingMode = .wantAll,
         iteration: Int32 = 1,
-        snapshot: Int32 = 0,
+        snapshot: Bool = false,
         reverse: Bool = false,
         commit: Bool = false
     ) -> EventLoopFuture<(FDB.KeyValuesResult, FDB.Transaction)> {
@@ -141,7 +141,7 @@ public extension FDB.Transaction {
         targetBytes: Int32 = 0,
         mode: FDB.StreamingMode = .wantAll,
         iteration: Int32 = 1,
-        snapshot: Int32 = 0,
+        snapshot: Bool = false,
         reverse: Bool = false,
         commit: Bool = false
     ) -> EventLoopFuture<(FDB.KeyValuesResult, FDB.Transaction)> {
