@@ -325,7 +325,7 @@ public extension FDB.Transaction {
             self.atomic(op, key: key, value: getBytes(value))
         }
     }
-    
+
     /// Sets a transaction option to current transaction
     ///
     /// - parameters:

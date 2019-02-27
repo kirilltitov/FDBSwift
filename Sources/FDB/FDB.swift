@@ -66,7 +66,7 @@ public class FDB {
         ///
         /// aka `FDB_MUTATION_TYPE_ADD`
         case add = 2
-        
+
         /// Performs a bitwise ``and`` operation.  If the existing value in the database is not present, then ``param``
         /// is stored in the database. If the existing value in the database is shorter than ``param``, it is first
         /// extended to the length of ``param`` with zero bytes.  If ``param`` is shorter than the existing value in
@@ -74,21 +74,21 @@ public class FDB {
         ///
         /// aka `FDB_MUTATION_TYPE_BIT_AND`
         case bitAnd = 6
-        
+
         /// Performs a bitwise ``or`` operation.  If the existing value in the database is not present or shorter than
         /// ``param``, it is first extended to the length of ``param`` with zero bytes.  If ``param`` is shorter than
         /// the existing value in the database, the existing value is truncated to match the length of ``param``.
         ///
         /// aka `FDB_MUTATION_TYPE_BIT_OR`
         case bitOr = 7
-        
+
         /// Performs a bitwise ``xor`` operation.  If the existing value in the database is not present or shorter than
         /// ``param``, it is first extended to the length of ``param`` with zero bytes.  If ``param`` is shorter than
         /// the existing value in the database, the existing value is truncated to match the length of ``param``.
         ///
         /// aka `FDB_MUTATION_TYPE_BIT_XOR`
         case bitXor = 8
-        
+
         /// Appends ``param`` to the end of the existing value already in the database at the given key (or creates the
         /// key and sets the value to ``param`` if the key is empty). This will only append the value if the final
         /// concatenated value size is less than or equal to the maximum value size (i.e., if it fits).
@@ -98,7 +98,7 @@ public class FDB {
         ///
         /// aka `FDB_MUTATION_TYPE_APPEND_IF_FITS`
         case appendIfFits = 9
-        
+
         /// Performs a little-endian comparison of byte strings. If the existing value in the database is not present
         /// or shorter than ``param``, it is first extended to the length of ``param`` with zero bytes.  If ``param``
         /// is shorter than the existing value in the database, the existing value is truncated to match the length of
@@ -106,7 +106,7 @@ public class FDB {
         ///
         /// aka `FDB_MUTATION_TYPE_MAX`
         case max = 12
-        
+
         /// Performs a little-endian comparison of byte strings. If the existing value in the database is not present,
         /// then ``param`` is stored in the database. If the existing value in the database is shorter than ``param``,
         /// it is first extended to the length of ``param`` with zero bytes.  If ``param`` is shorter than the existing
@@ -115,7 +115,7 @@ public class FDB {
         ///
         /// aka `FDB_MUTATION_TYPE_MIN`
         case min = 13
-        
+
         /// Transforms ``key`` using a versionstamp for the transaction. Sets the transformed key in the database to
         /// ``param``. The key is transformed by removing the final four bytes from the key and reading those as
         /// a little-Endian 32-bit integer to get a position ``pos``.
@@ -129,7 +129,7 @@ public class FDB {
         ///
         /// aka `FDB_MUTATION_TYPE_SET_VERSIONSTAMPED_KEY`
         case setVersionstampedKey = 14
-        
+
         /// Transforms ``param`` using a versionstamp for the transaction. Sets the ``key`` given to the transformed
         /// ``param``. The parameter is transformed by removing the final four bytes from ``param`` and reading those
         /// as a little-Endian 32-bit integer to get a position ``pos``. The 10 bytes of the parameter
@@ -143,13 +143,13 @@ public class FDB {
         ///
         /// aka `FDB_MUTATION_TYPE_SET_VERSIONSTAMPED_VALUE`
         case setVersionstampedValue = 15
-        
+
         /// Performs lexicographic comparison of byte strings. If the existing value in the database is not present,
         /// then ``param`` is stored. Otherwise the smaller of the two values is then stored in the database.
         ///
         /// aka `FDB_MUTATION_TYPE_BYTE_MIN`
         case byteMin = 16
-        
+
         /// Performs lexicographic comparison of byte strings. If the existing value in the database is not present,
         /// then ``param`` is stored. Otherwise the larger of the two values is then stored in the database.
         ///
@@ -247,7 +247,7 @@ public class FDB {
         let ptr = Unmanaged.passRetained(Box(self)).toOpaque()
 
         #if os(OSX)
-            var thread: pthread_t? = nil
+            var thread: pthread_t?
         #else
             var thread: pthread_t = pthread_t()
         #endif
@@ -336,7 +336,7 @@ public class FDB {
 
         return try self.getDB()
     }
-    
+
     /// Prints verbose debug message to stdout (if `FDB.verbose` is `true`)
     ///
     /// TODO: Migrate to Server Logging API when it's out
