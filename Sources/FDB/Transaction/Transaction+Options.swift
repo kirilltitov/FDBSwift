@@ -10,7 +10,6 @@ public extension FDB.Transaction {
         /// but might not be the latest committed in the event of a fault or partition
         case causalReadRisky
 
-        ///
         case causalReadDisable
 
         /// The next write performed on this transaction will not generate a write conflict range.
