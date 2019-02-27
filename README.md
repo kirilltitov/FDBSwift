@@ -92,7 +92,7 @@ try fdb.set(key: "somekey", value: someBytes)
 // OR
 try fdb.set(key: Bytes([0, 1, 2, 3]), value: someBytes)
 // OR
-try fdb.set(key: FDB.Tuple("foo", nil, "bar", FDB.Tuple("baz", "sas"), "lul"), value: someBytes)
+try fdb.set(key: FDB.Tuple("foo", FDB.Null(), "bar", FDB.Tuple("baz", "sas"), "lul"), value: someBytes)
 // OR
 try fdb.set(key: Subspace("foo").subspace("bar"), value: someBytes)
 ```
