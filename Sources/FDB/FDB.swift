@@ -437,7 +437,7 @@ public class FDB {
         return try self.clear(range: subspace.range)
     }
 
-    /// Returns bytes value for given key (or `nil` of no key)
+    /// Returns bytes value for given key (or `nil` if no key)
     ///
     /// This function will block current thread during execution
     ///
@@ -464,7 +464,6 @@ public class FDB {
     /// This function will block current thread during execution
     ///
     /// - parameters:
-    ///   - subspace: Subspace
     ///   - begin: Begin key
     ///   - end: End key
     ///   - beginEqual: Should begin key also include exact key value
@@ -474,9 +473,9 @@ public class FDB {
     ///   - limit: Limit returned key-value pairs (only relevant when `mode` is `.exact`)
     ///   - targetBytes: If non-zero, indicates a soft cap on the combined number of bytes of keys and values to return
     ///   - mode: The manner in which rows are returned (see `FDB.StreamingMode` docs)
-    ///   - iteration: if `mode` is `.iterator` this arg represent current read iteration (should start from 1)
+    ///   - iteration: If `mode` is `.iterator`, this arg represent current read iteration (should start from 1)
     ///   - snapshot: Snapshot read (i.e. whether this read create a conflict range or not)
-    ///   - reverse: if `true`, key-value pairs will be returned in reverse lexicographical order
+    ///   - reverse: If `true`, key-value pairs will be returned in reverse lexicographical order
     public func get(
         begin: AnyFDBKey,
         end: AnyFDBKey,
@@ -521,9 +520,9 @@ public class FDB {
     ///   - limit: Limit returned key-value pairs (only relevant when `mode` is `.exact`)
     ///   - targetBytes: If non-zero, indicates a soft cap on the combined number of bytes of keys and values to return
     ///   - mode: The manner in which rows are returned (see `FDB.StreamingMode` docs)
-    ///   - iteration: if `mode` is `.iterator` this arg represent current read iteration (should start from 1)
+    ///   - iteration: If `mode` is `.iterator`, this arg represent current read iteration (should start from 1)
     ///   - snapshot: Snapshot read (i.e. whether this read create a conflict range or not)
-    ///   - reverse: if `true`, key-value pairs will be returned in reverse lexicographical order
+    ///   - reverse: If `true`, key-value pairs will be returned in reverse lexicographical order
     public func get(
         range: FDB.RangeKey,
         beginEqual: Bool = false,

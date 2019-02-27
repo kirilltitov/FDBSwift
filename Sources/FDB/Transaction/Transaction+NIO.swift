@@ -2,14 +2,17 @@ import CFDB
 import NIO
 
 public extension FDB.Transaction {
+    /// Commits current transaction
+    ///
+    /// - returns: EventLoopFuture with future Void value
     public func commit() -> EventLoopFuture<Void> {
         guard let eventLoop = self.eventLoop else {
             self.debug("[commit] No event loop")
             return FDB.dummyEventLoop.newFailedFuture(error: FDB.Error.noEventLoopProvided)
         }
-        let promise: EventLoopPromise<Future<Void>> = eventLoop.newPromise()
+        let promise: EventLoopPromise<FDB.Future<Void>> = eventLoop.newPromise()
         do {
-            let future: Future<Void> = try self.commit()
+            let future: FDB.Future<Void> = try self.commit()
             try future.whenReady(promise.succeed)
             future.whenError(promise.fail)
         } catch {
@@ -22,7 +25,7 @@ public extension FDB.Transaction {
             }
             self.debug("Retrying transaction (commit error \(commitError)")
             let retryPromise: EventLoopPromise<Void> = eventLoop.newPromise()
-            let retryFuture: Future<Void> = fdb_transaction_on_error(self.pointer, commitError).asFuture()
+            let retryFuture: FDB.Future<Void> = fdb_transaction_on_error(self.pointer, commitError).asFuture()
             do {
                 try retryFuture.whenReady { _retryFuture in
                     try fdb_future_get_error(_retryFuture.pointer).orThrow()
@@ -36,6 +39,14 @@ public extension FDB.Transaction {
         }
     }
 
+    /// Sets bytes to given key in FDB cluster
+    ///
+    /// - parameters:
+    ///   - key: FDB key
+    ///   - value: Bytes value
+    ///   - commit: Whether to commit this transaction after action or not
+    ///
+    /// - returns: EventLoopFuture with future Transaction (`self`) value
     public func set(key: AnyFDBKey, value: Bytes, commit: Bool = false) -> EventLoopFuture<FDB.Transaction> {
         guard let eventLoop = self.eventLoop else {
             self.debug("[set] No event loop")
@@ -51,6 +62,14 @@ public extension FDB.Transaction {
         return future
     }
 
+    /// Returns bytes value for given key (or `nil` if no key)
+    ///
+    /// - parameters:
+    ///   - key: FDB key
+    ///   - snapshot: Snapshot read (i.e. whether this read create a conflict range or not)
+    ///   - commit: Whether to commit this transaction after action or not
+    ///
+    /// - returns: EventLoopFuture with future `(Bytes?, FDB.Transaction)` tuple value
     public func get(
         key: AnyFDBKey,
         snapshot: Bool = false,
@@ -80,6 +99,24 @@ public extension FDB.Transaction {
         return future
     }
 
+    /// Returns a range of keys and their respective values in given key range
+    ///
+    /// - parameters:
+    ///   - begin: Begin key
+    ///   - end: End key
+    ///   - beginEqual: Should begin key also include exact key value
+    ///   - beginOffset: Begin key offset
+    ///   - endEqual: Should end key also include exact key value
+    ///   - endOffset: End key offset
+    ///   - limit: Limit returned key-value pairs (only relevant when `mode` is `.exact`)
+    ///   - targetBytes: If non-zero, indicates a soft cap on the combined number of bytes of keys and values to return
+    ///   - mode: The manner in which rows are returned (see `FDB.StreamingMode` docs)
+    ///   - iteration: If `mode` is `.iterator`, this arg represent current read iteration (should start from 1)
+    ///   - snapshot: Snapshot read (i.e. whether this read create a conflict range or not)
+    ///   - reverse: If `true`, key-value pairs will be returned in reverse lexicographical order
+    ///   - commit: Whether to commit this transaction after action or not
+    ///
+    /// - returns: EventLoopFuture with future `(FDB.KeyValuesResult, FDB.Transaction)` tuple value
     public func get(
         begin: AnyFDBKey,
         end: AnyFDBKey,
@@ -101,7 +138,7 @@ public extension FDB.Transaction {
         }
         let promise: EventLoopPromise<(FDB.KeyValuesResult, FDB.Transaction)> = eventLoop.newPromise()
         do {
-            let future: Future<FDB.KeyValuesResult> = self.get(
+            let future: FDB.Future<FDB.KeyValuesResult> = self.get(
                 begin: begin,
                 end: end,
                 beginEqual: beginEqual,
@@ -131,6 +168,23 @@ public extension FDB.Transaction {
         return future
     }
 
+    /// Returns a range of keys and their respective values in given key range
+    ///
+    /// - parameters:
+    ///   - range: Range key
+    ///   - beginEqual: Should begin key also include exact key value
+    ///   - beginOffset: Begin key offset
+    ///   - endEqual: Should end key also include exact key value
+    ///   - endOffset: End key offset
+    ///   - limit: Limit returned key-value pairs (only relevant when `mode` is `.exact`)
+    ///   - targetBytes: If non-zero, indicates a soft cap on the combined number of bytes of keys and values to return
+    ///   - mode: The manner in which rows are returned (see `FDB.StreamingMode` docs)
+    ///   - iteration: If `mode` is `.iterator`, this arg represent current read iteration (should start from 1)
+    ///   - snapshot: Snapshot read (i.e. whether this read create a conflict range or not)
+    ///   - reverse: If `true`, key-value pairs will be returned in reverse lexicographical order
+    ///   - commit: Whether to commit this transaction after action or not
+    ///
+    /// - returns: EventLoopFuture with future `(FDB.KeyValuesResult, FDB.Transaction)` tuple value
     public func get(
         range: FDB.RangeKey,
         beginEqual: Bool = false,
@@ -162,6 +216,13 @@ public extension FDB.Transaction {
         )
     }
 
+    /// Performs a generic throwable closure wrapped with event loop sanity check
+    ///
+    /// - parameters:
+    ///   - commit: Whether to commit this transaction after action or not
+    ///   - closure: Throwable closure with actual business logic
+    ///
+    /// - returns: EventLoopFuture with future Transaction (`self`) value
     fileprivate func genericAction(
         commit: Bool,
         _ closure: () throws -> Void
@@ -185,24 +246,55 @@ public extension FDB.Transaction {
         return future
     }
 
+    /// Clears given key in FDB cluster
+    ///
+    /// - parameters:
+    ///   - key: FDB key
+    ///   - commit: Whether to commit this transaction after action or not
+    ///
+    /// - returns: EventLoopFuture with future Transaction (`self`) value
     public func clear(key: AnyFDBKey, commit: Bool = false) -> EventLoopFuture<FDB.Transaction> {
         return self.genericAction(commit: commit) {
             self.clear(key: key)
         }
     }
 
+    /// Clears keys in given range in FDB cluster
+    ///
+    /// - parameters:
+    ///   - begin: Begin key
+    ///   - end: End key
+    ///   - commit: Whether to commit this transaction after action or not
+    ///
+    /// - returns: EventLoopFuture with future Transaction (`self`) value
     public func clear(begin: AnyFDBKey, end: AnyFDBKey, commit: Bool = false) -> EventLoopFuture<FDB.Transaction> {
         return self.genericAction(commit: commit) {
             self.clear(begin: begin, end: end)
         }
     }
 
+    /// Clears keys in given range in FDB cluster
+    ///
+    /// - parameters:
+    ///   - range: Range key
+    ///   - commit: Whether to commit this transaction after action or not
+    ///
+    /// - returns: EventLoopFuture with future Transaction (`self`) value
     public func clear(range: FDB.RangeKey, commit: Bool = false) -> EventLoopFuture<FDB.Transaction> {
         return self.genericAction(commit: commit) {
             self.clear(range: range)
         }
     }
 
+    /// Peforms an atomic operation in FDB cluster on given key with given value bytes
+    ///
+    /// - parameters:
+    ///   - _: Atomic operation
+    ///   - key: FDB key
+    ///   - value: Value bytes
+    ///   - commit: Whether to commit this transaction after action or not
+    ///
+    /// - returns: EventLoopFuture with future Transaction (`self`) value
     public func atomic(
         _ op: FDB.MutationType,
         key: AnyFDBKey,
@@ -214,6 +306,15 @@ public extension FDB.Transaction {
         }
     }
 
+    /// Peforms an atomic operation in FDB cluster on given key with given generic value
+    ///
+    /// - parameters:
+    ///   - _: Atomic operation
+    ///   - key: FDB key
+    ///   - value: Value bytes
+    ///   - commit: Whether to commit this transaction after action or not
+    ///
+    /// - returns: EventLoopFuture with future Transaction (`self`) value
     public func atomic<T>(
         _ op: FDB.MutationType,
         key: AnyFDBKey,
@@ -225,6 +326,11 @@ public extension FDB.Transaction {
         }
     }
     
+    /// Sets a transaction option to current transaction
+    ///
+    /// - parameters:
+    ///   - option: Transaction option
+    /// - returns: EventLoopFuture with future Transaction (`self`) value
     public func setOption(_ option: FDB.Transaction.Option) -> EventLoopFuture<FDB.Transaction> {
         return self.genericAction(commit: false) {
             let _: FDB.Transaction = try self.setOption(option)

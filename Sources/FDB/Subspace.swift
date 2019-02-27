@@ -1,6 +1,12 @@
 public extension FDB {
+    /// A high-level FDB key structure for managing nested keys. Powered by Tuple layer concept.
     public struct Subspace {
+        /// Existing key prefix
         public let prefix: Bytes
+        
+        /// Estimated counter if items within current subspace.
+        ///
+        /// Nested Tuple counts as 1.
         public let itemsCount: Int
         
         public var range: FDB.RangeKey {

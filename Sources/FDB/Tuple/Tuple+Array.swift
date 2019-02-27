@@ -1,3 +1,4 @@
+/// Packs input bytes as BYTE STRING tuple value with null bytes escaping preprocessing
 internal func packBytes(_ bytes: Bytes) -> Bytes {
     var result = Bytes()
     result.append(PREFIX_BYTE_STRING)
