@@ -12,6 +12,6 @@ public extension FDB {
         version: Int32 = FDB_API_VERSION,
         queue: DispatchQueue = DispatchQueue(label: "fdb", qos: .userInitiated, attributes: .concurrent)
     ) {
-        self.init(cluster: cluster, networkStopTimeout: networkStopTimeout)
+        self.init(clusterFile: cluster, networkStopTimeout: networkStopTimeout)
     }
 }

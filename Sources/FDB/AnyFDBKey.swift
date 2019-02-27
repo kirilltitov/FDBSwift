@@ -1,8 +1,11 @@
 public extension FDB {
+    /// Holds begin and end keys for range get
     public typealias RangeKey = (begin: AnyFDBKey, end: AnyFDBKey)
 }
 
+/// A type-erased FDB key
 public protocol AnyFDBKey: FDBTuplePackable {
+    /// Returns byte representation of this concrete key
     func asFDBKey() -> Bytes
 }
 
