@@ -9,8 +9,8 @@ public extension FDB {
     public convenience init(
         cluster: String? = nil,
         networkStopTimeout: Int = 10,
-        version: Int32 = FDB_API_VERSION,
-        queue: DispatchQueue = DispatchQueue(label: "fdb", qos: .userInitiated, attributes: .concurrent)
+        version _: Int32 = FDB_API_VERSION,
+        queue _: DispatchQueue = DispatchQueue(label: "fdb", qos: .userInitiated, attributes: .concurrent)
     ) {
         self.init(clusterFile: cluster, networkStopTimeout: networkStopTimeout)
     }

@@ -52,7 +52,7 @@ extension FDB.Tuple {
         }
         self.init(result)
     }
-    
+
     internal static func _unpack(_ input: Bytes, _ pos: Int = 0) throws -> (FDBTuplePackable, Int) {
         func sanityCheck(begin: Int, end: Int) throws {
             guard begin >= input.startIndex else {

@@ -7,7 +7,7 @@ public extension FDB {
 
         internal let pointer: Pointer
         internal let eventLoop: EventLoop?
-        
+
         /// Creates a new instance of a previously started FDB transaction
         internal init(_ pointer: Pointer, _ eventLoop: EventLoop? = nil) {
             self.pointer = pointer
@@ -22,7 +22,7 @@ public extension FDB {
 
             self.debug("Started transaction \(debugInfoSuffix)")
         }
-        
+
         deinit {
             fdb_transaction_destroy(self.pointer)
         }
@@ -31,7 +31,7 @@ public extension FDB {
         internal func debug(_ message: String) {
             FDB.debug("[Transaction] [\(ObjectIdentifier(self).hashValue)] \(message)")
         }
-        
+
         /// Begins a new FDB transactionon on given FDB database pointer and optional event loop
         internal class func begin(_ db: FDB.Database, _ eventLoop: EventLoop? = nil) throws -> FDB.Transaction {
             var pointer: Pointer!
@@ -40,19 +40,19 @@ public extension FDB {
 
             return FDB.Transaction(pointer, eventLoop)
         }
-        
+
         /// Cancels the transaction. All pending or future uses of the transaction will return
         /// a `transaction_cancelled` error. The transaction can be used again after it is `reset`.
         public func cancel() {
             fdb_transaction_cancel(self.pointer)
         }
-        
+
         /// Reset transaction to its initial state.
         /// This is similar to creating a new transaction after destroying previous one.
         public func reset() {
             fdb_transaction_reset(self.pointer)
         }
-        
+
         /// Clears given key in FDB cluster
         ///
         /// - parameters:
@@ -61,7 +61,7 @@ public extension FDB {
             let keyBytes = key.asFDBKey()
             fdb_transaction_clear(self.pointer, keyBytes, keyBytes.length)
         }
-        
+
         /// Clears keys in given range in FDB cluster
         ///
         /// - parameters:
@@ -72,7 +72,7 @@ public extension FDB {
             let endBytes = end.asFDBKey()
             fdb_transaction_clear_range(self.pointer, beginBytes, beginBytes.length, endBytes, endBytes.length)
         }
-        
+
         /// Clears keys in given range in FDB cluster
         ///
         /// - parameters:
@@ -80,7 +80,7 @@ public extension FDB {
         public func clear(range: FDB.RangeKey) {
             self.clear(begin: range.begin, end: range.end)
         }
-        
+
         /// Peforms an atomic operation in FDB cluster on given key with given value bytes
         ///
         ///
@@ -101,4 +101,3 @@ public extension FDB {
         }
     }
 }
-

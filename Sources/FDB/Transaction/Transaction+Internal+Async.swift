@@ -5,7 +5,7 @@ internal extension FDB.Transaction {
     internal func commit() throws -> FDB.Future<Void> {
         return fdb_transaction_commit(self.pointer).asFuture()
     }
-    
+
     /// Sets bytes to given key in FDB cluster
     ///
     /// - parameters:

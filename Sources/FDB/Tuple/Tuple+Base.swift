@@ -26,7 +26,7 @@
 public protocol FDBTuplePackable {
     /// Returns self bytes representation wrapped with control bytes.
     func pack() -> Bytes
-    
+
     /// Internal method extending `pack` method with more complicated logic, you ought not implement it.
     func _pack() -> Bytes
 }
@@ -42,8 +42,8 @@ internal let PREFIX_BYTE_STRING: Byte   = 0x01
 internal let PREFIX_UTF_STRING: Byte    = 0x02
 internal let PREFIX_NESTED_TUPLE: Byte  = 0x05
 internal let PREFIX_INT_ZERO_CODE: Byte = 0x14
-internal let PREFIX_POS_INT_END: Byte   = 0x1d
-internal let PREFIX_NEG_INT_START: Byte = 0x0b
+internal let PREFIX_POS_INT_END: Byte   = 0x1D
+internal let PREFIX_NEG_INT_START: Byte = 0x0B
 
 internal let NULL_ESCAPE_SEQUENCE: Bytes = [NULL, 0xFF]
 
@@ -54,19 +54,19 @@ public extension FDB {
             return [NULL]
         }
     }
-    
+
     /// Tuple layer implementation. Stores an ordered collection of `FDBTuplePackable` items.
     public struct Tuple: FDBTuplePackable {
         public private(set) var tuple: [FDBTuplePackable]
-        
+
         public init(_ input: [FDBTuplePackable]) {
             self.tuple = input
         }
-        
+
         public init(_ input: FDBTuplePackable...) {
             self.init(input)
         }
-        
+
         public func pack() -> Bytes {
             var result = Bytes()
             self.tuple.forEach {
@@ -74,7 +74,7 @@ public extension FDB {
             }
             return result
         }
-        
+
         public func _pack() -> Bytes {
             var result = Bytes()
             result.append(PREFIX_NESTED_TUPLE)

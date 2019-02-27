@@ -19,38 +19,38 @@ public extension FDB {
         /// Sets the 'LogGroup' attribute with the specified value for all events in the trace output files.
         /// The default log group is 'default'.
         case traceLogGroup(name: String)
-        
+
         /// Set internal tuning or debugging knobs
         case knob(key: String, value: String)
-        
+
         /// Set the certificate chain
         case TLSCertBytes(bytes: Bytes)
-        
+
         /// Set the file from which to load the certificate chain
         case TLSCertPath(path: String)
-        
+
         /// Set the private key corresponding to your own certificate
         case TLSKeyBytes(bytes: Bytes)
-        
+
         /// Set the file from which to load the private key corresponding to your own certificate
         case TLSKeyPath(path: String)
-        
+
         /// Set the ca bundle
         case TLSVerifyPeers(bytes: Bytes)
-        
+
         /// Set the file from which to load the certificate authority bundle
         case TLSCABytes(bytes: Bytes)
 
         /// Set the passphrase for encrypted private key. Password should be set before setting the key
         /// for the password to be used.
         case TLSCAPath(path: String)
-        
+
         /// Set the peer certificate field verification criteria
         case TLSPassword(password: String)
-        
+
         /// Not documented
         case buggifyEnable
-        
+
         /// Not documented
         case buggifyDisable
 
@@ -93,81 +93,81 @@ public extension FDB {
 
         internal func setOption() throws {
             let internalOption: FDBNetworkOption
-            var param: UnsafePointer<Byte>? = nil
+            var param: UnsafePointer<Byte>?
             var paramLength: Int32 = 0
 
             switch self {
-                case .traceEnable(let directory):
+            case let .traceEnable(directory):
                 FDB.OptionsHelper.stringOptionToPointer(string: directory, pointer: &param, length: &paramLength)
                 internalOption = FDB_NET_OPTION_TRACE_ENABLE
-                case .traceRollSize(let size):
+            case let .traceRollSize(size):
                 FDB.OptionsHelper.intOptionToPointer(int: size, pointer: &param, length: &paramLength)
                 internalOption = FDB_NET_OPTION_TRACE_ROLL_SIZE
-                case .traceMaxLogsSize(let size):
+            case let .traceMaxLogsSize(size):
                 FDB.OptionsHelper.intOptionToPointer(int: size, pointer: &param, length: &paramLength)
                 internalOption = FDB_NET_OPTION_TRACE_MAX_LOGS_SIZE
-                case .traceLogGroup(let name):
+            case let .traceLogGroup(name):
                 FDB.OptionsHelper.stringOptionToPointer(string: name, pointer: &param, length: &paramLength)
                 internalOption = FDB_NET_OPTION_TRACE_LOG_GROUP
-                case .knob(let key, let value):
+            case let .knob(key, value):
                 FDB.OptionsHelper.stringOptionToPointer(string: "\(key)=\(value)", pointer: &param, length: &paramLength)
                 internalOption = FDB_NET_OPTION_KNOB
-                case .TLSCertBytes(let bytes):
+            case let .TLSCertBytes(bytes):
                 FDB.OptionsHelper.bytesOptionToPointer(bytes: bytes, pointer: &param, length: &paramLength)
                 internalOption = FDB_NET_OPTION_TLS_CERT_BYTES
-                case .TLSCertPath(let path):
+            case let .TLSCertPath(path):
                 FDB.OptionsHelper.stringOptionToPointer(string: path, pointer: &param, length: &paramLength)
                 internalOption = FDB_NET_OPTION_TLS_CERT_PATH
-                case .TLSKeyBytes(let bytes):
+            case let .TLSKeyBytes(bytes):
                 FDB.OptionsHelper.bytesOptionToPointer(bytes: bytes, pointer: &param, length: &paramLength)
                 internalOption = FDB_NET_OPTION_TLS_KEY_BYTES
-                case .TLSKeyPath(let path):
+            case let .TLSKeyPath(path):
                 FDB.OptionsHelper.stringOptionToPointer(string: path, pointer: &param, length: &paramLength)
                 internalOption = FDB_NET_OPTION_TLS_KEY_PATH
-                case .TLSVerifyPeers(let bytes):
+            case let .TLSVerifyPeers(bytes):
                 FDB.OptionsHelper.bytesOptionToPointer(bytes: bytes, pointer: &param, length: &paramLength)
                 internalOption = FDB_NET_OPTION_TLS_VERIFY_PEERS
-                case .TLSCABytes(let bytes):
+            case let .TLSCABytes(bytes):
                 FDB.OptionsHelper.bytesOptionToPointer(bytes: bytes, pointer: &param, length: &paramLength)
                 internalOption = FDB_NET_OPTION_TLS_CA_BYTES
-                case .TLSCAPath(let path):
+            case let .TLSCAPath(path):
                 FDB.OptionsHelper.stringOptionToPointer(string: path, pointer: &param, length: &paramLength)
                 internalOption = FDB_NET_OPTION_TLS_CA_PATH
-                case .TLSPassword(let password):
+            case let .TLSPassword(password):
                 FDB.OptionsHelper.stringOptionToPointer(string: password, pointer: &param, length: &paramLength)
                 internalOption = FDB_NET_OPTION_TLS_PASSWORD
-                case .buggifyEnable:
+            case .buggifyEnable:
                 internalOption = FDB_NET_OPTION_BUGGIFY_ENABLE
-                case .buggifyDisable:
+            case .buggifyDisable:
                 internalOption = FDB_NET_OPTION_BUGGIFY_DISABLE
-                case .buggifySectionActivatedProbability(let probability):
+            case let .buggifySectionActivatedProbability(probability):
                 FDB.OptionsHelper.intOptionToPointer(int: probability, pointer: &param, length: &paramLength)
                 internalOption = FDB_NET_OPTION_BUGGIFY_SECTION_ACTIVATED_PROBABILITY
-                case .buggifySectionFiredProbability(let probability):
+            case let .buggifySectionFiredProbability(probability):
                 FDB.OptionsHelper.intOptionToPointer(int: probability, pointer: &param, length: &paramLength)
                 internalOption = FDB_NET_OPTION_BUGGIFY_SECTION_FIRED_PROBABILITY
-                case .disableMultiVersionClientAPI:
+            case .disableMultiVersionClientAPI:
                 internalOption = FDB_NET_OPTION_DISABLE_MULTI_VERSION_CLIENT_API
-                case .callbacksOnExternalThreads:
+            case .callbacksOnExternalThreads:
                 internalOption = FDB_NET_OPTION_CALLBACKS_ON_EXTERNAL_THREADS
-                case .externalClientLibrary(let path):
+            case let .externalClientLibrary(path):
                 FDB.OptionsHelper.stringOptionToPointer(string: path, pointer: &param, length: &paramLength)
                 internalOption = FDB_NET_OPTION_EXTERNAL_CLIENT_LIBRARY
-                case .externalClientDirectory(let directory):
+            case let .externalClientDirectory(directory):
                 FDB.OptionsHelper.stringOptionToPointer(string: directory, pointer: &param, length: &paramLength)
                 internalOption = FDB_NET_OPTION_EXTERNAL_CLIENT_DIRECTORY
-                case .disableLocalClient:
+            case .disableLocalClient:
                 internalOption = FDB_NET_OPTION_DISABLE_LOCAL_CLIENT
-                case .disableClientStatisticsLogging:
+            case .disableClientStatisticsLogging:
                 internalOption = FDB_NET_OPTION_DISABLE_CLIENT_STATISTICS_LOGGING
-                case .enableSlowTaskProfiling:
+            case .enableSlowTaskProfiling:
                 internalOption = FDB_NET_OPTION_ENABLE_SLOW_TASK_PROFILING
             }
 
             try fdb_network_set_option(internalOption, param, paramLength).orThrow()
         }
     }
-    
+
     /// Sets a network option
     /// Warning: options must be set before connection. Otherwise behaviour is undefined.
     ///

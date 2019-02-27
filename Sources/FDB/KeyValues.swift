@@ -4,7 +4,7 @@ public extension FDB {
         public let key: Bytes
         public let value: Bytes
     }
-    
+
     /// A holder for key-value pairs result returned from range get
     public struct KeyValuesResult {
         /// Records returned from range get
