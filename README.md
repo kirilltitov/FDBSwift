@@ -26,7 +26,7 @@ Ahem. Where was I? OK so about library API. First let's deal with synchronous AP
 ### Connection
 
 ```swift
-// Default cluster path depending on your OS
+// Default cluster file path depending on your OS
 let fdb = FDB()
 // OR
 let fdb = FDB(clusterFile: "/usr/local/etc/foundationdb/fdb.cluster")
