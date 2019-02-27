@@ -98,7 +98,7 @@ public extension FDB.Transaction {
         internal func setOption(transaction: FDB.Transaction) throws {
             let internalOption: FDBTransactionOption
             var param: UnsafePointer<Byte>?
-            var paramLength: Int32 = 0
+            var length: Int32 = 0
 
             switch self {
             case .causalWriteRisky:
@@ -137,26 +137,26 @@ public extension FDB.Transaction {
                 internalOption = FDB_TR_OPTION_READ_LOCK_AWARE
             case let .debugRetryLogging(transactionName):
                 internalOption = FDB_TR_OPTION_DEBUG_RETRY_LOGGING
-                FDB.OptionsHelper.stringOptionToPointer(string: transactionName, pointer: &param, length: &paramLength)
+                FDB.OptionsHelper.stringOptionToPointer(string: transactionName, pointer: &param, length: &length)
             case let .transactionLoggingEnable(identifier):
                 internalOption = FDB_TR_OPTION_TRANSACTION_LOGGING_ENABLE
-                FDB.OptionsHelper.stringOptionToPointer(string: identifier, pointer: &param, length: &paramLength)
+                FDB.OptionsHelper.stringOptionToPointer(string: identifier, pointer: &param, length: &length)
             case let .timeout(milliseconds):
                 internalOption = FDB_TR_OPTION_TIMEOUT
-                FDB.OptionsHelper.intOptionToPointer(int: milliseconds, pointer: &param, length: &paramLength)
+                FDB.OptionsHelper.intOptionToPointer(int: milliseconds, pointer: &param, length: &length)
             case let .retryLimit(retries):
                 internalOption = FDB_TR_OPTION_RETRY_LIMIT
-                FDB.OptionsHelper.intOptionToPointer(int: retries, pointer: &param, length: &paramLength)
+                FDB.OptionsHelper.intOptionToPointer(int: retries, pointer: &param, length: &length)
             case let .maxRetryDelay(milliseconds):
                 internalOption = FDB_TR_OPTION_MAX_RETRY_DELAY
-                FDB.OptionsHelper.intOptionToPointer(int: milliseconds, pointer: &param, length: &paramLength)
+                FDB.OptionsHelper.intOptionToPointer(int: milliseconds, pointer: &param, length: &length)
             }
 
             try fdb_transaction_set_option(
                 transaction.pointer,
                 internalOption,
                 param,
-                paramLength
+                length
             ).orThrow()
         }
     }
