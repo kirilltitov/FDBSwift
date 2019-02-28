@@ -42,7 +42,7 @@ Just place it in `main.swift` or somewhere else, and you will able to track down
 
 **A**: I don't like littering the global namespace, and I don't want to wait two more major versions until I'm able to actually delete these definitions (one version to deprecate, and another to delete for good).
 
-Note: I dont' really like leaving `AnyFDBKey` and `FDBTuplePackable` in the global namespace, I'd love to hide them all under the `FDB` name as well. However, Swift _currently_ doesn't allow to define nested protocols, which is a shame. But worry not, the day Swift allows to do that, I will release a respective update :)
+Note: I don't really like leaving `AnyFDBKey` and `FDBTuplePackable` in the global namespace, I'd love to hide them all under the `FDB` name as well. However, Swift _currently_ doesn't allow to define nested protocols, which is a shame. But worry not, the day Swift allows to do that, I will release a respective update :)
 
 ## Usage
 
