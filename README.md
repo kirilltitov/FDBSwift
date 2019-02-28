@@ -1,4 +1,4 @@
-# FDBSwift <img src="https://img.shields.io/badge/Swift-4.2-brightgreen.svg" alt="Swift: 4.2" /> <img src="https://img.shields.io/badge/Swift-5.0-green.svg" alt="Swift: 5.0" /> <img src="https://travis-ci.org/kirilltitov/FDBSwift.svg?branch=master" />
+# FDBSwift v3 <img src="https://img.shields.io/badge/Swift-4.2-brightgreen.svg" alt="Swift: 4.2" /> <img src="https://img.shields.io/badge/Swift-5.0-green.svg" alt="Swift: 5.0" /> <img src="https://travis-ci.org/kirilltitov/FDBSwift.svg?branch=master" />
 > **Fine. I'll do it myself.**
 >> _It should definitely be better than Python bindings in Swift :D_
 
@@ -12,6 +12,37 @@ chmod +x ./scripts/install_pkgconfig.sh
 ./scripts/install_pkgconfig.sh
 ```
 or copy `scripts/libfdb.pc` (choose your platform) to `/usr/local/lib/pkgconfig/` on macOS or `/usr/lib/pkgconfig/libfdb.pc` on Linux.
+
+## Migration to v3
+
+Since v3 is a major version, it reshapes the whole FDBSwift public API reducing it to three (and a half) global names:
+* `FDB` — this is where all stuff lays now.
+* `AnyFDBKey` — a type-erased FDB key value.
+* `FDBTuplePackable` — a type-erased Tuple value.
+* (it's the half) `Byte` and `Bytes` (just typealiases for `UInt8` and `[UInt8]`), and should probably be defined as a part of Swift Foundation.
+
+Given the above, you should migrate all your v2 and v1 code to new names. You can simplify this process by using this shim which will help you with migration to v3:
+
+```swift
+@available(*, deprecated, renamed: "FDB.Transaction")
+public typealias Transaction = FDB.Transaction
+@available(*, deprecated, renamed: "FDB.Tuple")
+public typealias Tuple = FDB.Tuple
+@available(*, deprecated, renamed: "FDB.Subspace")
+public typealias Subspace = FDB.Subspace
+@available(*, deprecated, renamed: "FDBTuplePackable")
+public typealias TuplePackable = FDBTuplePackable
+@available(*, deprecated, renamed: "AnyFDBKey")
+public typealias FDBKey = AnyFDBKey
+```
+
+Just place it in `main.swift` or somewhere else, and you will able to track down all deprecated FDB names usages.
+
+**Q**: Why haven't you committed this shim to repository?
+
+**A**: I don't like littering the global namespace, and I don't want to wait two more major versions until I'm able to actually delete these definitions (one version to deprecate it, and another to delete them for good).
+
+Note: I dont' really like leaving `AnyFDBKey` and `FDBTuplePackable` in the global namespace, I'd love to hide them all under the `FDB` name as well. However, Swift _currently_ doesn't allow to define nested protocols, which is a shame. But worry not, the day Swift allows to do that, I will release a respective update :)
 
 ## Usage
 
