@@ -33,11 +33,11 @@ let fdb = FDB(clusterFile: "/usr/local/etc/foundationdb/fdb.cluster")
 ```
 Optionally you may pass network stop timeout.
 
-Keep in mind that at this point connection has not yet been established, it automatically established on first actual database operation. If you would like to explicitly connect to database and catch possible errors, you should just call:
+Keep in mind that at this point connection has not yet been established, it's automatically established on first actual database operation. If you would like to explicitly connect to database and catch possible errors, you should just call:
 ```swift
 try fdb.connect()
 ```
-Disconnection is automatic, on `deinit`. But also you may call `disconnect()` method directly. Be warned that if anything goes wrong during disconnection, you will get uncatchable fatal error. It's not that bad because disconnection should happen only once, when your application shuts down (and you shouldn't really care about fatal errors at that point). Also you _very_ ought to ensure that FDB really disconnected before actual shutdown (trap `SIGTERM` signal and wait for `disconnect` to finish), otherwise you might experience undefined behaviour (I personally haven't really encountered that yet, but it's not phantom menace; when you don't follow FoundationDB recommendations, things get quite messy indeed).
+Disconnection is automatic, on `deinit`. But you may also call `disconnect()` method directly. Be warned that if anything goes wrong during disconnection, you will get uncatchable fatal error. It's not that bad because disconnection should happen only once, when your application shuts down (and you shouldn't really care about fatal errors at that point). Also you _very_ ought to ensure that FDB really disconnected before actual shutdown (trap `SIGTERM` signal and wait for `disconnect` to finish), otherwise you might experience undefined behaviour (I personally haven't really encountered that yet, but it's not phantom menace; when you don't follow FoundationDB recommendations, things get quite messy indeed).
 
 Before you connected to FDB cluster you may set network options:
 
@@ -82,7 +82,7 @@ let tuple = FDB.Tuple(
     FDB.Null()
 )
 let packed: Bytes = tuple.pack()
-let unpacked: FDB.Tuple = FDB.Tuple(from: packed)
+let unpacked: FDB.Tuple = try FDB.Tuple(from: packed)
 let tupleBytes: Bytes = unpacked.tuple[0]
 let tupleInt: Int = unpacked.tuple[1]
 // ...
