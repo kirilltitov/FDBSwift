@@ -150,6 +150,8 @@ public extension FDB.Transaction {
                 internalOption = FDB_TR_OPTION_MAX_RETRY_DELAY
                 FDB.OptionsHelper.intOptionToPointer(int: milliseconds, pointer: &param, length: &length)
             }
+            
+            dump([internalOption, param, length])
 
             try fdb_transaction_set_option(
                 transaction.pointer,

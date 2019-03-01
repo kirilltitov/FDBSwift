@@ -1,7 +1,7 @@
 import CFDB
 import NIO
 
-public extension FDB.Transaction {
+public extension FDB.Transaction {    
     /// Commits current transaction
     ///
     /// - returns: EventLoopFuture with future Void value
@@ -18,25 +18,27 @@ public extension FDB.Transaction {
         } catch {
             promise.fail(error: error)
         }
-        return promise.futureResult.then { future in
-            let commitError: fdb_error_t = fdb_future_get_error(future.pointer)
-            if commitError == 0 {
-                return eventLoop.newSucceededFuture(result: ())
-            }
-            self.debug("Retrying transaction (commit error \(commitError)")
-            let retryPromise: EventLoopPromise<Void> = eventLoop.newPromise()
-            let retryFuture: FDB.Future<Void> = fdb_transaction_on_error(self.pointer, commitError).asFuture()
-            do {
-                try retryFuture.whenReady { _retryFuture in
-                    try fdb_future_get_error(_retryFuture.pointer).orThrow()
-                    throw FDB.Error.transactionRetry
-                }
-                retryFuture.whenError(retryPromise.fail)
-            } catch {
-                retryPromise.fail(error: error)
-            }
-            return retryPromise.futureResult
-        }
+        return promise.futureResult.map { _ in () }
+//        return promise.futureResult.then { future in
+//            let commitError: fdb_error_t = fdb_future_get_error(future.pointer)
+//            if commitError == 0 {
+//                return eventLoop.newSucceededFuture(result: ())
+//            }
+//            self.debug("Retrying transaction (commit errno \(commitError): \(FDB.Error.getErrorInfo(for: commitError)))")
+//            let retryPromise: EventLoopPromise<Void> = eventLoop.newPromise()
+//            let retryFuture: FDB.Future<Void> = fdb_transaction_on_error(self.pointer, commitError).asFuture()
+//            do {
+//                try retryFuture.whenReady { _retryFuture in
+//                    try fdb_future_get_error(_retryFuture.pointer).orThrow()
+//                    throw FDB.Error.transactionRetry(transaction: self)
+//                }
+//                retryFuture.whenError(retryPromise.fail)
+//            } catch {
+//                self.debug("Bad error during future retry: \(error)")
+//                retryPromise.fail(error: error)
+//            }
+//            return retryPromise.futureResult
+//        }
     }
 
     /// Sets bytes to given key in FDB cluster

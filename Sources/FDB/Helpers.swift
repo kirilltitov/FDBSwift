@@ -20,7 +20,12 @@ internal extension FDB {
             pointer: inout UnsafePointer<Byte>?,
             length: inout Int32
         ) {
-            self.bytesOptionToPointer(bytes: getBytes(int), pointer: &pointer, length: &length)
+            length = Int32(MemoryLayout<Int64>.size)
+            self.bytesOptionToPointer(
+                bytes: getBytes(int.littleEndian),
+                pointer: &pointer,
+                length: &length
+            )
         }
 
         internal static func bytesOptionToPointer(

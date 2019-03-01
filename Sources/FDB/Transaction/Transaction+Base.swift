@@ -24,6 +24,11 @@ public extension FDB {
         }
 
         deinit {
+            self.destroy()
+        }
+
+        /// Destroys current transaction. It becomes unusable after this.
+        public func destroy() {
             fdb_transaction_destroy(self.pointer)
         }
 

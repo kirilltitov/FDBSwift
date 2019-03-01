@@ -10,7 +10,7 @@ public extension FDB.Transaction {
         guard commitError == 0 else {
             let retryFuture: FDB.Future<Void> = try fdb_transaction_on_error(self.pointer, commitError).waitForFuture()
             try fdb_future_get_error(retryFuture.pointer).orThrow()
-            throw FDB.Error.transactionRetry
+            throw FDB.Error.transactionRetry(transaction: self)
         }
     }
 

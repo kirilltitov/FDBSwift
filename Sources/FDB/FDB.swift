@@ -275,7 +275,7 @@ public class FDB {
 
     /// Inits FDB cluster
     private func initCluster() throws -> FDB {
-        let clusterFuture: Future<Void> = try fdb_create_cluster(self.clusterFile).waitForFuture()
+        let clusterFuture: Future<Void> = try fdb_create_cluster(self.clusterFile).waitForFuture(isTransaction: false)
         try fdb_future_get_cluster(clusterFuture.pointer, &self.cluster).orThrow()
         self.debug("Cluster ready")
         return self
@@ -287,7 +287,7 @@ public class FDB {
             self.cluster,
             FDB.dbName.utf8Start,
             Int32(FDB.dbName.utf8CodeUnitCount)
-        ).waitForFuture()
+        ).waitForFuture(isTransaction: false)
         try fdb_future_get_database(dbFuture.pointer, &self.db).orThrow()
         self.debug("Database ready")
         return self
@@ -320,7 +320,7 @@ public class FDB {
     }
 
     /// Returns current FDB connection pointer or transparently connects if no connection is established yet
-    private func getDB() throws -> Database {
+    internal func getDB() throws -> Database {
         if let db = self.db {
             return db
         }
@@ -349,34 +349,6 @@ public class FDB {
     /// Prints verbose debug message to stdout (if `FDB.verbose` is `true`)
     internal func debug(_ message: String) {
         FDB.debug("[\(ObjectIdentifier(self).hashValue)] \(message)")
-    }
-
-    /// Begins a new FDB transaction without an event loop
-    public func begin() throws -> FDB.Transaction {
-        self.debug("Trying to start transaction without eventloop")
-
-        return try FDB.Transaction.begin(try self.getDB())
-    }
-
-    /// Begins a new FDB transaction with given event loop
-    ///
-    /// - parameters:
-    ///   - eventLoop: Swift-NIO EventLoop to run future computations
-    /// - returns: `EventLoopFuture` with a transaction instance as future value.
-    public func begin(eventLoop: EventLoop) -> EventLoopFuture<FDB.Transaction> {
-        do {
-            self.debug("Trying to start transaction with eventloop \(Swift.type(of: eventLoop))")
-
-            return eventLoop.newSucceededFuture(
-                result: try FDB.Transaction.begin(
-                    try self.getDB(),
-                    eventLoop
-                )
-            )
-        } catch {
-            self.debug("Failed to start transaction with eventloop \(Swift.type(of: eventLoop)): \(error)")
-            return FDB.dummyEventLoop.newFailedFuture(error: error)
-        }
     }
 
     /// Performs explicit connection to FDB cluster
