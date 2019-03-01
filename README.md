@@ -1,6 +1,6 @@
 # FDBSwift v3 <img src="https://img.shields.io/badge/Swift-4.2-brightgreen.svg" alt="Swift: 4.2" /> <img src="https://img.shields.io/badge/Swift-5.0-green.svg" alt="Swift: 5.0" /> <img src="https://travis-ci.org/kirilltitov/FDBSwift.svg?branch=master" />
 > **Fine. I'll do it myself.**
->> _It should definitely be better than Python bindings in Swift :D_
+>> _Episode III: Revenge of FoundationDB_
 
 This is FoundationDB wrapper for Swift. It's quite low-level, (almost) `Foundation`less and can into Swift-NIO.
 
