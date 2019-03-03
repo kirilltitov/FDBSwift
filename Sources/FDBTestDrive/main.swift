@@ -18,7 +18,7 @@ extension Array where Element == Byte {
     }
 }
 
-let etalon: [Int64] = (1...10).map { $0 }
+let etalon: [Int64] = (1...100).map { $0 }
 var result = Array<Int64>()
 result.reserveCapacity(etalon.count)
 
@@ -32,7 +32,7 @@ try fdb.connect()
 let subspace = FDB.Subspace("atomic_load_test")
 let key = subspace["id"]
 
-//try fdb.clear(key: key)
+try fdb.clear(key: key)
 
 let submitQueue = DispatchQueue(label: "ssdf", qos: .userInitiated, attributes: .concurrent)
 
@@ -44,41 +44,34 @@ for i in etalon {
 //            dump(error)
 //        }
         let future: EventLoopFuture<Void> = fdb
-            .begin(on: group.next())
-//            .then { transaction in
-//                transaction.setOption(.retryLimit(retries: 20))
-//            }
-//            .then { transaction in
-//                transaction.setOption(.maxRetryDelay(milliseconds: 3000))
-//            }
-            .then { (transaction: FDB.Transaction) in
+            .withTransaction(on: group.next()) { transaction in
                 print("#\(i) Transaction started")
-                return transaction.atomic(.add, key: key, value: Int64(1))
-            }
-            .then { (transaction: FDB.Transaction) in
-                print("#\(i) Atomic add done")
-                return transaction.get(key: key, commit: true)
-            }
-            .map { (bytes: Bytes?, transaction: FDB.Transaction) -> Void in
-                print("#\(i) Got value")
-                let value: Int64 = bytes!.cast()
-                //queue.async(flags: .barrier) {
-                    print("#\(i) Result \(value) set")
-                    result.append(value)
-                //}
-                return
+                return transaction
+                    .atomic(.add, key: key, value: Int64(1))
+                    .then { (transaction: FDB.Transaction) in
+                        print("#\(i) Atomic add done")
+                        return transaction.get(key: key, commit: true)
+                    }
+                    .map { (bytes: Bytes?, transaction: FDB.Transaction) -> Void in
+                        print("#\(i) Got value")
+                        let value: Int64 = bytes!.cast()
+                        print("#\(i) Result \(value) set")
+                        result.append(value)
+                        return
+                    }
             }
         future.whenFailure { error in
-            dump(error)
+            print(error)
         }
 //    }
 }
 
 print("Submitted all tasks")
 
-sleep(3)
+sleep(5)
 
-//dump(result)
-//dump(result.sorted())
+print(result)
+print(result.sorted())
+print(result.sorted() == etalon)
 
 //semaphore.wait()

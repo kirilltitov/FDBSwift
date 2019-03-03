@@ -1,54 +1,31 @@
 import CFDB
 
-/// A context wrapper (box) for passing to a CFDB function as `*void`
-fileprivate class BytesContext {
-    internal typealias Closure = FDB.Future<Bytes?>.ReadyBytesClosure
-
-    internal let callback: Closure
-    internal let ctx: FDB.Future<Bytes?>
-
-    init(
-        _ callback: @escaping Closure,
-        _ ctx: FDB.Future<Bytes?>
-    ) {
-        self.callback = callback
-        self.ctx = ctx
-    }
-}
-
-internal extension FDB.Future where R == Bytes? {
-    internal typealias ReadyBytesClosure = (_ bytes: Bytes?) throws -> Void
-
+extension FDB.Future {
     /// Sets a closure to be executed when current future is resolved
-    internal func whenReady(_ callback: @escaping ReadyBytesClosure) throws {
-        try fdb_future_set_callback(
-            self.pointer,
-            { futurePtr, contextPtr in
-                let context = Unmanaged<BytesContext>.fromOpaque(contextPtr!).takeRetainedValue()
-                do {
-                    try context.callback(try context.ctx.parseBytes(futurePtr!))
-                } catch {
-                    context.ctx.fail(with: error)
-                }
-            },
-            Unmanaged<BytesContext>.passRetained(BytesContext(callback, self)).toOpaque()
-        ).orThrow()
+    func whenBytesReady(_ callback: @escaping (Bytes?) -> Void) throws {
+        self.whenReady { future in
+            do {
+                try callback(future.parseBytes())
+            } catch {
+                future.fail(with: error)
+            }
+        }
     }
 
     /// Blocks current thread until future is resolved
     internal func wait() throws -> Bytes? {
-        return try self.waitAndCheck().parseBytes(self.pointer)
+        return try self.waitAndCheck().parseBytes()
     }
 
     /// Parses bytes result from current future
     ///
     /// Warning: this should be only called if future is in resolved state
-    internal func parseBytes(_ futurePtr: OpaquePointer) throws -> Bytes? {
+    internal func parseBytes() throws -> Bytes? {
         var readValueFound: Int32 = 0
         var readValue: UnsafePointer<Byte>!
         var readValueLength: Int32 = 0
 
-        try fdb_future_get_value(futurePtr, &readValueFound, &readValue, &readValueLength).orThrow()
+        try fdb_future_get_value(self.pointer, &readValueFound, &readValue, &readValueLength).orThrow()
 
         guard readValueFound > 0 else {
             return nil

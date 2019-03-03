@@ -30,43 +30,36 @@ public extension FDB {
             return FDB.dummyEventLoop.newFailedFuture(error: error)
         }
     }
-    
+
+    /// Executes given transactional closure with appropriate retry logic
+    ///
+    /// Retry logic kicks in if `notCommitted` (1020) error was thrown during commit event. You must commit
+    /// the transaction yourself. Additionally, this transactional closure should be idempotent in order to exclude
+    /// unexpected behaviour.
     public func withTransaction<T>(
         on eventLoop: EventLoop,
-        commit: Bool = false,
         _ closure: @escaping (FDB.Transaction) throws -> EventLoopFuture<T>
     ) -> EventLoopFuture<T> {
-        func transactionRoutine(_ transaction: FDB.Transaction) -> EventLoopFuture<(T, FDB.Transaction)> {
-            let result: EventLoopFuture<(T, FDB.Transaction)>
+        func transactionRoutine(_ transaction: FDB.Transaction) -> EventLoopFuture<T> {
+            let result: EventLoopFuture<T>
+
             do {
-                result = try closure(transaction).map { _result in (_result, transaction) }
+                result = try closure(transaction).checkingRetryableError(for: transaction)
             } catch {
                 result = eventLoop.newFailedFuture(error: error)
             }
-            return result
+
+            return result.thenIfError { (error: Swift.Error) -> EventLoopFuture<T> in
+                if case let FDB.Error.transactionRetry(transaction) = error {
+                    transaction.incrementRetries()
+                    return transactionRoutine(transaction)
+                }
+                return eventLoop.newFailedFuture(error: error)
+            }
         }
 
         return self
             .begin(on: eventLoop)
             .then(transactionRoutine)
-            .then { (result: T, transaction: FDB.Transaction) in
-                let resultFuture: EventLoopFuture<(T, FDB.Transaction)>
-                if commit {
-                    resultFuture = transaction
-                        .commit()
-                        .map { _ in (result, transaction) }
-                } else {
-                    resultFuture = eventLoop.newSucceededFuture(result: (result, transaction))
-                }
-                return resultFuture
-            }
-            .thenIfError { (error: Swift.Error) -> EventLoopFuture<(T, FDB.Transaction)> in
-                if case let FDB.Error.transactionRetry(transaction) = error {
-                    self.debug("Retrying transaction")
-                    return transactionRoutine(transaction)
-                }
-                return eventLoop.newFailedFuture(error: error)
-            }
-            .map { result, transaction in result }
     }
 }

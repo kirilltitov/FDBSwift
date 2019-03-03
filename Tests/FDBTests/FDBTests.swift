@@ -120,15 +120,14 @@ class FDBTests: XCTestCase {
     }
 
     func testErrorDescription() {
-        let error = FDB.Error.self
-        XCTAssertEqual(error.transactionReadOnly.rawValue, 2021)
-        XCTAssertEqual(error.transactionReadOnly.getDescription(), "Transaction is read-only and therefore does not have a commit version")
-        XCTAssertEqual(error.transactionRetry.getDescription(), "You should replay this transaction")
-        XCTAssertEqual(error.unexpectedError.getDescription(), "Error is unexpected, it shouldn't really happen")
+        typealias E = FDB.Error
+        XCTAssertEqual(E.transactionReadOnly.errno, 2021)
+        XCTAssertEqual(E.transactionReadOnly.getDescription(), "Transaction is read-only and therefore does not have a commit version")
+        XCTAssertEqual(E.unexpectedError("FOo bar").getDescription(), "Error is unexpected, it shouldn't really happen")
     }
 
     func begin() throws -> EventLoopFuture<FDB.Transaction> {
-        return FDBTests.fdb.begin(eventLoop: self.eventLoop)
+        return FDBTests.fdb.begin(on: self.eventLoop)
     }
 
     func genericTestCommit() throws -> FDB.Transaction {
@@ -223,7 +222,7 @@ class FDBTests: XCTestCase {
             semaphore.signal()
         }
         semaphore.wait()
-        let result = try tr.get(key: key).wait()
+        let result: Bytes? = try tr.get(key: key).wait()
         XCTAssertNotNil(result)
         XCTAssertEqual(result!.cast() as Int64, expected)
         XCTAssertEqual(result, getBytes(expected))
@@ -259,7 +258,7 @@ class FDBTests: XCTestCase {
         XCTAssertNoThrow(try tr.setOption(.maxRetryDelay(milliseconds: 5000)).wait())
         XCTAssertNoThrow(try tr.set(key: key, value: Bytes([1,2,3])).wait())
         XCTAssertEqual(Bytes([1,2,3]), try tr.get(key: key).wait())
-        try tr.commit().wait()
+        let _: Void = try tr.commit().wait()
     }
     
     func testNetworkOptions() throws {

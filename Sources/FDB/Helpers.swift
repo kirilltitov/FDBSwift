@@ -12,7 +12,11 @@ internal extension FDB {
             pointer: inout UnsafePointer<Byte>?,
             length: inout Int32
         ) {
-            self.bytesOptionToPointer(bytes: string.bytes, pointer: &pointer, length: &length)
+            self.bytesOptionToPointer(
+                bytes: string.bytes,
+                pointer: &pointer,
+                length: &length
+            )
         }
 
         internal static func intOptionToPointer(
@@ -20,12 +24,8 @@ internal extension FDB {
             pointer: inout UnsafePointer<Byte>?,
             length: inout Int32
         ) {
+            pointer = getPtr(int)
             length = Int32(MemoryLayout<Int64>.size)
-            self.bytesOptionToPointer(
-                bytes: getBytes(int.littleEndian),
-                pointer: &pointer,
-                length: &length
-            )
         }
 
         internal static func bytesOptionToPointer(
@@ -70,6 +70,12 @@ internal extension Array where Element == Byte {
 // little endian byte order
 internal func getBytes<Input>(_ input: Input) -> Bytes {
     return withUnsafeBytes(of: input) { Bytes($0) }
+}
+
+@usableFromInline internal func getPtr<Input>(_ input: Input) -> UnsafePointer<Byte> {
+    return withUnsafePointer(to: input) {
+        return $0.withMemoryRebound(to: Byte.self, capacity: 1) { $0 }
+    }
 }
 
 // taken from Swift-NIO

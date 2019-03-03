@@ -1,12 +1,34 @@
 import CFDB
 import NIO
 
+internal extension EventLoopFuture {
+    func checkingRetryableError(for transaction: FDB.Transaction) -> EventLoopFuture {
+        return self.thenIfError { error in
+            guard let FDBError = error as? FDB.Error else {
+                return self.eventLoop.newFailedFuture(error: error)
+            }
+
+            let onErrorFuture: FDB.Future = fdb_transaction_on_error(transaction.pointer, FDBError.errno).asFuture()
+
+            let promise: EventLoopPromise<T> = self.eventLoop.newPromise()
+
+            onErrorFuture.whenVoidReady {
+                promise.fail(error: FDB.Error.transactionRetry(transaction: transaction))
+            }
+            onErrorFuture.whenError(promise.fail)
+
+            return promise.futureResult
+        }
+    }
+}
+
 public extension FDB {
     public class Transaction {
         internal typealias Pointer = OpaquePointer
 
         internal let pointer: Pointer
         internal let eventLoop: EventLoop?
+        internal private(set) var retries: Int = 0
 
         /// Creates a new instance of a previously started FDB transaction
         internal init(_ pointer: Pointer, _ eventLoop: EventLoop? = nil) {
@@ -30,6 +52,10 @@ public extension FDB {
         /// Destroys current transaction. It becomes unusable after this.
         public func destroy() {
             fdb_transaction_destroy(self.pointer)
+        }
+
+        internal func incrementRetries() {
+            self.retries += 1
         }
 
         /// Prints verbose debug message to stdout (if `FDB.verbose` is `true`)

@@ -275,7 +275,7 @@ public class FDB {
 
     /// Inits FDB cluster
     private func initCluster() throws -> FDB {
-        let clusterFuture: Future<Void> = try fdb_create_cluster(self.clusterFile).waitForFuture(isTransaction: false)
+        let clusterFuture: Future = try fdb_create_cluster(self.clusterFile).waitForFuture(isTransaction: false)
         try fdb_future_get_cluster(clusterFuture.pointer, &self.cluster).orThrow()
         self.debug("Cluster ready")
         return self
@@ -283,7 +283,7 @@ public class FDB {
 
     /// Inits FDB database
     private func initDB() throws -> FDB {
-        let dbFuture: Future<Void> = try fdb_cluster_create_database(
+        let dbFuture: Future = try fdb_cluster_create_database(
             self.cluster,
             FDB.dbName.utf8Start,
             Int32(FDB.dbName.utf8CodeUnitCount)
@@ -564,7 +564,7 @@ public class FDB {
         let transaction = try self.begin()
         try transaction.atomic(.add, key: key, value: getBytes(value), commit: false) as Void
         guard let bytes: Bytes = try transaction.get(key: key) else {
-            throw FDB.Error.unexpectedError
+            throw FDB.Error.unexpectedError("Couldn't get key '\(key)' after increment")
         }
         try transaction.commitSync()
         return bytes.cast()

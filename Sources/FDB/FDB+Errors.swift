@@ -89,7 +89,7 @@ public extension FDB {
         case internalError
 
         case transactionRetry(transaction: FDB.Transaction)
-        case unexpectedError
+        case unexpectedError(String)
         case noEventLoopProvided
         case connectionError
         case unpackEmptyInput
@@ -166,7 +166,6 @@ public extension FDB {
             case 2210: result = .exactModeWithoutLimits
             case 4000: result = .unknownError
             case 4100: result = .internalError
-            case 9000: result = .unexpectedError
             case 9500: result = .noEventLoopProvided
             case 9600: result = .connectionError
             case 9701: result = .unpackEmptyInput
