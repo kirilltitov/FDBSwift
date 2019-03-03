@@ -1,7 +1,7 @@
 import CFDB
 import NIO
 
-public extension FDB.Transaction {    
+public extension FDB.Transaction {
     /// Commits current transaction
     ///
     /// - returns: EventLoopFuture with future Void value
