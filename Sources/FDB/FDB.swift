@@ -275,7 +275,7 @@ public class FDB {
 
     /// Inits FDB cluster
     private func initCluster() throws -> FDB {
-        let clusterFuture: Future = try fdb_create_cluster(self.clusterFile).waitForFuture(isTransaction: false)
+        let clusterFuture: Future = try fdb_create_cluster(self.clusterFile).waitForFuture()
         try fdb_future_get_cluster(clusterFuture.pointer, &self.cluster).orThrow()
         self.debug("Cluster ready")
         return self
@@ -287,7 +287,7 @@ public class FDB {
             self.cluster,
             FDB.dbName.utf8Start,
             Int32(FDB.dbName.utf8CodeUnitCount)
-        ).waitForFuture(isTransaction: false)
+        ).waitForFuture()
         try fdb_future_get_database(dbFuture.pointer, &self.db).orThrow()
         self.debug("Database ready")
         return self

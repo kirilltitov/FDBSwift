@@ -21,11 +21,9 @@ internal extension FDB {
         let pointer: OpaquePointer
 
         private var failClosure: ((Swift.Error) -> Void)?
-        private let isTransaction: Bool
 
-        init(_ pointer: OpaquePointer, _ isTransaction: Bool) {
+        init(_ pointer: OpaquePointer) {
             self.pointer = pointer
-            self.isTransaction = isTransaction
         }
 
         deinit {
