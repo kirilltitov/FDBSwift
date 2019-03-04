@@ -283,13 +283,13 @@ Transaction here is wrapped with an `EventLoopFuture` because this call may fail
 
 This transaction now supports asynchronous methods (if you try to call asynchronous method on transaction created without `EventLoop`, you will instantly get failed `EventLoopPromise`, so take care). Keep in mind that almost all async transaction methods returns not just `EventLoopFuture` with result (or `Void`) inside, but a tuple of result and this very same transaction, because if you'd like to commit it yourself, you must have a reference to it, and it's your job to pass this transaction further while you need it.
 
-### `withTransaction` functions
+### Conflicts, retries and `withTransaction`
 
 Since FoundationDB is _quite_ a transactional database, sometimes `commit`s might not succeed due to serialization failures. This can happen when two or more transactions create overlapping conflict ranges. Or, simply speaking, when they try to access or modify same keys (unless they are not in `snapshot` read mode) at the same time. This is expected (and, in a way, welcomed) behaviour because this is how ACID is achieved.
 
-In these [not-so-rare] cases transaction is allowed to be replayed again. How do you know if transasction can be replayed? It's failed with a special `FDB.Error` case `.transactionRetry(FDB.Transaction)` which holds current transaction as an associated value. If your transaction (or its respective `EventLoopFuture`) is failed with this particular error, it means that the transaction has already been rolled back to initial state and is ready to be executed again.
+In these [not-so-rare] cases transaction is allowed to be replayed again. How do you know if transaction can be replayed? It's failed with a special `FDB.Error` case `.transactionRetry(FDB.Transaction)` which holds current transaction as an associated value. If your transaction (or its respective `EventLoopFuture`) is failed with this particular error, it means that the transaction has already been rolled back to its initial state and is ready to be executed again.
 
-You can implement this logic manually or you can just use builtin `FDB` object function `withTransaction`. This function, as always, comes with two flavors: synchronous and NIO:
+You can implement this retry logic manually or you can just use builtin `FDB` object function `withTransaction`. This function, as always, comes with two flavors: synchronous and NIO:
 
 ```swift
 let maybeString: String? = try fdb.withTransaction { transaction in
@@ -313,7 +313,7 @@ let maybeStringFuture: EventLoopFuture<String?> = fdb.withTransaction(on: myEven
 }
 ```
 
-This way passed block of code will be gently retried until transaction is successfully committed.
+Thus your block of code will be gently retried until transaction is successfully committed.
 
 ### Complete example
 
