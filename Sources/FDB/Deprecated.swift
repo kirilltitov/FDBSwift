@@ -1,9 +1,6 @@
 import CFDB
 import Dispatch
 
-@available(*, unavailable, renamed: "AnyFDBKey")
-public typealias FDBKey = AnyFDBKey
-
 public extension FDB {
     @available(*, deprecated, message: "Use init without queue argument")
     public convenience init(
