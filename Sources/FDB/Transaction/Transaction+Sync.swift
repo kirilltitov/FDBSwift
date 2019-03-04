@@ -5,12 +5,12 @@ public extension FDB.Transaction {
     ///
     /// This function will block current thread during execution
     public func commitSync() throws {
-        let future: FDB.Future<Void> = try self.commit().wait()
+        let future: FDB.Future = try self.commit().wait()
         let commitError = fdb_future_get_error(future.pointer)
         guard commitError == 0 else {
-            let retryFuture: FDB.Future<Void> = try fdb_transaction_on_error(self.pointer, commitError).waitForFuture()
+            let retryFuture: FDB.Future = try fdb_transaction_on_error(self.pointer, commitError).waitForFuture()
             try fdb_future_get_error(retryFuture.pointer).orThrow()
-            throw FDB.Error.transactionRetry
+            throw FDB.Error.transactionRetry(transaction: self)
         }
     }
 
@@ -40,7 +40,7 @@ public extension FDB.Transaction {
     ///
     /// - returns: Bytes result or `nil` if no key
     public func get(key: AnyFDBKey, snapshot: Bool = false, commit: Bool = false) throws -> Bytes? {
-        let result = try self.get(key: key, snapshot: snapshot).wait()
+        let result: Bytes? = try self.get(key: key, snapshot: snapshot).wait()
         if commit {
             try self.commitSync()
         }
@@ -82,7 +82,7 @@ public extension FDB.Transaction {
         reverse: Bool = false,
         commit: Bool = false
     ) throws -> FDB.KeyValuesResult {
-        let future: FDB.Future<FDB.KeyValuesResult> = try self.get(
+        let future: FDB.Future = try self.get(
             begin: begin,
             end: end,
             beginEqual: beginEqual,
@@ -135,7 +135,7 @@ public extension FDB.Transaction {
         reverse: Bool = false,
         commit: Bool = false
     ) throws -> FDB.KeyValuesResult {
-        let future: FDB.Future<FDB.KeyValuesResult> = self.get(
+        let future: FDB.Future = self.get(
             begin: range.begin,
             end: range.end,
             beginEqual: beginEqual,

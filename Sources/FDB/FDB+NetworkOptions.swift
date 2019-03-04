@@ -102,10 +102,12 @@ public extension FDB {
                 FDB.OptionsHelper.stringOptionToPointer(string: directory, pointer: &param, length: &length)
                 internalOption = FDB_NET_OPTION_TRACE_ENABLE
             case let .traceRollSize(size):
-                FDB.OptionsHelper.intOptionToPointer(int: size, pointer: &param, length: &length)
+                param = getPtr(size)
+                length = 8
                 internalOption = FDB_NET_OPTION_TRACE_ROLL_SIZE
             case let .traceMaxLogsSize(size):
-                FDB.OptionsHelper.intOptionToPointer(int: size, pointer: &param, length: &length)
+                param = getPtr(size)
+                length = 8
                 internalOption = FDB_NET_OPTION_TRACE_MAX_LOGS_SIZE
             case let .traceLogGroup(name):
                 FDB.OptionsHelper.stringOptionToPointer(string: name, pointer: &param, length: &length)
@@ -142,10 +144,12 @@ public extension FDB {
             case .buggifyDisable:
                 internalOption = FDB_NET_OPTION_BUGGIFY_DISABLE
             case let .buggifySectionActivatedProbability(probability):
-                FDB.OptionsHelper.intOptionToPointer(int: probability, pointer: &param, length: &length)
+                param = getPtr(probability)
+                length = 8
                 internalOption = FDB_NET_OPTION_BUGGIFY_SECTION_ACTIVATED_PROBABILITY
             case let .buggifySectionFiredProbability(probability):
-                FDB.OptionsHelper.intOptionToPointer(int: probability, pointer: &param, length: &length)
+                param = getPtr(probability)
+                length = 8
                 internalOption = FDB_NET_OPTION_BUGGIFY_SECTION_FIRED_PROBABILITY
             case .disableMultiVersionClientAPI:
                 internalOption = FDB_NET_OPTION_DISABLE_MULTI_VERSION_CLIENT_API

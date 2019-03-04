@@ -7,23 +7,28 @@ public typealias Bytes = [Byte]
 
 internal extension FDB {
     internal struct OptionsHelper {
-        internal static func stringOptionToPointer(
+        @usableFromInline internal static func stringOptionToPointer(
             string: String,
             pointer: inout UnsafePointer<Byte>?,
             length: inout Int32
         ) {
-            self.bytesOptionToPointer(bytes: string.bytes, pointer: &pointer, length: &length)
+            self.bytesOptionToPointer(
+                bytes: string.bytes,
+                pointer: &pointer,
+                length: &length
+            )
         }
 
-        internal static func intOptionToPointer(
+        @usableFromInline internal static func intOptionToPointer(
             int: Int64,
             pointer: inout UnsafePointer<Byte>?,
             length: inout Int32
         ) {
-            self.bytesOptionToPointer(bytes: getBytes(int), pointer: &pointer, length: &length)
+            pointer = getPtr(int)
+            length = Int32(MemoryLayout<Int64>.size)
         }
 
-        internal static func bytesOptionToPointer(
+        @usableFromInline internal static func bytesOptionToPointer(
             bytes: Bytes,
             pointer: inout UnsafePointer<Byte>?,
             length: inout Int32
@@ -35,19 +40,19 @@ internal extension FDB {
 }
 
 internal extension String {
-    var bytes: Bytes {
+    @usableFromInline var bytes: Bytes {
         return Bytes(self.utf8)
     }
 }
 
 internal extension Bool {
-    var int: fdb_bool_t {
+    @usableFromInline var int: fdb_bool_t {
         return self ? 1 : 0
     }
 }
 
 internal extension Array where Element == Byte {
-    func cast<R>() -> R {
+    @usableFromInline func cast<R>() -> R {
         precondition(
             MemoryLayout<R>.size == self.count,
             "Memory layout size for result type '\(R.self)' (\(MemoryLayout<R>.size) bytes) does not match with given byte array length (\(self.count) bytes)"
@@ -57,23 +62,29 @@ internal extension Array where Element == Byte {
         }
     }
 
-    var length: Int32 {
+    @usableFromInline var length: Int32 {
         return Int32(self.count)
     }
 }
 
 // little endian byte order
-internal func getBytes<Input>(_ input: Input) -> Bytes {
+@usableFromInline internal func getBytes<Input>(_ input: Input) -> Bytes {
     return withUnsafeBytes(of: input) { Bytes($0) }
 }
 
+@usableFromInline internal func getPtr<Input>(_ input: Input) -> UnsafePointer<Byte> {
+    return withUnsafePointer(to: input) {
+        return $0.withMemoryRebound(to: Byte.self, capacity: 1) { $0 }
+    }
+}
+
 // taken from Swift-NIO
-internal func debugOnly(_ body: () -> Void) {
+@usableFromInline internal func debugOnly(_ body: () -> Void) {
     assert({ body(); return true }())
 }
 
 internal extension UnsafePointer {
-    func unwrapPointee(count: Int32) -> [Pointee] {
+    @usableFromInline func unwrapPointee(count: Int32) -> [Pointee] {
         let items = Int(count)
         let buffer = self.withMemoryRebound(to: Pointee.self, capacity: items) {
             UnsafeBufferPointer(start: $0, count: items)
@@ -83,7 +94,7 @@ internal extension UnsafePointer {
 }
 
 internal extension UnsafePointer where Pointee == Byte {
-    func getBytes(count: Int32) -> Bytes {
+    @usableFromInline func getBytes(count: Int32) -> Bytes {
         let items = Int(count) / MemoryLayout<Byte>.stride
         let buffer = self.withMemoryRebound(to: Byte.self, capacity: items) {
             UnsafeBufferPointer(start: $0, count: items)
@@ -94,7 +105,7 @@ internal extension UnsafePointer where Pointee == Byte {
 
 internal extension UnsafeRawPointer {
     // Boy this is unsafe :D
-    func getBytes(count: Int32) -> Bytes {
+    @usableFromInline func getBytes(count: Int32) -> Bytes {
         return self.assumingMemoryBound(to: Byte.self).getBytes(count: count)
     }
 }
@@ -105,17 +116,17 @@ internal extension DispatchSemaphore {
     /// - Parameters:
     ///   - for: Seconds to wait before unblocking
     /// - Returns: Wait result. Can be `.success` if semaphore succesfully released or `.timedOut` if else
-    func wait(for seconds: Int) -> DispatchTimeoutResult {
+    @usableFromInline func wait(for seconds: Int) -> DispatchTimeoutResult {
         return self.wait(timeout: .secondsFromNow(seconds))
     }
 }
 
 internal extension DispatchTime {
-    static func seconds(_ seconds: Int) -> DispatchTime {
+    @usableFromInline static func seconds(_ seconds: Int) -> DispatchTime {
         return self.init(uptimeNanoseconds: UInt64(seconds) * 1_000_000_000)
     }
 
-    static func secondsFromNow(_ seconds: Int) -> DispatchTime {
+    @usableFromInline static func secondsFromNow(_ seconds: Int) -> DispatchTime {
         return self.init(secondsFromNow: seconds)
     }
 

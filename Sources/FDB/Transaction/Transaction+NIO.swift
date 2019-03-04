@@ -10,33 +10,14 @@ public extension FDB.Transaction {
             self.debug("[commit] No event loop")
             return FDB.dummyEventLoop.newFailedFuture(error: FDB.Error.noEventLoopProvided)
         }
-        let promise: EventLoopPromise<FDB.Future<Void>> = eventLoop.newPromise()
-        do {
-            let future: FDB.Future<Void> = try self.commit()
-            try future.whenReady(promise.succeed)
-            future.whenError(promise.fail)
-        } catch {
-            promise.fail(error: error)
-        }
-        return promise.futureResult.then { future in
-            let commitError: fdb_error_t = fdb_future_get_error(future.pointer)
-            if commitError == 0 {
-                return eventLoop.newSucceededFuture(result: ())
-            }
-            self.debug("Retrying transaction (commit error \(commitError)")
-            let retryPromise: EventLoopPromise<Void> = eventLoop.newPromise()
-            let retryFuture: FDB.Future<Void> = fdb_transaction_on_error(self.pointer, commitError).asFuture()
-            do {
-                try retryFuture.whenReady { _retryFuture in
-                    try fdb_future_get_error(_retryFuture.pointer).orThrow()
-                    throw FDB.Error.transactionRetry
-                }
-                retryFuture.whenError(retryPromise.fail)
-            } catch {
-                retryPromise.fail(error: error)
-            }
-            return retryPromise.futureResult
-        }
+        let promise: EventLoopPromise<Void> = eventLoop.newPromise()
+
+        let future: FDB.Future = self.commit()
+        future.whenVoidReady(promise.succeed)
+        future.whenError(promise.fail)
+
+        return promise.futureResult
+            .map { _ in () }
     }
 
     /// Sets bytes to given key in FDB cluster
@@ -52,13 +33,17 @@ public extension FDB.Transaction {
             self.debug("[set] No event loop")
             return FDB.dummyEventLoop.newFailedFuture(error: FDB.Error.noEventLoopProvided)
         }
+
         self.set(key: key, value: value)
-        let future: EventLoopFuture<FDB.Transaction> = eventLoop.newSucceededFuture(result: self)
+
+        var future: EventLoopFuture<FDB.Transaction> = eventLoop.newSucceededFuture(result: self)
+
         if commit {
-            return future
+            future = future
                 .then { _ in self.commit() }
                 .map { self }
         }
+
         return future
     }
 
@@ -79,23 +64,28 @@ public extension FDB.Transaction {
             self.debug("[get] No event loop")
             return FDB.dummyEventLoop.newFailedFuture(error: FDB.Error.noEventLoopProvided)
         }
+
         let promise: EventLoopPromise<(Bytes?, FDB.Transaction)> = eventLoop.newPromise()
+
         do {
             let resultFuture = self.get(key: key, snapshot: snapshot)
-            try resultFuture.whenReady {
+            try resultFuture.whenBytesReady {
                 promise.succeed(result: ($0, self))
             }
             resultFuture.whenError(promise.fail)
         } catch {
             promise.fail(error: error)
         }
-        let future = promise.futureResult
+
+        var future = promise.futureResult
+
         if commit {
-            return future
+            future = future
                 .then { bytes in
                     self.commit().map { bytes }
                 }
         }
+
         return future
     }
 
@@ -136,9 +126,11 @@ public extension FDB.Transaction {
             self.debug("[get range] No event loop")
             return FDB.dummyEventLoop.newFailedFuture(error: FDB.Error.noEventLoopProvided)
         }
+
         let promise: EventLoopPromise<(FDB.KeyValuesResult, FDB.Transaction)> = eventLoop.newPromise()
+
         do {
-            let future: FDB.Future<FDB.KeyValuesResult> = self.get(
+            let future: FDB.Future = self.get(
                 begin: begin,
                 end: end,
                 beginEqual: beginEqual,
@@ -152,19 +144,22 @@ public extension FDB.Transaction {
                 snapshot: snapshot,
                 reverse: reverse
             )
-            try future.whenReady {
+            try future.whenKeyValuesReady {
                 promise.succeed(result: ($0, self))
             }
             future.whenError(promise.fail)
         } catch {
             promise.fail(error: error)
         }
-        let future = promise.futureResult
+
+        var future = promise.futureResult
+
         if commit {
-            return future.then { bytes in
+            future = future.then { bytes in
                 self.commit().map { bytes }
             }
         }
+
         return future
     }
 
@@ -231,18 +226,22 @@ public extension FDB.Transaction {
             self.debug("[generic action] No event loop")
             return FDB.dummyEventLoop.newFailedFuture(error: FDB.Error.noEventLoopProvided)
         }
-        let future: EventLoopFuture<FDB.Transaction>
+
+        var future: EventLoopFuture<FDB.Transaction>
+
         do {
             try closure()
             future = eventLoop.newSucceededFuture(result: self)
         } catch {
             return eventLoop.newFailedFuture(error: error)
         }
+
         if commit {
-            return future.then { _ in
+            future = future.then { _ in
                 self.commit()
             }.map { self }
         }
+
         return future
     }
 

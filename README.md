@@ -283,39 +283,70 @@ Transaction here is wrapped with an `EventLoopFuture` because this call may fail
 
 This transaction now supports asynchronous methods (if you try to call asynchronous method on transaction created without `EventLoop`, you will instantly get failed `EventLoopPromise`, so take care). Keep in mind that almost all async transaction methods returns not just `EventLoopFuture` with result (or `Void`) inside, but a tuple of result and this very same transaction, because if you'd like to commit it yourself, you must have a reference to it, and it's your job to pass this transaction further while you need it.
 
-Complete example:
+### Conflicts, retries and `withTransaction`
+
+Since FoundationDB is _quite_ a transactional database, sometimes `commit`s might not succeed due to serialization failures. This can happen when two or more transactions create overlapping conflict ranges. Or, simply speaking, when they try to access or modify same keys (unless they are not in `snapshot` read mode) at the same time. This is expected (and, in a way, welcomed) behaviour because this is how ACID is achieved.
+
+In these [not-so-rare] cases transaction is allowed to be replayed again. How do you know if transaction can be replayed? It's failed with a special `FDB.Error` case `.transactionRetry(FDB.Transaction)` which holds current transaction as an associated value. If your transaction (or its respective `EventLoopFuture`) is failed with this particular error, it means that the transaction has already been rolled back to its initial state and is ready to be executed again.
+
+You can implement this retry logic manually or you can just use builtin `FDB` object function `withTransaction`. This function, as always, comes with two flavors: synchronous and NIO:
 
 ```swift
-// EmbeddedEventLoop is meant to be used for testing only
+let maybeString: String? = try fdb.withTransaction { transaction in
+    guard let bytes: Bytes = try transaction.get(key: key) else {
+        return nil
+    }
+    try transaction.commitSync()
+    return String(bytes: bytes, encoding: .ascii)
+}
+
+// OR
+
+let maybeStringFuture: EventLoopFuture<String?> = fdb.withTransaction(on: myEventLoop) { transaction in
+    return transaction.get(key: key, commit: true)
+        .map { maybeBytes, transaction in
+            guard let bytes = maybeBytes else {
+                return nil
+            }
+            return String(bytes: bytes, encoding: .ascii)
+        }
+}
+```
+
+Thus your block of code will be gently retried until transaction is successfully committed.
+
+### Complete example
+
+```swift
 let key = FDB.Subspace("1337")["322"]
-let future: EventLoopFuture<String> = fdb
-    .begin(eventLoop: currentEventLoop)
-    .then { transaction in
-        transaction.setOption(.timeout(milliseconds: 5000))
-    }
-    .then { transaction in
-        try transaction.setOption(.snapshotRywEnable)
-    }
-    .then { transaction in
-        transaction.set(key: key, value: Bytes([1, 2, 3]))
-    }
-    .then { transaction in
-        transaction.get(key: key)
-    }
-    .thenThrowing { (bytes, transaction) in
-        guard let bytes = bytes else {
-            throw MyApplicationError.Something("Bytes are not bytes")
+
+let future: EventLoopFuture<String> = fdb.withTransaction(on: myEventLoop) { transaction in
+    return transaction
+        .setOption(.timeout(milliseconds: 5000))
+        .then { transaction in
+            transaction.setOption(.snapshotRywEnable)
         }
-        guard let string = String(bytes: bytes, encoding: .ascii) else {
-            throw MyApplicationError.Something("String is not string")
+        .then { transaction in
+            transaction.set(key: key, value: Bytes([1, 2, 3]))
         }
-        return (string, transaction)
+        .then { transaction in
+            transaction.get(key: key, snapshot: true)
+        }
+        .thenThrowing { (maybeBytes, transaction) -> (String, FDB.Transaction) in
+            guard let bytes = maybeBytes else {
+                throw MyApplicationError.Something("Bytes are not bytes")
+            }
+            guard let string = String(bytes: bytes, encoding: .ascii) else {
+                throw MyApplicationError.Something("String is not string")
+            }
+            return (string, transaction)
+        }
+        .then { string, transaction in
+            transaction
+                .commit()
+                .map { _ in string }
     }
-    .then { transaction in
-        transaction
-            .commit()
-            .map { _ in string }
-    }
+}
 
 future.whenSuccess { (resultString: String) in
     print("My string is '\(resultString)'")
@@ -323,6 +354,7 @@ future.whenSuccess { (resultString: String) in
 future.whenFailure { (error: Error) in
     print("Error :C '\(error)'")
 }
+
 // OR (you only use wait method outside of main thread or eventLoop thread, because it's blocking)
 let string: String = try future.wait()
 ```

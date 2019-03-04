@@ -2,7 +2,7 @@ import CFDB
 
 internal extension FDB.Transaction {
     /// Commits current transaction
-    internal func commit() throws -> FDB.Future<Void> {
+    func commit() -> FDB.Future {
         return fdb_transaction_commit(self.pointer).asFuture()
     }
 
@@ -11,7 +11,7 @@ internal extension FDB.Transaction {
     /// - parameters:
     ///   - key: FDB key
     ///   - value: bytes value
-    internal func set(key: AnyFDBKey, value: Bytes) {
+    func set(key: AnyFDBKey, value: Bytes) {
         let keyBytes = key.asFDBKey()
         fdb_transaction_set(self.pointer, keyBytes, keyBytes.length, value, value.length)
     }
@@ -21,7 +21,7 @@ internal extension FDB.Transaction {
     /// - parameters:
     ///   - key: FDB key
     ///   - snapshot: Snapshot read (i.e. whether this read create a conflict range or not)
-    internal func get(key: AnyFDBKey, snapshot: Bool = false) -> FDB.Future<Bytes?> {
+    func get(key: AnyFDBKey, snapshot: Bool = false) -> FDB.Future {
         let keyBytes = key.asFDBKey()
         return fdb_transaction_get(self.pointer, keyBytes, keyBytes.length, snapshot.int).asFuture()
     }
@@ -41,7 +41,7 @@ internal extension FDB.Transaction {
     ///   - iteration: If `mode` is `.iterator`, this arg represent current read iteration (should start from 1)
     ///   - snapshot: Snapshot read (i.e. whether this read create a conflict range or not)
     ///   - reverse: If `true`, key-value pairs will be returned in reverse lexicographical order
-    internal func get(
+    func get(
         begin: AnyFDBKey,
         end: AnyFDBKey,
         beginEqual: Bool = false,
@@ -54,7 +54,7 @@ internal extension FDB.Transaction {
         iteration: Int32 = 1,
         snapshot: Bool = false,
         reverse: Bool = false
-    ) -> FDB.Future<FDB.KeyValuesResult> {
+    ) -> FDB.Future {
         let beginBytes = begin.asFDBKey()
         let endBytes = end.asFDBKey()
         return fdb_transaction_get_range(
@@ -92,7 +92,7 @@ internal extension FDB.Transaction {
     ///   - iteration: If `mode` is `.iterator`, this arg represent current read iteration (should start from 1)
     ///   - snapshot: Snapshot read (i.e. whether this read create a conflict range or not)
     ///   - reverse: If `true`, key-value pairs will be returned in reverse lexicographical order
-    internal func get(
+    func get(
         range: FDB.RangeKey,
         beginEqual: Bool = false,
         beginOffset: Int32 = 1,
@@ -104,7 +104,7 @@ internal extension FDB.Transaction {
         iteration: Int32 = 1,
         snapshot: Bool = false,
         reverse: Bool = false
-    ) -> FDB.Future<FDB.KeyValuesResult> {
+    ) -> FDB.Future {
         return self.get(
             begin: range.begin,
             end: range.end,

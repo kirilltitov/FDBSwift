@@ -142,13 +142,16 @@ public extension FDB.Transaction {
                 FDB.OptionsHelper.stringOptionToPointer(string: identifier, pointer: &param, length: &length)
             case let .timeout(milliseconds):
                 internalOption = FDB_TR_OPTION_TIMEOUT
-                FDB.OptionsHelper.intOptionToPointer(int: milliseconds, pointer: &param, length: &length)
+                param = getPtr(milliseconds)
+                length = 8
             case let .retryLimit(retries):
                 internalOption = FDB_TR_OPTION_RETRY_LIMIT
-                FDB.OptionsHelper.intOptionToPointer(int: retries, pointer: &param, length: &length)
+                param = getPtr(retries)
+                length = 8
             case let .maxRetryDelay(milliseconds):
                 internalOption = FDB_TR_OPTION_MAX_RETRY_DELAY
-                FDB.OptionsHelper.intOptionToPointer(int: milliseconds, pointer: &param, length: &length)
+                param = getPtr(milliseconds)
+                length = 8
             }
 
             try fdb_transaction_set_option(
