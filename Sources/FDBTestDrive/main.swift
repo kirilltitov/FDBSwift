@@ -37,32 +37,41 @@ try fdb.clear(key: key)
 let submitQueue = DispatchQueue(label: "ssdf", qos: .userInitiated, attributes: .concurrent)
 
 for i in etalon {
-//    submitQueue.async {
+    submitQueue.async {
+        let resultValue: Bytes? = try! fdb.withTransaction { transaction in
+            print("Iteration #\(i) started")
+            let _: Void = try transaction.atomic(.add, key: key, value: Int64(1))
+            let value: Bytes? = try transaction.get(key: key)
+            try transaction.commitSync()
+            return value
+        }
+        result.append(resultValue!.cast())
+    }
 //        do {
 //            result.append(try fdb.increment(key: key))
 //        } catch {
 //            dump(error)
 //        }
-        let future: EventLoopFuture<Void> = fdb
-            .withTransaction(on: group.next()) { transaction in
-                print("#\(i) Transaction started")
-                return transaction
-                    .atomic(.add, key: key, value: Int64(1))
-                    .then { (transaction: FDB.Transaction) in
-                        print("#\(i) Atomic add done")
-                        return transaction.get(key: key, commit: true)
-                    }
-                    .map { (bytes: Bytes?, transaction: FDB.Transaction) -> Void in
-                        print("#\(i) Got value")
-                        let value: Int64 = bytes!.cast()
-                        print("#\(i) Result \(value) set")
-                        result.append(value)
-                        return
-                    }
-            }
-        future.whenFailure { error in
-            print(error)
-        }
+//        let future: EventLoopFuture<Void> = fdb
+//            .withTransaction(on: group.next()) { transaction in
+//                print("#\(i) Transaction started")
+//                return transaction
+//                    .atomic(.add, key: key, value: Int64(1))
+//                    .then { (transaction: FDB.Transaction) in
+//                        print("#\(i) Atomic add done")
+//                        return transaction.get(key: key, commit: true)
+//                    }
+//                    .map { (bytes: Bytes?, transaction: FDB.Transaction) -> Void in
+//                        print("#\(i) Got value")
+//                        let value: Int64 = bytes!.cast()
+//                        print("#\(i) Result \(value) set")
+//                        result.append(value)
+//                        return
+//                    }
+//            }
+//        future.whenFailure { error in
+//            print(error)
+//        }
 //    }
 }
 

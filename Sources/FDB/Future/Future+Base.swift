@@ -79,8 +79,9 @@ internal extension FDB {
                         let unwrappedBox = Unmanaged<Box>.fromOpaque(boxPtr!).takeRetainedValue()
                         let errno = fdb_future_get_error(futurePtr)
                         if errno != 0 {
-                            FDB.debug("Failing future with errno \(errno)")
-                            unwrappedBox.future.fail(with: FDB.Error.from(errno: errno))
+                            let error = FDB.Error.from(errno: errno)
+                            FDB.debug("Failing future with error '\(error)' (\(errno)): '\(error.getDescription())'")
+                            unwrappedBox.future.fail(with: error)
                         } else {
                             unwrappedBox.callback(unwrappedBox.future)
                         }

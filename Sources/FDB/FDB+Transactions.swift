@@ -38,13 +38,13 @@ public extension FDB {
     /// unexpected behaviour.
     public func withTransaction<T>(
         on eventLoop: EventLoop,
-        _ closure: @escaping (FDB.Transaction) throws -> EventLoopFuture<T>
+        _ block: @escaping (FDB.Transaction) throws -> EventLoopFuture<T>
     ) -> EventLoopFuture<T> {
         func transactionRoutine(_ transaction: FDB.Transaction) -> EventLoopFuture<T> {
             let result: EventLoopFuture<T>
 
             do {
-                result = try closure(transaction).checkingRetryableError(for: transaction)
+                result = try block(transaction).checkingRetryableError(for: transaction)
             } catch {
                 result = eventLoop.newFailedFuture(error: error)
             }
@@ -61,5 +61,26 @@ public extension FDB {
         return self
             .begin(on: eventLoop)
             .then(transactionRoutine)
+    }
+
+    /// Executes given transactional closure with appropriate retry logic
+    ///
+    /// This function will block current thread during execution
+    ///
+    /// Retry logic kicks in if `notCommitted` (1020) error was thrown during commit event. You must commit
+    /// the transaction yourself. Additionally, this transactional closure should be idempotent in order to exclude
+    /// unexpected behaviour.
+    public func withTransaction<T>(
+        _ block: @escaping (FDB.Transaction) throws -> T
+    ) throws -> T {
+        func transactionRoutine(_ transaction: FDB.Transaction) throws -> T {
+            do {
+                return try block(transaction)
+            } catch let FDB.Error.transactionRetry(transaction) {
+                return try transactionRoutine(transaction)
+            }
+        }
+
+        return try transactionRoutine(self.begin())
     }
 }

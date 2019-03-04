@@ -268,6 +268,65 @@ class FDBTests: XCTestCase {
         XCTAssertNoThrow(try FDBTests.fdb.setOption(.buggifySectionActivatedProbability(probability: 0)))
     }
 
+    func testWrappedTransactions() throws {
+        let etalon: [Int64] = (1...100).map { $0 }
+        var resultSync = Array<Int64>()
+        resultSync.reserveCapacity(etalon.count)
+        var resultAsync = Array<Int64>()
+        resultAsync.reserveCapacity(etalon.count)
+
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: System.coreCount)
+
+        let semaphoreSync = DispatchSemaphore(value: 0)
+        let semaphoreAsync = DispatchSemaphore(value: 0)
+
+        let keySync = FDBTests.subspace["increment_sync"]
+        let keyAsync = FDBTests.subspace["increment_async"]
+
+        try FDBTests.fdb.clear(key: keySync)
+        try FDBTests.fdb.clear(key: keyAsync)
+
+        let queue = DispatchQueue(label: "wrapped_test_queue", qos: .userInitiated, attributes: .concurrent)
+
+        for _ in etalon {
+            queue.async {
+                let resultValue: Bytes? = try! FDBTests.fdb.withTransaction { transaction in
+                    let _: Void = try transaction.atomic(.add, key: keySync, value: Int64(1))
+                    let value: Bytes? = try transaction.get(key: keySync)
+                    try transaction.commitSync()
+                    return value
+                }
+                resultSync.append(resultValue!.cast())
+                if resultSync.count == etalon.count {
+                    semaphoreSync.signal()
+                }
+            }
+            let _: EventLoopFuture<Void> = FDBTests.fdb
+                .withTransaction(on: group.next()) { transaction in
+                    return transaction
+                        .atomic(.add, key: keyAsync, value: Int64(1))
+                        .then { (transaction: FDB.Transaction) in
+                            return transaction.get(key: keyAsync, commit: true)
+                        }
+                        .map { (bytes: Bytes?, transaction: FDB.Transaction) -> Void in
+                            let value: Int64 = bytes!.cast()
+                            resultAsync.append(value)
+                            if resultAsync.count == etalon.count {
+                                semaphoreAsync.signal()
+                            }
+                            return
+                        }
+                }
+        }
+
+        let _ = semaphoreSync.wait(for: 10)
+        XCTAssertEqual(resultSync.sorted(), etalon)
+
+        let _ = semaphoreAsync.wait(for: 10)
+        XCTAssertEqual(resultAsync.sorted(), etalon)
+
+    }
+
     static var allTests = [
         ("testEmptyValue", testEmptyValue),
         ("testSetGetBytes", testSetGetBytes),
@@ -286,5 +345,6 @@ class FDBTests: XCTestCase {
         ("testNIOClear", testNIOClear),
         ("testTransactionOptions", testTransactionOptions),
         ("testNetworkOptions", testNetworkOptions),
+        ("testWrappedTransactions", testWrappedTransactions),
     ]
 }
