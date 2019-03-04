@@ -1,5 +1,4 @@
 import CFDB
-import NIO
 
 internal extension FDB {
     /// An internal class representing FDB future value.

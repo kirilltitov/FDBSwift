@@ -72,10 +72,7 @@ public extension FDB.Transaction {
             try resultFuture.whenBytesReady {
                 promise.succeed(result: ($0, self))
             }
-            resultFuture.whenError { error in
-                dump(["GET": error])
-                promise.fail(error: error)
-            }
+            resultFuture.whenError(promise.fail)
         } catch {
             promise.fail(error: error)
         }
