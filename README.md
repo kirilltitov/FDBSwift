@@ -34,6 +34,12 @@ public typealias Subspace = FDB.Subspace
 public typealias TuplePackable = FDBTuplePackable
 @available(*, deprecated, renamed: "AnyFDBKey")
 public typealias FDBKey = AnyFDBKey
+public extension FDB {
+    @available(*, deprecated, renamed: "begin(on:)")
+    public func begin(eventLoop: EventLoop) -> EventLoopFuture<FDB.Transaction> {
+        return self.begin(on: eventLoop)
+    }
+}
 ```
 
 Just place it in `main.swift` or somewhere else, and you will able to track down all deprecated FDB names usages.
