@@ -276,6 +276,7 @@ class FDBTests: XCTestCase {
         resultAsync.reserveCapacity(etalon.count)
 
         let group = MultiThreadedEventLoopGroup(numberOfThreads: System.coreCount)
+        defer { try! group.syncShutdownGracefully() }
 
         let semaphoreSync = DispatchSemaphore(value: 0)
         let semaphoreAsync = DispatchSemaphore(value: 0)
@@ -324,7 +325,44 @@ class FDBTests: XCTestCase {
 
         let _ = semaphoreAsync.wait(for: 10)
         XCTAssertEqual(resultAsync.sorted(), etalon)
+    }
 
+    func testGetSetReadVersionSync() throws {
+        let key = FDBTests.subspace["getSetVersionSync"]
+        let etalon = Bytes([1,2,3])
+
+        try FDBTests.fdb.set(key: key, value: etalon)
+
+        let version: Int64 = try FDBTests.fdb!.withTransaction { transaction in
+            let _: Bytes? = try transaction.get(key: key)
+            return try transaction.getReadVersion()
+        }
+
+        let _ = try FDBTests.fdb.withTransaction { transaction in
+            XCTAssertNoThrow(transaction.setReadVersion(version: version))
+            XCTAssertNoThrow(transaction.get(key: key))
+        }
+    }
+
+    func testGetSetReadVersionNIO() throws {
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer { try! group.syncShutdownGracefully() }
+
+        let key = FDBTests.subspace["getSetReadVersionNIO"]
+        let etalon = Bytes([1,2,3])
+
+        try FDBTests.fdb.set(key: key, value: etalon)
+
+        let version: Int64 = try FDBTests.fdb.withTransaction(on: group.next()) { transaction in
+            transaction
+                .get(key: key)
+                .then { (_: Bytes?) in transaction.getReadVersion() }
+        }.wait()
+
+        let _: Bytes? = try FDBTests.fdb!.withTransaction(on: group.next()) { transaction in
+            transaction.setReadVersion(version: version)
+            return transaction.get(key: key)
+        }.wait()
     }
 
     static var allTests = [
@@ -346,5 +384,7 @@ class FDBTests: XCTestCase {
         ("testTransactionOptions", testTransactionOptions),
         ("testNetworkOptions", testNetworkOptions),
         ("testWrappedTransactions", testWrappedTransactions),
+        ("testGetSetReadVersionSync", testGetSetReadVersionSync),
+        ("testGetSetReadVersionNIO", testGetSetReadVersionNIO),
     ]
 }

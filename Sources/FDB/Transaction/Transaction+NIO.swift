@@ -1,6 +1,27 @@
 import CFDB
 import NIO
 
+internal extension EventLoopFuture {
+    func checkingRetryableError(for transaction: FDB.Transaction) -> EventLoopFuture {
+        return self.thenIfError { error in
+            guard let FDBError = error as? FDB.Error else {
+                return self.eventLoop.newFailedFuture(error: error)
+            }
+
+            let onErrorFuture: FDB.Future = fdb_transaction_on_error(transaction.pointer, FDBError.errno).asFuture()
+
+            let promise: EventLoopPromise<T> = self.eventLoop.newPromise()
+
+            onErrorFuture.whenVoidReady {
+                promise.fail(error: FDB.Error.transactionRetry(transaction: transaction))
+            }
+            onErrorFuture.whenError(promise.fail)
+
+            return promise.futureResult
+        }
+    }
+}
+
 public extension FDB.Transaction {
     /// Commits current transaction
     ///
@@ -54,23 +75,23 @@ public extension FDB.Transaction {
     ///   - snapshot: Snapshot read (i.e. whether this read create a conflict range or not)
     ///   - commit: Whether to commit this transaction after action or not
     ///
-    /// - returns: EventLoopFuture with future `(Bytes?, FDB.Transaction)` tuple value
+    /// - returns: EventLoopFuture with future `Bytes?` tuple value
     public func get(
         key: AnyFDBKey,
         snapshot: Bool = false,
         commit: Bool = false
-    ) -> EventLoopFuture<(Bytes?, FDB.Transaction)> {
+    ) -> EventLoopFuture<Bytes?> {
         guard let eventLoop = self.eventLoop else {
             self.debug("[get] No event loop")
             return FDB.dummyEventLoop.newFailedFuture(error: FDB.Error.noEventLoopProvided)
         }
 
-        let promise: EventLoopPromise<(Bytes?, FDB.Transaction)> = eventLoop.newPromise()
+        let promise: EventLoopPromise<Bytes?> = eventLoop.newPromise()
 
         do {
             let resultFuture = self.get(key: key, snapshot: snapshot)
             try resultFuture.whenBytesReady {
-                promise.succeed(result: ($0, self))
+                promise.succeed(result: $0)
             }
             resultFuture.whenError(promise.fail)
         } catch {
@@ -80,10 +101,104 @@ public extension FDB.Transaction {
         var future = promise.futureResult
 
         if commit {
-            future = future
-                .then { bytes in
-                    self.commit().map { bytes }
-                }
+            future = future.then { maybeBytes in
+                self
+                    .commit()
+                    .map { maybeBytes }
+            }
+        }
+
+        return future
+    }
+
+
+    /// Returns bytes value for given key (or `nil` if no key)
+    ///
+    /// - parameters:
+    ///   - key: FDB key
+    ///   - snapshot: Snapshot read (i.e. whether this read create a conflict range or not)
+    ///   - commit: Whether to commit this transaction after action or not
+    ///
+    /// - returns: EventLoopFuture with future `(Bytes?, FDB.Transaction)` tuple value
+    public func get(
+        key: AnyFDBKey,
+        snapshot: Bool = false,
+        commit: Bool = false
+    ) -> EventLoopFuture<(Bytes?, FDB.Transaction)> {
+        return self
+            .get(key: key, snapshot: snapshot, commit: commit)
+            .map { ($0, self) }
+    }
+
+    /// Returns a range of keys and their respective values in given key range
+    ///
+    /// - parameters:
+    ///   - begin: Begin key
+    ///   - end: End key
+    ///   - beginEqual: Should begin key also include exact key value
+    ///   - beginOffset: Begin key offset
+    ///   - endEqual: Should end key also include exact key value
+    ///   - endOffset: End key offset
+    ///   - limit: Limit returned key-value pairs (only relevant when `mode` is `.exact`)
+    ///   - targetBytes: If non-zero, indicates a soft cap on the combined number of bytes of keys and values to return
+    ///   - mode: The manner in which rows are returned (see `FDB.StreamingMode` docs)
+    ///   - iteration: If `mode` is `.iterator`, this arg represent current read iteration (should start from 1)
+    ///   - snapshot: Snapshot read (i.e. whether this read create a conflict range or not)
+    ///   - reverse: If `true`, key-value pairs will be returned in reverse lexicographical order
+    ///   - commit: Whether to commit this transaction after action or not
+    ///
+    /// - returns: EventLoopFuture with future `FDB.KeyValuesResult` tuple value
+    public func get(
+        begin: AnyFDBKey,
+        end: AnyFDBKey,
+        beginEqual: Bool = false,
+        beginOffset: Int32 = 1,
+        endEqual: Bool = false,
+        endOffset: Int32 = 1,
+        limit: Int32 = 0,
+        targetBytes: Int32 = 0,
+        mode: FDB.StreamingMode = .wantAll,
+        iteration: Int32 = 1,
+        snapshot: Bool = false,
+        reverse: Bool = false,
+        commit: Bool = false
+    ) -> EventLoopFuture<FDB.KeyValuesResult> {
+        guard let eventLoop = self.eventLoop else {
+            self.debug("[get range] No event loop")
+            return FDB.dummyEventLoop.newFailedFuture(error: FDB.Error.noEventLoopProvided)
+        }
+
+        let promise: EventLoopPromise<FDB.KeyValuesResult> = eventLoop.newPromise()
+
+        do {
+            let future: FDB.Future = self.get(
+                begin: begin,
+                end: end,
+                beginEqual: beginEqual,
+                beginOffset: beginOffset,
+                endEqual: endEqual,
+                endOffset: endOffset,
+                limit: limit,
+                targetBytes: targetBytes,
+                mode: mode,
+                iteration: iteration,
+                snapshot: snapshot,
+                reverse: reverse
+            )
+            try future.whenKeyValuesReady {
+                promise.succeed(result: $0)
+            }
+            future.whenError(promise.fail)
+        } catch {
+            promise.fail(error: error)
+        }
+
+        var future = promise.futureResult
+
+        if commit {
+            future = future.then { result in
+                self.commit().map { result }
+            }
         }
 
         return future
@@ -122,45 +237,69 @@ public extension FDB.Transaction {
         reverse: Bool = false,
         commit: Bool = false
     ) -> EventLoopFuture<(FDB.KeyValuesResult, FDB.Transaction)> {
-        guard let eventLoop = self.eventLoop else {
-            self.debug("[get range] No event loop")
-            return FDB.dummyEventLoop.newFailedFuture(error: FDB.Error.noEventLoopProvided)
-        }
+        return self.get(
+            begin: begin,
+            end: end,
+            beginEqual: beginEqual,
+            beginOffset: beginOffset,
+            endEqual: endEqual,
+            endOffset: endOffset,
+            limit: limit,
+            targetBytes: targetBytes,
+            mode: mode,
+            iteration: iteration,
+            snapshot: snapshot,
+            reverse: reverse,
+            commit: commit
+        ).map { ($0, self) }
+    }
 
-        let promise: EventLoopPromise<(FDB.KeyValuesResult, FDB.Transaction)> = eventLoop.newPromise()
-
-        do {
-            let future: FDB.Future = self.get(
-                begin: begin,
-                end: end,
-                beginEqual: beginEqual,
-                beginOffset: beginOffset,
-                endEqual: endEqual,
-                endOffset: endOffset,
-                limit: limit,
-                targetBytes: targetBytes,
-                mode: mode,
-                iteration: iteration,
-                snapshot: snapshot,
-                reverse: reverse
-            )
-            try future.whenKeyValuesReady {
-                promise.succeed(result: ($0, self))
-            }
-            future.whenError(promise.fail)
-        } catch {
-            promise.fail(error: error)
-        }
-
-        var future = promise.futureResult
-
-        if commit {
-            future = future.then { bytes in
-                self.commit().map { bytes }
-            }
-        }
-
-        return future
+    /// Returns a range of keys and their respective values in given key range
+    ///
+    /// - parameters:
+    ///   - range: Range key
+    ///   - beginEqual: Should begin key also include exact key value
+    ///   - beginOffset: Begin key offset
+    ///   - endEqual: Should end key also include exact key value
+    ///   - endOffset: End key offset
+    ///   - limit: Limit returned key-value pairs (only relevant when `mode` is `.exact`)
+    ///   - targetBytes: If non-zero, indicates a soft cap on the combined number of bytes of keys and values to return
+    ///   - mode: The manner in which rows are returned (see `FDB.StreamingMode` docs)
+    ///   - iteration: If `mode` is `.iterator`, this arg represent current read iteration (should start from 1)
+    ///   - snapshot: Snapshot read (i.e. whether this read create a conflict range or not)
+    ///   - reverse: If `true`, key-value pairs will be returned in reverse lexicographical order
+    ///   - commit: Whether to commit this transaction after action or not
+    ///
+    /// - returns: EventLoopFuture with future `(FDB.KeyValuesResult, FDB.Transaction)` tuple value
+    public func get(
+        range: FDB.RangeKey,
+        beginEqual: Bool = false,
+        beginOffset: Int32 = 1,
+        endEqual: Bool = false,
+        endOffset: Int32 = 1,
+        limit: Int32 = 0,
+        targetBytes: Int32 = 0,
+        mode: FDB.StreamingMode = .wantAll,
+        iteration: Int32 = 1,
+        snapshot: Bool = false,
+        reverse: Bool = false,
+        commit: Bool = false
+    ) -> EventLoopFuture<FDB.KeyValuesResult> {
+        return self.get(
+            begin: range.begin,
+            end: range.end,
+            beginEqual: beginEqual,
+            beginOffset: beginOffset,
+            endEqual: endEqual,
+            endOffset: endOffset,
+            limit: limit,
+            targetBytes: targetBytes,
+            mode: mode,
+            iteration: iteration,
+            snapshot: snapshot,
+            reverse: reverse,
+            commit: commit
+        )
     }
 
     /// Returns a range of keys and their respective values in given key range
@@ -208,7 +347,7 @@ public extension FDB.Transaction {
             snapshot: snapshot,
             reverse: reverse,
             commit: commit
-        )
+        ).map { ($0, self) }
     }
 
     /// Performs a generic throwable closure wrapped with event loop sanity check
@@ -334,5 +473,28 @@ public extension FDB.Transaction {
         return self.genericAction(commit: false) {
             let _: FDB.Transaction = try self.setOption(option)
         }
+    }
+
+    /// Returns transaction snapshot read version
+    ///
+    /// - returns: EventLoopFuture with future Int64 value
+    func getReadVersion() -> EventLoopFuture<Int64> {
+        guard let eventLoop = self.eventLoop else {
+            self.debug("[getReadVersion] No event loop")
+            return FDB.dummyEventLoop.newFailedFuture(error: FDB.Error.noEventLoopProvided)
+        }
+
+        let promise: EventLoopPromise<Int64> = eventLoop.newPromise()
+
+        let future: FDB.Future = self.getReadVersion()
+        future.whenError(promise.fail)
+
+        do {
+            try future.whenInt64Ready(promise.succeed)
+        } catch {
+            promise.fail(error: error)
+        }
+
+        return promise.futureResult
     }
 }
