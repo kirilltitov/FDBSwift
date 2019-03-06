@@ -1,27 +1,6 @@
 import CFDB
 import NIO
 
-internal extension EventLoopFuture {
-    func checkingRetryableError(for transaction: FDB.Transaction) -> EventLoopFuture {
-        return self.thenIfError { error in
-            guard let FDBError = error as? FDB.Error else {
-                return self.eventLoop.newFailedFuture(error: error)
-            }
-
-            let onErrorFuture: FDB.Future = fdb_transaction_on_error(transaction.pointer, FDBError.errno).asFuture()
-
-            let promise: EventLoopPromise<T> = self.eventLoop.newPromise()
-
-            onErrorFuture.whenVoidReady {
-                promise.fail(error: FDB.Error.transactionRetry(transaction: transaction))
-            }
-            onErrorFuture.whenError(promise.fail)
-
-            return promise.futureResult
-        }
-    }
-}
-
 public extension FDB {
     public class Transaction {
         internal typealias Pointer = OpaquePointer
@@ -56,6 +35,7 @@ public extension FDB {
 
         internal func incrementRetries() {
             self.retries += 1
+            self.debug("Retry #\(self.retries)")
         }
 
         /// Prints verbose debug message to stdout (if `FDB.verbose` is `true`)
@@ -129,6 +109,16 @@ public extension FDB {
                 value.length,
                 FDBMutationType(op.rawValue)
             )
+        }
+
+        /// Sets the snapshot read version used by a transaction
+        ///
+        /// This is not needed in simple cases. If the given version is too old, subsequent reads will fail
+        /// with error_code_past_version; if it is too new, subsequent reads may be delayed indefinitely and/or fail
+        /// with error_code_future_version. If any of fdb_transaction_get_*() have been called
+        /// on this transaction already, the result is undefined.
+        func setReadVersion(version: Int64) {
+            fdb_transaction_set_read_version(self.pointer, version)
         }
     }
 }

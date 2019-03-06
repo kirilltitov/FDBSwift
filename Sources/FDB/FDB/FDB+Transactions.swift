@@ -77,6 +77,7 @@ public extension FDB {
             do {
                 return try block(transaction)
             } catch let FDB.Error.transactionRetry(transaction) {
+                transaction.incrementRetries()
                 return try transactionRoutine(transaction)
             }
         }

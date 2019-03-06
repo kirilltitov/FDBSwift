@@ -226,4 +226,13 @@ public extension FDB.Transaction {
             try self.commitSync()
         }
     }
+
+    /// Returns transaction snapshot read version
+    ///
+    /// This function will block current thread during execution
+    ///
+    /// - returns: Read version as Int64
+    func getReadVersion() throws -> Int64 {
+        return try self.getReadVersion().wait()
+    }
 }

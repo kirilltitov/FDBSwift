@@ -120,4 +120,9 @@ internal extension FDB.Transaction {
             reverse: reverse
         )
     }
+
+    /// Returns transaction snapshot read version
+    func getReadVersion() -> FDB.Future {
+        return fdb_transaction_get_read_version(self.pointer).asFuture()
+    }
 }
