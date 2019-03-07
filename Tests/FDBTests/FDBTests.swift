@@ -365,6 +365,22 @@ class FDBTests: XCTestCase {
         }.wait()
     }
 
+    func testBugTransactionCancelled() throws {
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer { try! group.syncShutdownGracefully() }
+
+        // This problem appeared when there are no externals refs to FDB.Transaction instance.
+        // Quite rare case tbh, but extremely confusing.
+        // Fixed by implicit FDB.Transaction ref capturing in FDB.Future
+
+        XCTAssertNoThrow(
+            try FDBTests.fdb.begin(on: group.next())
+                .then { transaction in transaction.set(key: FDBTests.subspace["trcancelled"], value: Bytes([1,2,3])) }
+                .then { transaction in transaction.commit() }
+                .wait()
+        )
+    }
+
     static var allTests = [
         ("testEmptyValue", testEmptyValue),
         ("testSetGetBytes", testSetGetBytes),
@@ -386,5 +402,6 @@ class FDBTests: XCTestCase {
         ("testWrappedTransactions", testWrappedTransactions),
         ("testGetSetReadVersionSync", testGetSetReadVersionSync),
         ("testGetSetReadVersionNIO", testGetSetReadVersionNIO),
+        ("testTransactionCancelled", testTransactionCancelled),
     ]
 }

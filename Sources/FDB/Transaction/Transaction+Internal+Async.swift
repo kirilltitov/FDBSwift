@@ -3,7 +3,8 @@ import CFDB
 internal extension FDB.Transaction {
     /// Commits current transaction
     func commit() -> FDB.Future {
-        return fdb_transaction_commit(self.pointer).asFuture()
+        self.debug("Committing transaction")
+        return fdb_transaction_commit(self.pointer).asFuture(ref: self)
     }
 
     /// Sets bytes to given key in FDB cluster
@@ -13,6 +14,7 @@ internal extension FDB.Transaction {
     ///   - value: bytes value
     func set(key: AnyFDBKey, value: Bytes) {
         let keyBytes = key.asFDBKey()
+        self.debug("Setting key '\(String(bytes: key.asFDBKey(), encoding: .ascii)!)'")
         fdb_transaction_set(self.pointer, keyBytes, keyBytes.length, value, value.length)
     }
 

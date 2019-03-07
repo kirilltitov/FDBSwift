@@ -37,8 +37,7 @@ public extension FDB.Transaction {
         future.whenVoidReady(promise.succeed)
         future.whenError(promise.fail)
 
-        return promise.futureResult
-            .map { _ in () }
+        return promise.futureResult.map { _ in () }
     }
 
     /// Sets bytes to given key in FDB cluster
@@ -61,7 +60,7 @@ public extension FDB.Transaction {
 
         if commit {
             future = future
-                .then { _ in self.commit() }
+                .then { $0.commit() }
                 .map { self }
         }
 

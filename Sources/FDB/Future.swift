@@ -18,11 +18,13 @@ internal extension FDB {
         }
 
         let pointer: OpaquePointer
+        let ref: Any?
 
         private var failClosure: ((Swift.Error) -> Void)?
 
-        init(_ pointer: OpaquePointer) {
+        init(_ pointer: OpaquePointer, _ ref: Any? = nil) {
             self.pointer = pointer
+            self.ref = ref
         }
 
         deinit {

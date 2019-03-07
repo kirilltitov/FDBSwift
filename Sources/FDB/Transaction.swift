@@ -55,12 +55,14 @@ public extension FDB {
         /// Cancels the transaction. All pending or future uses of the transaction will return
         /// a `transaction_cancelled` error. The transaction can be used again after it is `reset`.
         public func cancel() {
+            self.debug("Cancelling transaction")
             fdb_transaction_cancel(self.pointer)
         }
 
         /// Reset transaction to its initial state.
         /// This is similar to creating a new transaction after destroying previous one.
         public func reset() {
+            self.debug("Resetting transaction")
             fdb_transaction_reset(self.pointer)
         }
 
