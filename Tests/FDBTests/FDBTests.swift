@@ -402,6 +402,6 @@ class FDBTests: XCTestCase {
         ("testWrappedTransactions", testWrappedTransactions),
         ("testGetSetReadVersionSync", testGetSetReadVersionSync),
         ("testGetSetReadVersionNIO", testGetSetReadVersionNIO),
-        ("testTransactionCancelled", testTransactionCancelled),
+        ("testBugTransactionCancelled", testBugTransactionCancelled),
     ]
 }
