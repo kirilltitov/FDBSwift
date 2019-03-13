@@ -2,7 +2,7 @@
 > **Fine. I'll do it myself.**
 >> _Episode III: Revenge of FoundationDB_
 
-This is FoundationDB wrapper for Swift. It's quite low-level, (almost) `Foundation`less and can into Swift-NIO.
+This is FoundationDB client for Swift. It's quite low-level, (almost) `Foundation`less and can into Swift-NIO.
 
 ## Installation
 
