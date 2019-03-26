@@ -172,7 +172,7 @@ class FDBTests: XCTestCase {
         let value = self.getRandomBytes()
         let _: EventLoopFuture<Void> = tr
             .set(key: key, value: value)
-            .then { $0.get(key: key) }
+            .flatMap { $0.get(key: key) }
             .map { (bytes, _) in
                 XCTAssertEqual(bytes, value)
                 semaphore.signal()
@@ -218,7 +218,7 @@ class FDBTests: XCTestCase {
         }
 //      TODO:
 //      XCTAssertNoThrow(try tr.increment(key: key))
-        tr.atomic(.add, key: key, value: step).whenComplete {
+        tr.atomic(.add, key: key, value: step).whenComplete { _ in
             semaphore.signal()
         }
         semaphore.wait()
@@ -238,11 +238,11 @@ class FDBTests: XCTestCase {
         let semaphore = self.semaphore
         let future = tr
             .clear(key: FDBTests.subspace["empty"])
-            .then { $0.commit() }
+            .flatMap { $0.commit() }
         future.whenFailure { error in
             XCTFail("Error: \(error)")
         }
-        future.whenComplete {
+        future.whenComplete { _ in
             semaphore.signal()
         }
         semaphore.wait()
@@ -306,7 +306,7 @@ class FDBTests: XCTestCase {
                 .withTransaction(on: group.next()) { transaction in
                     return transaction
                         .atomic(.add, key: keyAsync, value: Int64(1))
-                        .then { (transaction: FDB.Transaction) in
+                        .flatMap { (transaction: FDB.Transaction) in
                             return transaction.get(key: keyAsync, commit: true)
                         }
                         .map { (bytes: Bytes?, transaction: FDB.Transaction) -> Void in
@@ -356,7 +356,7 @@ class FDBTests: XCTestCase {
         let version: Int64 = try FDBTests.fdb.withTransaction(on: group.next()) { transaction in
             transaction
                 .get(key: key)
-                .then { (_: Bytes?) in transaction.getReadVersion() }
+                .flatMap { (_: Bytes?) in transaction.getReadVersion() }
         }.wait()
 
         let _: Bytes? = try FDBTests.fdb!.withTransaction(on: group.next()) { transaction in
@@ -375,8 +375,8 @@ class FDBTests: XCTestCase {
 
         XCTAssertNoThrow(
             try FDBTests.fdb.begin(on: group.next())
-                .then { transaction in transaction.set(key: FDBTests.subspace["trcancelled"], value: Bytes([1,2,3])) }
-                .then { transaction in transaction.commit() }
+                .flatMap { transaction in transaction.set(key: FDBTests.subspace["trcancelled"], value: Bytes([1,2,3])) }
+                .flatMap { transaction in transaction.commit() }
                 .wait()
         )
     }

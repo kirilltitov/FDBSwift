@@ -2,7 +2,7 @@ import CFDB
 import NIO
 
 public extension FDB {
-    public class Transaction {
+    class Transaction {
         internal typealias Pointer = OpaquePointer
 
         internal let pointer: Pointer
@@ -29,7 +29,7 @@ public extension FDB {
         }
 
         /// Destroys current transaction. It becomes unusable after this.
-        public func destroy() {
+        func destroy() {
             fdb_transaction_destroy(self.pointer)
         }
 
@@ -54,14 +54,14 @@ public extension FDB {
 
         /// Cancels the transaction. All pending or future uses of the transaction will return
         /// a `transaction_cancelled` error. The transaction can be used again after it is `reset`.
-        public func cancel() {
+        func cancel() {
             self.debug("Cancelling transaction")
             fdb_transaction_cancel(self.pointer)
         }
 
         /// Reset transaction to its initial state.
         /// This is similar to creating a new transaction after destroying previous one.
-        public func reset() {
+        func reset() {
             self.debug("Resetting transaction")
             fdb_transaction_reset(self.pointer)
         }
@@ -70,7 +70,7 @@ public extension FDB {
         ///
         /// - parameters:
         ///   - key: FDB key
-        public func clear(key: AnyFDBKey) {
+        func clear(key: AnyFDBKey) {
             let keyBytes = key.asFDBKey()
             fdb_transaction_clear(self.pointer, keyBytes, keyBytes.length)
         }
@@ -80,7 +80,7 @@ public extension FDB {
         /// - parameters:
         ///   - begin: Begin key
         ///   - end: End key
-        public func clear(begin: AnyFDBKey, end: AnyFDBKey) {
+        func clear(begin: AnyFDBKey, end: AnyFDBKey) {
             let beginBytes = begin.asFDBKey()
             let endBytes = end.asFDBKey()
             fdb_transaction_clear_range(self.pointer, beginBytes, beginBytes.length, endBytes, endBytes.length)
@@ -90,7 +90,7 @@ public extension FDB {
         ///
         /// - parameters:
         ///   - range: Range key
-        public func clear(range: FDB.RangeKey) {
+        func clear(range: FDB.RangeKey) {
             self.clear(begin: range.begin, end: range.end)
         }
 
@@ -101,7 +101,7 @@ public extension FDB {
         ///   - _: Atomic operation
         ///   - key: FDB key
         ///   - value: Value bytes
-        public func atomic(_ op: FDB.MutationType, key: AnyFDBKey, value: Bytes) {
+        func atomic(_ op: FDB.MutationType, key: AnyFDBKey, value: Bytes) {
             let keyBytes = key.asFDBKey()
             fdb_transaction_atomic_op(
                 self.pointer,

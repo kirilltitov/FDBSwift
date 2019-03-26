@@ -1,6 +1,6 @@
 public extension FDB {
     /// Holds begin and end keys for range get
-    public typealias RangeKey = (begin: AnyFDBKey, end: AnyFDBKey)
+    typealias RangeKey = (begin: AnyFDBKey, end: AnyFDBKey)
 }
 
 /// A type-erased FDB key
@@ -10,7 +10,7 @@ public protocol AnyFDBKey: FDBTuplePackable {
 }
 
 public extension AnyFDBKey {
-    public func pack() -> Bytes {
+    func pack() -> Bytes {
         return self.asFDBKey().pack()
     }
 }

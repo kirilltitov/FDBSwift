@@ -1,7 +1,7 @@
 import CFDB
 
 public extension FDB {
-    public enum NetworkOption {
+    enum NetworkOption {
         /// Enables trace output to a file in a directory of the clients choosing
         case traceEnable(directory: String)
 
@@ -179,7 +179,7 @@ public extension FDB {
     /// - parameters:
     ///   - option: Network option
     /// - returns: current FDB instance (`self`)
-    public func setOption(_ option: FDB.NetworkOption) throws -> FDB {
+    func setOption(_ option: FDB.NetworkOption) throws -> FDB {
         self.debug("Trying to set network option \(option)")
 
         try option.setOption()

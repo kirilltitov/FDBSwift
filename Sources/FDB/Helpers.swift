@@ -6,7 +6,7 @@ public typealias Byte = UInt8
 public typealias Bytes = [Byte]
 
 internal extension FDB {
-    internal struct OptionsHelper {
+    struct OptionsHelper {
         @usableFromInline internal static func stringOptionToPointer(
             string: String,
             pointer: inout UnsafePointer<Byte>?,

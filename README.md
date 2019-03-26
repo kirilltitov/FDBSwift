@@ -329,16 +329,16 @@ let key = FDB.Subspace("1337")["322"]
 let future: EventLoopFuture<String> = fdb.withTransaction(on: myEventLoop) { transaction in
     return transaction
         .setOption(.timeout(milliseconds: 5000))
-        .then { transaction in
+        .flatMap { transaction in
             transaction.setOption(.snapshotRywEnable)
         }
-        .then { transaction in
+        .flatMap { transaction in
             transaction.set(key: key, value: Bytes([1, 2, 3]))
         }
-        .then { transaction in
+        .flatMap { transaction in
             transaction.get(key: key, snapshot: true)
         }
-        .thenThrowing { (maybeBytes, transaction) -> (String, FDB.Transaction) in
+        .flatMapThrowing { (maybeBytes, transaction) -> (String, FDB.Transaction) in
             guard let bytes = maybeBytes else {
                 throw MyApplicationError.Something("Bytes are not bytes")
             }
@@ -347,7 +347,7 @@ let future: EventLoopFuture<String> = fdb.withTransaction(on: myEventLoop) { tra
             }
             return (string, transaction)
         }
-        .then { string, transaction in
+        .flatMap { string, transaction in
             transaction
                 .commit()
                 .map { _ in string }
@@ -386,7 +386,7 @@ FDB.verbose = true
 
 **Q**: My application/server just stuck, it stopped responding and dispatching requests. The heck?
 
-**A**: It's called deadlock. You blocked main/event loop thread. You never block main thread (or event loop thread). It happened because you did some blocking disk or network operation within `then`/`map` future closure (probably, while requesting the very same application instance over network). Do your blocking (IO/network) operation within `DispatchQueue.async` context, resolve it with `EventLoopPromise` and return future result as `EventLoopFuture`.
+**A**: It's called deadlock. You blocked main/event loop thread. You never block main thread (or event loop thread). It happened because you did some blocking disk or network operation within `flatMap`/`map` future closure (probably, while requesting the very same application instance over network). Do your blocking (IO/network) operation within `DispatchQueue.async` context, resolve it with `EventLoopPromise` and return future result as `EventLoopFuture`.
 
 ## Warnings
 

@@ -1,7 +1,7 @@
 import CFDB
 
 public extension FDB.Transaction {
-    public enum Option {
+    enum Option {
         /// The transaction, if not self-conflicting, may be committed a second time after commit succeeds,
         /// in the event of a fault
         case causalWriteRisky
@@ -168,7 +168,7 @@ public extension FDB.Transaction {
     /// - parameters:
     ///   - option: Transaction option
     /// - returns: current transaction (`self`)
-    public func setOption(_ option: FDB.Transaction.Option) throws -> FDB.Transaction {
+    func setOption(_ option: FDB.Transaction.Option) throws -> FDB.Transaction {
         try option.setOption(transaction: self)
 
         return self
