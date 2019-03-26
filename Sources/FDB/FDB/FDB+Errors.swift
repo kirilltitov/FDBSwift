@@ -2,12 +2,12 @@ import CFDB
 
 public extension FDB {
     /// Internal FDB error type (`fdb_error_t` aka `Int32`)
-    public typealias Errno = fdb_error_t
+    typealias Errno = fdb_error_t
 }
 
 extension FDB.Errno {
     /// Converts non-zero error number to throwable error
-    public func orThrow() throws {
+    func orThrow() throws {
         if self == 0 {
             return
         }
@@ -15,14 +15,14 @@ extension FDB.Errno {
     }
 
     /// Converts non-zero error number to fatal runtime error
-    public func orDie() {
+    func orDie() {
         try! self.orThrow()
     }
 }
 
 public extension FDB {
     /// Error type for both FDB errors and FDBSwift errors
-    public enum Error: Swift.Error {
+    enum Error: Swift.Error {
         case operationFailed
         case timedOut
         case transactionTooOld
@@ -263,7 +263,7 @@ public extension FDB {
         }
 
         /// Returns human-readable description of current FDB error
-        public func getDescription() -> String {
+        func getDescription() -> String {
             if self.errno == 8000 {
                 return "You should replay this transaction"
             }

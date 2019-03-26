@@ -1,12 +1,12 @@
 public extension FDB {
     /// A holder for key-value pair
-    public struct KeyValue {
+    struct KeyValue {
         public let key: Bytes
         public let value: Bytes
     }
 
     /// A holder for key-value pairs result returned from range get
-    public struct KeyValuesResult {
+    struct KeyValuesResult {
         /// Records returned from range get
         public let records: [FDB.KeyValue]
 

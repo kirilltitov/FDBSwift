@@ -53,7 +53,7 @@ public class FDB {
     }
 
     /// Performs an explicit disconnect routine.
-    public func disconnect() {
+    func disconnect() {
         if !self.isConnected {
             print("Trying to disconnect from FDB while not connected")
             return
@@ -201,7 +201,7 @@ public class FDB {
     }
 
     /// Performs explicit connection to FDB cluster
-    public func connect() throws {
+    func connect() throws {
         _ = try self.getDB()
         self.debug("Connected")
     }
@@ -213,7 +213,7 @@ public class FDB {
     /// - parameters:
     ///   - key: FDB key
     ///   - value: bytes value
-    public func set(key: AnyFDBKey, value: Bytes) throws {
+    func set(key: AnyFDBKey, value: Bytes) throws {
         try self.withTransaction {
             try $0.set(key: key, value: value, commit: true) as Void
         }
@@ -226,7 +226,7 @@ public class FDB {
     /// - parameters:
     ///   - key: FDB key
     ///   - value: bytes value
-    public func setSync(key: AnyFDBKey, value: Bytes) throws {
+    func setSync(key: AnyFDBKey, value: Bytes) throws {
         try self.set(key: key, value: value) as Void
     }
 
@@ -236,7 +236,7 @@ public class FDB {
     ///
     /// - parameters:
     ///   - key: FDB key
-    public func clear(key: AnyFDBKey) throws {
+    func clear(key: AnyFDBKey) throws {
         try self.withTransaction {
             try $0.clear(key: key, commit: true) as Void
         }
@@ -248,7 +248,7 @@ public class FDB {
     ///
     /// - parameters:
     ///   - key: FDB key
-    public func clearSync(key: AnyFDBKey) throws {
+    func clearSync(key: AnyFDBKey) throws {
         try self.clear(key: key) as Void
     }
 
@@ -259,7 +259,7 @@ public class FDB {
     /// - parameters:
     ///   - begin: Begin key
     ///   - end: End key
-    public func clear(begin: AnyFDBKey, end: AnyFDBKey) throws {
+    func clear(begin: AnyFDBKey, end: AnyFDBKey) throws {
         try self.withTransaction {
             try $0.clear(begin: begin, end: end, commit: true) as Void
         }
@@ -272,7 +272,7 @@ public class FDB {
     /// - parameters:
     ///   - begin: Begin key
     ///   - end: End key
-    public func clearSync(begin: AnyFDBKey, end: AnyFDBKey) throws {
+    func clearSync(begin: AnyFDBKey, end: AnyFDBKey) throws {
         try self.clear(begin: begin, end: end) as Void
     }
 
@@ -282,7 +282,7 @@ public class FDB {
     ///
     /// - parameters:
     ///   - range: Range key
-    public func clear(range: FDB.RangeKey) throws {
+    func clear(range: FDB.RangeKey) throws {
         return try self.clear(begin: range.begin, end: range.end)
     }
 
@@ -292,7 +292,7 @@ public class FDB {
     ///
     /// - parameters:
     ///   - subspace: Subspace to clear
-    public func clear(subspace: Subspace) throws {
+    func clear(subspace: Subspace) throws {
         return try self.clear(range: subspace.range)
     }
 
@@ -303,7 +303,7 @@ public class FDB {
     /// - parameters:
     ///   - key: FDB key
     ///   - snapshot: Snapshot read (i.e. whether this read create a conflict range or not)
-    public func get(key: AnyFDBKey, snapshot: Bool = false) throws -> Bytes? {
+    func get(key: AnyFDBKey, snapshot: Bool = false) throws -> Bytes? {
         return try self.withTransaction {
             try $0.get(key: key, snapshot: snapshot, commit: true)
         }
@@ -316,7 +316,7 @@ public class FDB {
     /// - parameters:
     ///   - subspace: Subspace
     ///   - snapshot: Snapshot read (i.e. whether this read create a conflict range or not)
-    public func get(subspace: Subspace, snapshot: Bool = false) throws -> KeyValuesResult {
+    func get(subspace: Subspace, snapshot: Bool = false) throws -> KeyValuesResult {
         return try self.withTransaction {
             try $0.get(range: subspace.range, snapshot: snapshot)
         }
@@ -339,7 +339,7 @@ public class FDB {
     ///   - iteration: If `mode` is `.iterator`, this arg represent current read iteration (should start from 1)
     ///   - snapshot: Snapshot read (i.e. whether this read create a conflict range or not)
     ///   - reverse: If `true`, key-value pairs will be returned in reverse lexicographical order
-    public func get(
+    func get(
         begin: AnyFDBKey,
         end: AnyFDBKey,
         beginEqual: Bool = false,
@@ -388,7 +388,7 @@ public class FDB {
     ///   - iteration: If `mode` is `.iterator`, this arg represent current read iteration (should start from 1)
     ///   - snapshot: Snapshot read (i.e. whether this read create a conflict range or not)
     ///   - reverse: If `true`, key-value pairs will be returned in reverse lexicographical order
-    public func get(
+    func get(
         range: FDB.RangeKey,
         beginEqual: Bool = false,
         beginOffset: Int32 = 1,
@@ -425,7 +425,7 @@ public class FDB {
     ///   - op: Atomic operation
     ///   - key: FDB key
     ///   - value: Value bytes
-    public func atomic(_ op: FDB.MutationType, key: AnyFDBKey, value: Bytes) throws {
+    func atomic(_ op: FDB.MutationType, key: AnyFDBKey, value: Bytes) throws {
         try self.withTransaction {
             try $0.atomic(op, key: key, value: value, commit: true) as Void
         }
@@ -439,7 +439,7 @@ public class FDB {
     ///   - op: Atomic operation
     ///   - key: FDB key
     ///   - value: Integer
-    public func atomic<T: SignedInteger>(_ op: FDB.MutationType, key: AnyFDBKey, value: T) throws {
+    func atomic<T: SignedInteger>(_ op: FDB.MutationType, key: AnyFDBKey, value: T) throws {
         try self.atomic(op, key: key, value: getBytes(value))
     }
 
@@ -455,7 +455,7 @@ public class FDB {
     /// - parameters:
     ///   - key: FDB key
     ///   - value: Integer
-    @discardableResult public func increment(key: AnyFDBKey, value: Int64 = 1) throws -> Int64 {
+    @discardableResult func increment(key: AnyFDBKey, value: Int64 = 1) throws -> Int64 {
         return try self.withTransaction { transaction in
             try transaction.atomic(.add, key: key, value: getBytes(value), commit: false) as Void
 
@@ -476,7 +476,7 @@ public class FDB {
     /// - parameters:
     ///   - key: FDB key
     ///   - value: Integer
-    @discardableResult public func decrement(key: AnyFDBKey, value: Int64 = 1) throws -> Int64 {
+    @discardableResult func decrement(key: AnyFDBKey, value: Int64 = 1) throws -> Int64 {
         return try self.increment(key: key, value: -value)
     }
 }

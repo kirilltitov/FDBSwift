@@ -4,7 +4,7 @@ import NIO
 
 public extension FDB {
     /// Begins a new FDB transaction without an event loop
-    public func begin() throws -> FDB.Transaction {
+    func begin() throws -> FDB.Transaction {
         self.debug("Trying to start transaction without eventloop")
 
         return try FDB.Transaction.begin(try self.getDB())
@@ -15,19 +15,19 @@ public extension FDB {
     /// - parameters:
     ///   - eventLoop: Swift-NIO EventLoop to run future computations
     /// - returns: `EventLoopFuture` with a transaction instance as future value.
-    public func begin(on eventLoop: EventLoop) -> EventLoopFuture<FDB.Transaction> {
+    func begin(on eventLoop: EventLoop) -> EventLoopFuture<FDB.Transaction> {
         do {
             self.debug("Trying to start transaction with eventloop \(Swift.type(of: eventLoop))")
 
-            return eventLoop.newSucceededFuture(
-                result: try FDB.Transaction.begin(
+            return eventLoop.makeSucceededFuture(
+                try FDB.Transaction.begin(
                     try self.getDB(),
                     eventLoop
                 )
             )
         } catch {
             self.debug("Failed to start transaction with eventloop \(Swift.type(of: eventLoop)): \(error)")
-            return FDB.dummyEventLoop.newFailedFuture(error: error)
+            return FDB.dummyEventLoop.makeFailedFuture(error)
         }
     }
 
@@ -36,7 +36,7 @@ public extension FDB {
     /// Retry logic kicks in if `notCommitted` (1020) error was thrown during commit event. You must commit
     /// the transaction yourself. Additionally, this transactional closure should be idempotent in order to exclude
     /// unexpected behaviour.
-    public func withTransaction<T>(
+    func withTransaction<T>(
         on eventLoop: EventLoop,
         _ block: @escaping (FDB.Transaction) throws -> EventLoopFuture<T>
     ) -> EventLoopFuture<T> {
@@ -46,21 +46,21 @@ public extension FDB {
             do {
                 result = try block(transaction).checkingRetryableError(for: transaction)
             } catch {
-                result = eventLoop.newFailedFuture(error: error)
+                result = eventLoop.makeFailedFuture(error)
             }
 
-            return result.thenIfError { (error: Swift.Error) -> EventLoopFuture<T> in
+            return result.flatMapError { (error: Swift.Error) -> EventLoopFuture<T> in
                 if case let FDB.Error.transactionRetry(transaction) = error {
                     transaction.incrementRetries()
                     return transactionRoutine(transaction)
                 }
-                return eventLoop.newFailedFuture(error: error)
+                return eventLoop.makeFailedFuture(error)
             }
         }
 
         return self
             .begin(on: eventLoop)
-            .then(transactionRoutine)
+            .flatMap(transactionRoutine)
     }
 
     /// Executes given transactional closure with appropriate retry logic
@@ -70,7 +70,7 @@ public extension FDB {
     /// Retry logic kicks in if `notCommitted` (1020) error was thrown during commit event. You must commit
     /// the transaction yourself. Additionally, this transactional closure should be idempotent in order to exclude
     /// unexpected behaviour.
-    public func withTransaction<T>(
+    func withTransaction<T>(
         _ block: @escaping (FDB.Transaction) throws -> T
     ) throws -> T {
         func transactionRoutine(_ transaction: FDB.Transaction) throws -> T {

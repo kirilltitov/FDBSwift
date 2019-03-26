@@ -1,6 +1,6 @@
 public extension FDB {
     /// Range get streaming mode
-    public enum StreamingMode: Int32 {
+    enum StreamingMode: Int32 {
         /// Client intends to consume the entire range and would like it all transferred as early as possible.
         ///
         /// aka `FDB_STREAMING_MODE_WANT_ALL`
@@ -47,7 +47,7 @@ public extension FDB {
         case serial = 4
     }
 
-    public enum MutationType: UInt32 {
+    enum MutationType: UInt32 {
         /// Performs an addition of little-endian integers. If the existing value in the database is not present or
         /// shorter than ``param``, it is first extended to the length of ``param`` with zero bytes.  If ``param``
         /// is shorter than the existing value in the database, the existing value is truncated to match the length

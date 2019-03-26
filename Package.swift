@@ -8,7 +8,7 @@ let package = Package(
         .library(name: "FDB", targets: ["FDB"]),
     ],
     dependencies: [
-        .package(url: "https://github.com/apple/swift-nio", .upToNextMajor(from: "1.9.0")),
+        .package(url: "https://github.com/apple/swift-nio.git", .upToNextMajor(from: "2.0.0")),
     ],
     targets: [
         .systemLibrary(name: "CFDB", pkgConfig: "libfdb"),

@@ -1,6 +1,6 @@
 public extension FDB {
     /// A high-level FDB key structure for managing nested keys. Powered by Tuple layer concept.
-    public struct Subspace {
+    struct Subspace {
         /// Existing key prefix
         public let prefix: Bytes
 
@@ -29,11 +29,11 @@ public extension FDB {
             self.init(tuple.pack(), items: items)
         }
 
-        public func subspace(_ input: [FDBTuplePackable]) -> Subspace {
+        func subspace(_ input: [FDBTuplePackable]) -> Subspace {
             return Subspace(self.prefix + Tuple(input).pack(), items: self.itemsCount + input.count)
         }
 
-        public func subspace(_ input: FDBTuplePackable...) -> Subspace {
+        func subspace(_ input: FDBTuplePackable...) -> Subspace {
             return self.subspace(input)
         }
 
