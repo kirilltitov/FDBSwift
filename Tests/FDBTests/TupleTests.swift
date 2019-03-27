@@ -116,7 +116,7 @@ class TupleTests: XCTestCase {
     }
 
     func testUnpack() throws {
-        var input: [FDBTuplePackable] = [
+        let input: [FDBTuplePackable] = [
             Bytes([0, 1, 2]),
             322,
             -322,
