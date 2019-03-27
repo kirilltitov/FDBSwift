@@ -125,12 +125,8 @@ class TupleTests: XCTestCase {
             FDB.Tuple("bar", 1337, "baz"),
             FDB.Tuple(),
             FDB.Null(),
+            "foo\u{00}bar",
         ]
-        #if os(Linux)
-            input.append("foobar")
-        #else
-            input.append("foo\u{00}bar")
-        #endif
         let etalonTuple = FDB.Tuple(input)
         let packed = etalonTuple.pack()
         let repacked = try FDB.Tuple(from: packed).pack()
