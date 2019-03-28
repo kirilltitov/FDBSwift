@@ -34,7 +34,7 @@ public extension FDB.Transaction {
         let promise: EventLoopPromise<Void> = eventLoop.makePromise()
 
         let future: FDB.Future = self.commit()
-        future.whenVoidReady(promise.succeed)
+        future.whenVoidReady { promise.succeed(()) }
         future.whenError(promise.fail)
 
         return promise.futureResult.map { _ in () }
