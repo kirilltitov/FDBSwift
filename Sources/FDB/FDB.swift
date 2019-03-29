@@ -43,7 +43,7 @@ public class FDB {
             #endif
         }
         self.networkStopTimeout = networkStopTimeout
-        
+
         FDB.logger.debug("Using cluster file '\(self.clusterFile)'")
         FDB.logger.debug("Network stop timeout is \(self.networkStopTimeout) seconds")
 
