@@ -136,6 +136,7 @@ class FDBTests: XCTestCase {
     func genericTestCommit() throws -> FDB.Transaction {
         FDB.logger.info("Starting transaction")
         let tr = try self.begin().wait()
+        let _ = try tr.set(key: FDBTests.subspace["testcommit"], value: Bytes([1,2,3])).wait()
         FDB.logger.info("Started transaction")
         var ran = false
         let semaphore = self.semaphore
@@ -145,7 +146,7 @@ class FDBTests: XCTestCase {
             semaphore.signal()
         }
         FDB.logger.info("Waiting for semaphore")
-        semaphore.wait(for: 10)
+        let _ = semaphore.wait(for: 10)
         FDB.logger.info("Semaphore done")
         XCTAssertTrue(ran)
         return tr
@@ -169,7 +170,7 @@ class FDBTests: XCTestCase {
             semaphore.signal()
         }
         XCTAssertEqual(counter, 0)
-        semaphore.wait(for: 10)
+        let _ = semaphore.wait(for: 10)
         XCTAssertEqual(counter, 1)
     }
 
@@ -186,7 +187,7 @@ class FDBTests: XCTestCase {
                 semaphore.signal()
                 return
             }
-        semaphore.wait(for: 10)
+        let _ = semaphore.wait(for: 10)
     }
 
     func testNIOGetRange() throws {
@@ -212,7 +213,7 @@ class FDBTests: XCTestCase {
                 semaphore.signal()
                 return
             }
-        semaphore.wait(for: 10)
+        let _ = semaphore.wait(for: 10)
     }
 
     func testNIOAtomicAdd() throws {
@@ -229,7 +230,7 @@ class FDBTests: XCTestCase {
         tr.atomic(.add, key: key, value: step).whenComplete { _ in
             semaphore.signal()
         }
-        semaphore.wait(for: 10)
+        let _ = semaphore.wait(for: 10)
         let result: Bytes? = try tr.get(key: key).wait()
         XCTAssertNotNil(result)
         XCTAssertEqual(result!.cast() as Int64, expected)
@@ -253,7 +254,7 @@ class FDBTests: XCTestCase {
         future.whenComplete { _ in
             semaphore.signal()
         }
-        semaphore.wait(for: 10)
+        let _ = semaphore.wait(for: 10)
     }
 
     func testTransactionOptions() throws {
