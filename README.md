@@ -368,16 +368,16 @@ Of course, in most cases it's much easier and cleaner to just pass `commit: true
 
 ### Debugging/logging
 
-FDBSwift supports official community [Swift-Log](https://github.com/apple/swift-log) library, therefore you might plug your custom into `FDB` class:
+FDBSwift supports official community [Swift-Log](https://github.com/apple/swift-log) library, therefore you might plug your custom logger into `FDB` class:
 ```swift
 FDB.logger = myCustomLogger
 
-// OR
+// or project-wise
 
 LoggingSystem.bootstrap(MyLogHandler.init) // see swift-log [docs](https://github.com/apple/swift-log#on-the-implementation-of-a-logging-backend-a-loghandler) for details
 ```
 
-By default FDBSwift uses very basic factory `stdout` logger with `.info` default log level. If something goes wrong and/or you're not sure what's happening, you just change log level to `.debug`, just like that:
+By default FDBSwift uses very basic factory `stdout` logger with `.info` default log level (shouldn't be flooded). If something goes wrong and/or you're not sure what's happening, you just change log level to `.debug`, just like that:
 ```swift
 FDB.logger.logLevel = .debug
 ```
