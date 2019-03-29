@@ -374,7 +374,7 @@ FDB.logger = myCustomLogger
 
 // or project-wise
 
-LoggingSystem.bootstrap(MyLogHandler.init) // see swift-log [docs](https://github.com/apple/swift-log#on-the-implementation-of-a-logging-backend-a-loghandler) for details
+LoggingSystem.bootstrap(MyLogHandler.init) // see https://github.com/apple/swift-log#on-the-implementation-of-a-logging-backend-a-loghandler for details
 ```
 
 By default FDBSwift uses very basic factory `stdout` logger with `.info` default log level (shouldn't be flooded). If something goes wrong and/or you're not sure what's happening, you just change log level to `.debug`, just like that:
