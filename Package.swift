@@ -9,10 +9,11 @@ let package = Package(
     ],
     dependencies: [
         .package(url: "https://github.com/apple/swift-nio.git", .upToNextMajor(from: "2.0.0")),
+        .package(url: "https://github.com/apple/swift-log.git", .branch("master")),
     ],
     targets: [
         .systemLibrary(name: "CFDB", pkgConfig: "libfdb"),
-        .target(name: "FDB", dependencies: ["CFDB", "NIO"]),
+        .target(name: "FDB", dependencies: ["CFDB", "NIO", "Logging"]),
         .testTarget(name: "FDBTests", dependencies: ["FDB"]),
     ]
 )

@@ -28,7 +28,7 @@ public extension FDB.Transaction {
     /// - returns: EventLoopFuture with future Void value
     func commit() -> EventLoopFuture<Void> {
         guard let eventLoop = self.eventLoop else {
-            self.debug("[commit] No event loop")
+            self.log("[commit] No event loop", level: .alert)
             return FDB.dummyEventLoop.makeFailedFuture(FDB.Error.noEventLoopProvided)
         }
         let promise: EventLoopPromise<Void> = eventLoop.makePromise()
@@ -50,7 +50,7 @@ public extension FDB.Transaction {
     /// - returns: EventLoopFuture with future Transaction (`self`) value
     func set(key: AnyFDBKey, value: Bytes, commit: Bool = false) -> EventLoopFuture<FDB.Transaction> {
         guard let eventLoop = self.eventLoop else {
-            self.debug("[set] No event loop")
+            self.log("[set] No event loop", level: .alert)
             return FDB.dummyEventLoop.makeFailedFuture(FDB.Error.noEventLoopProvided)
         }
 
@@ -81,7 +81,7 @@ public extension FDB.Transaction {
         commit: Bool = false
     ) -> EventLoopFuture<Bytes?> {
         guard let eventLoop = self.eventLoop else {
-            self.debug("[get] No event loop")
+            self.log("[get] No event loop", level: .alert)
             return FDB.dummyEventLoop.makeFailedFuture(FDB.Error.noEventLoopProvided)
         }
 
@@ -163,7 +163,7 @@ public extension FDB.Transaction {
         commit: Bool = false
     ) -> EventLoopFuture<FDB.KeyValuesResult> {
         guard let eventLoop = self.eventLoop else {
-            self.debug("[get range] No event loop")
+            self.log("[get range] No event loop", level: .alert)
             return FDB.dummyEventLoop.makeFailedFuture(FDB.Error.noEventLoopProvided)
         }
 
@@ -361,7 +361,7 @@ public extension FDB.Transaction {
         _ closure: () throws -> Void
     ) -> EventLoopFuture<FDB.Transaction> {
         guard let eventLoop = self.eventLoop else {
-            self.debug("[generic action] No event loop")
+            self.log("[generic action] No event loop", level: .alert)
             return FDB.dummyEventLoop.makeFailedFuture(FDB.Error.noEventLoopProvided)
         }
 
@@ -479,7 +479,7 @@ public extension FDB.Transaction {
     /// - returns: EventLoopFuture with future Int64 value
     func getReadVersion() -> EventLoopFuture<Int64> {
         guard let eventLoop = self.eventLoop else {
-            self.debug("[getReadVersion] No event loop")
+            self.log("[getReadVersion] No event loop", level: .alert)
             return FDB.dummyEventLoop.makeFailedFuture(FDB.Error.noEventLoopProvided)
         }
 

@@ -180,7 +180,7 @@ public extension FDB {
     ///   - option: Network option
     /// - returns: current FDB instance (`self`)
     func setOption(_ option: FDB.NetworkOption) throws -> FDB {
-        self.debug("Trying to set network option \(option)")
+        FDB.logger.debug("Trying to set network option \(option)")
 
         try option.setOption()
 

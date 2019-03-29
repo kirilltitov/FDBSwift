@@ -56,11 +56,11 @@ extension FDB.Tuple {
     internal static func _unpack(_ input: Bytes, _ pos: Int = 0) throws -> (FDBTuplePackable, Int) {
         func sanityCheck(begin: Int, end: Int) throws {
             guard begin >= input.startIndex else {
-                FDB.debug("Invalid begin boundary \(begin) (actual: \(input.startIndex)) while parsing \(input)")
+                FDB.logger.error("Invalid begin boundary \(begin) (actual: \(input.startIndex)) while parsing \(input)")
                 throw FDB.Error.unpackInvalidBoundaries
             }
             guard end <= input.endIndex else {
-                FDB.debug("Invalid end boundary \(end) (actual: \(input.endIndex)) while parsing \(input)")
+                FDB.logger.error("Invalid end boundary \(end) (actual: \(input.endIndex)) while parsing \(input)")
                 throw FDB.Error.unpackInvalidBoundaries
             }
         }
@@ -82,7 +82,7 @@ extension FDB.Tuple {
             try sanityCheck(begin: pos + 1, end: end)
             let bytes = input[(pos + 1) ..< end].replaceEscapes()
             guard let string = String(bytes: bytes, encoding: .utf8) else {
-                FDB.debug("Could not convert bytes \(bytes) to string (ascii form: '\(String(bytes: bytes, encoding: .ascii)!)')")
+                FDB.logger.error("Could not convert bytes \(bytes) to string (ascii form: '\(String(bytes: bytes, encoding: .ascii)!)')")
                 throw FDB.Error.unpackInvalidString
             }
             return (string, end + 1)
@@ -135,7 +135,7 @@ extension FDB.Tuple {
             return (FDB.Tuple(result), end + 1)
         }
 
-        FDB.debug("Unknown tuple code '\(code)' while parsing \(input)")
+        FDB.logger.error("Unknown tuple code '\(code)' while parsing \(input)")
         throw FDB.Error.unpackUnknownCode
     }
 }
