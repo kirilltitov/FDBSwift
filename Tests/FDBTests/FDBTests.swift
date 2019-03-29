@@ -16,7 +16,7 @@ class FDBTests: XCTestCase {
     override class func setUp() {
         super.setUp()
         var logger = Logger(label: "testlogger")
-        logger.logLevel = .info
+        logger.logLevel = .debug
         FDB.logger = logger
         self.fdb = FDB()
         self.subspace = FDB.Subspace("test \(Int.random(in: 0 ..< Int.max))")
@@ -145,7 +145,7 @@ class FDBTests: XCTestCase {
             semaphore.signal()
         }
         FDB.logger.info("Waiting for semaphore")
-        semaphore.wait()
+        semaphore.wait(for: 10)
         FDB.logger.info("Semaphore done")
         XCTAssertTrue(ran)
         return tr
@@ -169,7 +169,7 @@ class FDBTests: XCTestCase {
             semaphore.signal()
         }
         XCTAssertEqual(counter, 0)
-        semaphore.wait()
+        semaphore.wait(for: 10)
         XCTAssertEqual(counter, 1)
     }
 
@@ -186,7 +186,7 @@ class FDBTests: XCTestCase {
                 semaphore.signal()
                 return
             }
-        semaphore.wait()
+        semaphore.wait(for: 10)
     }
 
     func testNIOGetRange() throws {
@@ -212,7 +212,7 @@ class FDBTests: XCTestCase {
                 semaphore.signal()
                 return
             }
-        semaphore.wait()
+        semaphore.wait(for: 10)
     }
 
     func testNIOAtomicAdd() throws {
@@ -229,7 +229,7 @@ class FDBTests: XCTestCase {
         tr.atomic(.add, key: key, value: step).whenComplete { _ in
             semaphore.signal()
         }
-        semaphore.wait()
+        semaphore.wait(for: 10)
         let result: Bytes? = try tr.get(key: key).wait()
         XCTAssertNotNil(result)
         XCTAssertEqual(result!.cast() as Int64, expected)
@@ -253,7 +253,7 @@ class FDBTests: XCTestCase {
         future.whenComplete { _ in
             semaphore.signal()
         }
-        semaphore.wait()
+        semaphore.wait(for: 10)
     }
 
     func testTransactionOptions() throws {
