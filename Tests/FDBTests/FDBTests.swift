@@ -1,6 +1,7 @@
 @testable import FDB
 import NIO
 import XCTest
+import Logging
 
 class FDBTests: XCTestCase {
     static var fdb: FDB!
@@ -14,7 +15,9 @@ class FDBTests: XCTestCase {
 
     override class func setUp() {
         super.setUp()
-        FDB.verbose = true
+        var logger = Logger(label: "testlogger")
+        logger.logLevel = .info
+        FDB.logger = logger
         self.fdb = FDB()
         self.subspace = FDB.Subspace("test \(Int.random(in: 0 ..< Int.max))")
     }

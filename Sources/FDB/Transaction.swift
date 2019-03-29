@@ -1,5 +1,6 @@
 import CFDB
 import NIO
+import Logging
 
 public extension FDB {
     class Transaction {
@@ -21,7 +22,7 @@ public extension FDB {
                 debugInfoSuffix = "without event loop"
             }
 
-            self.debug("Started transaction \(debugInfoSuffix)")
+            self.log("Started transaction \(debugInfoSuffix)")
         }
 
         deinit {
@@ -35,12 +36,18 @@ public extension FDB {
 
         internal func incrementRetries() {
             self.retries += 1
-            self.debug("Retry #\(self.retries)")
+            self.log("Retry #\(self.retries)", level: .info)
         }
 
-        /// Prints verbose debug message to stdout (if `FDB.verbose` is `true`)
-        internal func debug(_ message: String) {
-            FDB.debug("[Transaction] [\(ObjectIdentifier(self).hashValue)] \(message)")
+        /// Logs message to Logger (if `FDB.verbose` is `true`)
+        @inlinable internal func log(_ message: String, level: Logger.Level = .debug) {
+            var logger = FDB.logger
+            logger[metadataKey: "trid"] = "\(ObjectIdentifier(self).hashValue)"
+
+            logger.log(
+                level: level,
+                "[FDB.Transaction] \(message)"
+            )
         }
 
         /// Begins a new FDB transactionon on given FDB database pointer and optional event loop
@@ -55,14 +62,14 @@ public extension FDB {
         /// Cancels the transaction. All pending or future uses of the transaction will return
         /// a `transaction_cancelled` error. The transaction can be used again after it is `reset`.
         func cancel() {
-            self.debug("Cancelling transaction")
+            self.log("Cancelling transaction")
             fdb_transaction_cancel(self.pointer)
         }
 
         /// Reset transaction to its initial state.
         /// This is similar to creating a new transaction after destroying previous one.
         func reset() {
-            self.debug("Resetting transaction")
+            self.log("Resetting transaction")
             fdb_transaction_reset(self.pointer)
         }
 

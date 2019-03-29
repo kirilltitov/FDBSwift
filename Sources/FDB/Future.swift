@@ -58,7 +58,7 @@ internal extension FDB {
         func fail(with error: Swift.Error, _ file: StaticString = #file, _ line: Int = #line) {
             debugOnly {
                 guard let _ = self.failClosure else {
-                    print("FDB: no fail closure, caught error \(error) at \(file):\(line)")
+                    FDB.logger.error("No fail closure, caught error \(error) at \(file):\(line)")
                     return
                 }
             }
@@ -81,7 +81,7 @@ internal extension FDB {
                         let errno = fdb_future_get_error(futurePtr)
                         if errno != 0 {
                             let error = FDB.Error.from(errno: errno)
-                            FDB.debug("Failing future with error '\(error)' (\(errno)): '\(error.getDescription())'")
+                            FDB.logger.debug("Failing future with error '\(error)' (\(errno)): '\(error.getDescription())'")
                             unwrappedBox.future.fail(with: error)
                         } else {
                             unwrappedBox.callback(unwrappedBox.future)

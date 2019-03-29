@@ -366,11 +366,16 @@ let string: String = try future.wait()
 
 Of course, in most cases it's much easier and cleaner to just pass `commit: true` argument into `set(key:value:commit:)` method (or its siblings), and it will do things for you.
 
-### Debugging
+### Debugging/logging
 
-If FDB doesn't kickstart properly and you're unsure on what's happening, you may enable verbose mode which prints useful debug info to `stdout`:
+FDBSwift supports official community [Swift-Log](https://github.com/apple/swift-log) library, therefore you might plug your custom into `FDB` class:
 ```swift
-FDB.verbose = true
+FDB.logger = myCustomLogger
+```
+
+By default FDBSwift uses very basic factory `stdout` logger with `.info` default log level. If something goes wrong and/or you're not sure what's happening, you just change log level to `.debug`, just like that:
+```swift
+FDB.logger.logLevel = .debug
 ```
 
 ## Troubleshooting
@@ -414,6 +419,8 @@ Though I aim for full interlanguage compatibility of Tuple layer, I don't guaran
 * ✅ Transaction options
 * ✅ Network options
 * ✅ Docblocks and built-in documentation
+* ✅ Auto transaction retry if allowed and appropriate
+* ✅ 🎉 Even morer verbose (Swift-Log)
 * The rest of tuple pack/unpack (only floats, I think?)
 * More sugar for atomic operations
 * The rest of C API (watches?)

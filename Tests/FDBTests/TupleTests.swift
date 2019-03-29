@@ -3,7 +3,7 @@ import XCTest
 
 class TupleTests: XCTestCase {
     override func setUp() {
-        FDB.verbose = false
+        FDB.logger.logLevel = .emergency
     }
 
     func testPackUnicodeString() {

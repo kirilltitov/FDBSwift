@@ -5,7 +5,7 @@ import NIO
 public extension FDB {
     /// Begins a new FDB transaction without an event loop
     func begin() throws -> FDB.Transaction {
-        self.debug("Trying to start transaction without eventloop")
+        FDB.logger.debug("Trying to start transaction without eventloop")
 
         return try FDB.Transaction.begin(try self.getDB())
     }
@@ -17,7 +17,7 @@ public extension FDB {
     /// - returns: `EventLoopFuture` with a transaction instance as future value.
     func begin(on eventLoop: EventLoop) -> EventLoopFuture<FDB.Transaction> {
         do {
-            self.debug("Trying to start transaction with eventloop \(Swift.type(of: eventLoop))")
+            FDB.logger.debug("Trying to start transaction with eventloop \(Swift.type(of: eventLoop))")
 
             return eventLoop.makeSucceededFuture(
                 try FDB.Transaction.begin(
@@ -26,7 +26,7 @@ public extension FDB {
                 )
             )
         } catch {
-            self.debug("Failed to start transaction with eventloop \(Swift.type(of: eventLoop)): \(error)")
+            FDB.logger.alert("Failed to start transaction with eventloop \(Swift.type(of: eventLoop)): \(error)")
             return FDB.dummyEventLoop.makeFailedFuture(error)
         }
     }
