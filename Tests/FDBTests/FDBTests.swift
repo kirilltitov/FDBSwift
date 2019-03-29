@@ -134,14 +134,19 @@ class FDBTests: XCTestCase {
     }
 
     func genericTestCommit() throws -> FDB.Transaction {
+        FDB.logger.info("Starting transaction")
         let tr = try self.begin().wait()
+        FDB.logger.info("Started transaction")
         var ran = false
         let semaphore = self.semaphore
         tr.commit().whenSuccess {
+            FDB.logger.info("Transaction committed")
             ran = true
             semaphore.signal()
         }
+        FDB.logger.info("Waiting for semaphore")
         semaphore.wait()
+        FDB.logger.info("Semaphore done")
         XCTAssertTrue(ran)
         return tr
     }
