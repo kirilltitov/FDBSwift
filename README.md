@@ -294,7 +294,7 @@ Since FoundationDB is _quite_ a transactional database, sometimes `commit`s migh
 
 In these [not-so-rare] cases transaction is allowed to be replayed again. How do you know if transaction can be replayed? It's failed with a special `FDB.Error` case `.transactionRetry(FDB.Transaction)` which holds current transaction as an associated value. If your transaction (or its respective `EventLoopFuture`) is failed with this particular error, it means that the transaction has already been rolled back to its initial state and is ready to be executed again.
 
-You can implement this retry logic manually or you can just use builtin `FDB` object function `withTransaction`. This function, as always, comes with two flavors: synchronous and NIO:
+You can implement this retry logic manually or you can just use `FDB` instance method `withTransaction`. This function, as always, comes with two flavors: synchronous and NIO. Following example should be self-explanatory:
 
 ```swift
 let maybeString: String? = try fdb.withTransaction { transaction in
@@ -308,7 +308,8 @@ let maybeString: String? = try fdb.withTransaction { transaction in
 // OR
 
 let maybeStringFuture: EventLoopFuture<String?> = fdb.withTransaction(on: myEventLoop) { transaction in
-    return transaction.get(key: key, commit: true)
+    return transaction
+        .get(key: key, commit: true)
         .map { maybeBytes, transaction in
             guard let bytes = maybeBytes else {
                 return nil
