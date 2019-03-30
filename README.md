@@ -351,7 +351,7 @@ let future: EventLoopFuture<String> = fdb.withTransaction(on: myEventLoop) { tra
             transaction
                 .commit()
                 .map { _ in string }
-    }
+        }
 }
 
 future.whenSuccess { (resultString: String) in
