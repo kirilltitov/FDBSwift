@@ -139,7 +139,7 @@ class TupleTests: XCTestCase {
         let repacked = try FDB.Tuple(from: packed).pack()
         XCTAssertEqual(packed, repacked)
     }
-    
+
     func testUnpackSanity() {
         for _ in 1...10000 {
             do {
@@ -148,6 +148,60 @@ class TupleTests: XCTestCase {
                 )
             } catch {}
         }
+    }
+
+    func testFloat() throws {
+        let cases: [(Float32, Bytes)] = [
+            (-10000.01, [32, 57, 227, 191, 245]),
+            (-6500.1235, [32, 58, 52, 223, 2]),
+            (-100.00001, [32, 61, 55, 255, 254]),
+            (-1.0, [32, 64, 127, 255, 255]),
+            (0.0, [32, 128, 0, 0, 0]),
+            (-0.0, [32, 127, 255, 255, 255]),
+            (1.0, [32, 191, 128, 0, 0]),
+            (1.1, [32, 191, 140, 204, 205]),
+            (3.14, [32, 192, 72, 245, 195]),
+            (322.1337, [32, 195, 161, 17, 29]),
+            (1000.0, [32, 196, 122, 0, 0]),
+            (65545.17, [32, 199, 128, 4, 150]),
+        ]
+
+        for (inputFloat, expectedBytes) in cases {
+            XCTAssertEqual(expectedBytes, inputFloat.pack())
+        }
+    }
+
+    func testDouble() throws {
+        let cases: [(Double, Bytes)] = [
+            (-10000.01, [33, 63, 60, 119, 254, 184, 81, 235, 132]),
+            (-6500.1234, [33, 63, 70, 155, 224, 104, 219, 139, 171]),
+            (-100.00001, [33, 63, 166, 255, 255, 214, 14, 148, 237]),
+            (-1.0, [33, 64, 15, 255, 255, 255, 255, 255, 255]),
+            (0.0, [33, 128, 0, 0, 0, 0, 0, 0, 0]),
+            (-0.0, [33, 127, 255, 255, 255, 255, 255, 255, 255]),
+            (1.0, [33, 191, 240, 0, 0, 0, 0, 0, 0]),
+            (1.1, [33, 191, 241, 153, 153, 153, 153, 153, 154]),
+            (3.14, [33, 192, 9, 30, 184, 81, 235, 133, 31]),
+            (3.141592653589793, [33, 192, 9, 33, 251, 84, 68, 45, 24]),
+            (322.1337, [33, 192, 116, 34, 35, 162, 156, 119, 154]),
+            (1000.0, [33, 192, 143, 64, 0, 0, 0, 0, 0]),
+            (65545.17111337, [33, 192, 240, 0, 146, 188, 225, 95, 129]),
+        ]
+
+        for (inputFloat, expectedBytes) in cases {
+            XCTAssertEqual(expectedBytes, inputFloat.pack())
+        }
+    }
+
+    func testBool() throws {
+        XCTAssertEqual([0x26], false.pack())
+        XCTAssertEqual([0x27], true.pack())
+    }
+
+    func testUUID() throws {
+        let etalon: uuid_t = (136,167,235,150,108,115,69,118,164,45,145,99,222,237,56,59)
+        let uuid = UUID(uuid: etalon)
+        XCTAssertEqual([0x30] + getBytes(etalon), uuid.pack())
     }
 
     static var allTests = [
@@ -159,5 +213,9 @@ class TupleTests: XCTestCase {
         ("testUnpack", testUnpack),
         ("testNullEscapes", testNullEscapes),
         ("testUnpackSanity", testUnpackSanity),
+        ("testFloat", testFloat),
+        ("testDouble", testDouble),
+        ("testBool", testBool),
+        ("testUUID", testUUID),
     ]
 }

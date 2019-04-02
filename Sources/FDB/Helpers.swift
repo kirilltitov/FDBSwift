@@ -67,9 +67,19 @@ internal extension Array where Element == Byte {
     }
 }
 
-// little endian byte order
+/// Returns big-endian IEEE binary representation of arbitrary value
 @usableFromInline internal func getBytes<Input>(_ input: Input) -> Bytes {
     return withUnsafeBytes(of: input) { Bytes($0) }
+}
+
+/// Returns big-endian IEEE binary representation of a floating point number
+@usableFromInline internal func getBytes(_ input: Float32) -> Bytes {
+    return getBytes(input.bitPattern.bigEndian)
+}
+
+/// Returns big-endian IEEE binary representation of a floating point number
+@usableFromInline internal func getBytes(_ input: Double) -> Bytes {
+    return getBytes(input.bitPattern.bigEndian)
 }
 
 @usableFromInline internal func getPtr<Input>(_ input: Input) -> UnsafePointer<Byte> {

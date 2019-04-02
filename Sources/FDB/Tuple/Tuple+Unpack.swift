@@ -72,11 +72,11 @@ extension FDB.Tuple {
         let code = input[pos]
         if code == NULL {
             return (FDB.Null(), pos + 1)
-        } else if code == PREFIX_BYTE_STRING {
+        } else if code == FDB.Tuple.Prefix.BYTE_STRING {
             let end = findTerminator(input: input, pos: pos + 1)
             try sanityCheck(begin: pos + 1, end: end)
             return (input[(pos + 1) ..< end].replaceEscapes(), end + 1)
-        } else if code == PREFIX_UTF_STRING {
+        } else if code == FDB.Tuple.Prefix.UTF_STRING {
             let _pos = pos + 1
             let end = findTerminator(input: input, pos: _pos)
             try sanityCheck(begin: pos + 1, end: end)
@@ -86,7 +86,7 @@ extension FDB.Tuple {
                 throw FDB.Error.unpackInvalidString
             }
             return (string, end + 1)
-        } else if code >= PREFIX_INT_ZERO_CODE && code < PREFIX_POS_INT_END {
+        } else if code >= FDB.Tuple.Prefix.INT_ZERO_CODE && code < FDB.Tuple.Prefix.POS_INT_END {
             let n = Int(code) - 20
             let begin = pos + 1
             let end = begin + n
@@ -95,7 +95,7 @@ extension FDB.Tuple {
                 (Array<Byte>(repeating: 0x00, count: 8 - n) + input[begin ..< end]).reversed().cast() as Int,
                 end
             )
-        } else if code > PREFIX_NEG_INT_START && code < PREFIX_INT_ZERO_CODE {
+        } else if code > FDB.Tuple.Prefix.NEG_INT_START && code < FDB.Tuple.Prefix.INT_ZERO_CODE {
             let n = 20 - Int(code)
             let begin = pos + 1
             let end = pos + 1 + n
@@ -115,7 +115,7 @@ extension FDB.Tuple {
                 ) - sizeLimits[n],
                 end
             )
-        } else if code == PREFIX_NESTED_TUPLE {
+        } else if code == FDB.Tuple.Prefix.NESTED_TUPLE {
             var result: [FDBTuplePackable] = []
             var end = pos + 1
             while end < input.count {

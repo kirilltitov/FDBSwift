@@ -22,16 +22,16 @@ internal let sizeLimits = Array<Int>(0 ... 7).map { (1 << ($0 * 8)) - 1 }
 extension Int: FDBTuplePackable {
     public func pack() -> Bytes {
         if self == 0 {
-            return [PREFIX_INT_ZERO_CODE]
+            return [FDB.Tuple.Prefix.INT_ZERO_CODE]
         }
         var result = Bytes()
         if self > 0 {
             let n = bisect(list: sizeLimits, item: self)
-            result.append(PREFIX_INT_ZERO_CODE + UInt8(n))
+            result.append(FDB.Tuple.Prefix.INT_ZERO_CODE + UInt8(n))
             result.append(contentsOf: getBytes(self.bigEndian)[from: -n])
         } else {
             let n = bisect(list: sizeLimits, item: -self)
-            result.append(PREFIX_INT_ZERO_CODE - UInt8(n))
+            result.append(FDB.Tuple.Prefix.INT_ZERO_CODE - UInt8(n))
             let maxv = sizeLimits[n]
             let bytes = getBytes((maxv + self).bigEndian)
             result.append(contentsOf: bytes[from: -n])
