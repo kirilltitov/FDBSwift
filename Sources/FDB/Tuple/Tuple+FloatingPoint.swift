@@ -12,13 +12,6 @@ fileprivate func transformFloatingPoint(bytes: inout Bytes, start: Int, encode: 
     }
 }
 
-fileprivate func genericFloatingPointPack<T: FloatingPoint>(prefix: Byte, value: T) -> Bytes {
-    var result = Bytes([prefix])
-    result.append(contentsOf: getBytes(value))
-    transformFloatingPoint(bytes: &result, start: 1, encode: true)
-    return result
-}
-
 extension Float32: FDBTuplePackable {
     public func pack() -> Bytes {
         var result = Bytes([FDB.Tuple.Prefix.FLOAT])
