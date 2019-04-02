@@ -428,7 +428,7 @@ Though I aim for full interlanguage compatibility of Tuple layer, I don't guaran
 * ✅ Docblocks and built-in documentation
 * ✅ Auto transaction retry if allowed and appropriate
 * ✅ 🎉 Even morer verbose (Swift-Log)
-* The rest of tuple pack/unpack (only floats, I think?)
+* ✅ The rest of tuple pack/unpack (only floats, I think?) (also Bool and UUID)
 * More sugar for atomic operations
 * The rest of C API (watches?)
 * Directories
