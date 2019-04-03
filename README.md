@@ -120,10 +120,10 @@ let tuple = FDB.Tuple(
 )
 let packed: Bytes = tuple.pack()
 let unpacked: FDB.Tuple = try FDB.Tuple(from: packed)
-let tupleBytes: Bytes = unpacked.tuple[0]
-let tupleInt: Int = unpacked.tuple[1]
+let tupleBytes: Bytes? = unpacked.tuple[0] as? Bytes
+let tupleInt: Int? = unpacked.tuple[1] as? Int
 // ...
-let tupleEmptyTuple: FDB.Tuple = unpacked.tuple[6]
+let tupleEmptyTuple: FDB.Tuple? = unpacked.tuple[6] as? FDB.Tuple
 let tupleNull: FDBTuplePackable = unpacked.tuple[7]
 if tupleNull is FDB.Null || unpacked.tuple[7] is FDB.Null {}
 // you get the idea
