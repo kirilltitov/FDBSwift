@@ -96,7 +96,7 @@ public protocol AnyFDBKey {
 ```
 This protocol is adopted by `String`, `StaticString`, `Tuple`, `Subspace` and `Bytes` (aka `Array<UInt8>`), so you may freely use any of these types, or adopt this protocol in your custom types.
 
-Since you would probably like to have some kind of namespacing in your application, you should stick to `Subspace` which is an extremely useful instrument for creating namespaces. Under the hood it utilizes the Tuple concept. You oughtn't really bother delving into it, just remember that currently subspaces accept `String`, `Int`, `Tuple` (hence `FDBTuplePackable`), `FDB.Null` (why would you do that?) and `Bytes` as arguments.
+Since you would probably like to have some kind of namespacing in your application, you should stick to `Subspace` which is an extremely useful instrument for creating namespaces. Under the hood it utilizes the Tuple concept. You oughtn't really bother delving into it, just remember that currently subspaces accept `String`, `Int`, `Float` (aka `Float32`), `Double`, `Bool`, `UUID`, `Tuple` (hence `FDBTuplePackable`), `FDB.Null` (why would you do that?) and `Bytes` as arguments.
 ```swift
 // dump subspace if you would like to see how it looks from the inside
 let rootSubspace = FDB.Subspace("root")
