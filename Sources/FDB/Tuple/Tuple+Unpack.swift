@@ -133,6 +133,36 @@ extension FDB.Tuple {
                 }
             }
             return (FDB.Tuple(result), end + 1)
+        } else if code == FDB.Tuple.Prefix.FLOAT {
+            let end = pos + 1 + MemoryLayout<Float32>.size
+            try sanityCheck(begin: pos + 1, end: end)
+            var bytes = Bytes(input[(pos + 1) ..< end])
+            transformFloatingPoint(bytes: &bytes, start: 0, encode: false)
+            return (
+                Float32(bitPattern: (bytes.cast() as UInt32).bigEndian),
+                end
+            )
+        } else if code == FDB.Tuple.Prefix.DOUBLE {
+            let end = pos + 1 + MemoryLayout<Double>.size
+            try sanityCheck(begin: pos + 1, end: end)
+            var bytes = Bytes(input[(pos + 1) ..< end])
+            transformFloatingPoint(bytes: &bytes, start: 0, encode: false)
+            return (
+                Double(bitPattern: (bytes.cast() as UInt64).bigEndian),
+                end
+            )
+        } else if code == FDB.Tuple.Prefix.BOOL_TRUE || code == FDB.Tuple.Prefix.BOOL_FALSE {
+            return (
+                code == FDB.Tuple.Prefix.BOOL_TRUE,
+                pos + 1
+            )
+        } else if code == FDB.Tuple.Prefix.UUID {
+            let end = pos + 1 + MemoryLayout<uuid_t>.size
+            try sanityCheck(begin: pos + 1, end: end)
+            return (
+                UUID(uuid: Bytes(input[(pos + 1) ..< end]).cast()),
+                end
+            )
         }
 
         FDB.logger.error("Unknown tuple code '\(code)' while parsing \(input)")

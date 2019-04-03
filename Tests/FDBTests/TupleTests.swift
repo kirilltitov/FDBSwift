@@ -122,8 +122,13 @@ class TupleTests: XCTestCase {
             -322,
             FDB.Null(),
             "foo",
-            FDB.Tuple("bar", 1337, "baz"),
-            FDB.Tuple(),
+            UUID(),
+            true,
+            FDB.Tuple("bar", 1337, UUID(), Float(3.14), Double(322.1337), "baz", true, true, true, false),
+            FDB.Tuple(FDB.Tuple(FDB.Tuple())),
+            FDB.Tuple(Double(1637.1711)),
+            Float(3.14),
+            false,
             FDB.Null(),
             "foo\u{00}bar",
         ]
@@ -151,6 +156,15 @@ class TupleTests: XCTestCase {
     }
 
     func testFloat() throws {
+        for _ in 0...1000 {
+            let random = Float32.random(in: -1000...1000)
+            let packed = random.pack()
+            let unpacked = try FDB.Tuple(from: packed)
+            XCTAssertEqual(random, unpacked.tuple[0] as! Float)
+            let repacked = unpacked.pack()
+            XCTAssertEqual(packed, repacked)
+        }
+
         let cases: [(Float32, Bytes)] = [
             (-10000.01, [32, 57, 227, 191, 245]),
             (-6500.1235, [32, 58, 52, 223, 2]),
@@ -172,6 +186,15 @@ class TupleTests: XCTestCase {
     }
 
     func testDouble() throws {
+        for _ in 0...1000 {
+            let random = Double.random(in: -1000...1000)
+            let packed = random.pack()
+            let unpacked = try FDB.Tuple(from: packed)
+            XCTAssertEqual(random, unpacked.tuple[0] as! Double)
+            let repacked = unpacked.pack()
+            XCTAssertEqual(packed, repacked)
+        }
+
         let cases: [(Double, Bytes)] = [
             (-10000.01, [33, 63, 60, 119, 254, 184, 81, 235, 132]),
             (-6500.1234, [33, 63, 70, 155, 224, 104, 219, 139, 171]),
@@ -196,12 +219,24 @@ class TupleTests: XCTestCase {
     func testBool() throws {
         XCTAssertEqual([0x26], false.pack())
         XCTAssertEqual([0x27], true.pack())
+
+        for bool in [true, false] {
+            let packed = bool.pack()
+            let unpacked = try FDB.Tuple(from: packed)
+            XCTAssertEqual(bool, unpacked.tuple[0] as! Bool)
+            let repacked = unpacked.pack()
+            XCTAssertEqual(packed, repacked)
+        }
     }
 
     func testUUID() throws {
         let etalon: uuid_t = (136,167,235,150,108,115,69,118,164,45,145,99,222,237,56,59)
         let uuid = UUID(uuid: etalon)
-        XCTAssertEqual([0x30] + getBytes(etalon), uuid.pack())
+        let packed = uuid.pack()
+        XCTAssertEqual([0x30] + getBytes(etalon), packed)
+        let unpacked = try FDB.Tuple(from: packed)
+        XCTAssertEqual(uuid, unpacked.tuple[0] as! UUID)
+        XCTAssertEqual(packed, unpacked.pack())
     }
 
     static var allTests = [
