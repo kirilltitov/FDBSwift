@@ -65,7 +65,7 @@ public class FDB {
         }
         fdb_stop_network().orDie()
         if self.semaphore.wait(for: self.networkStopTimeout) == .timedOut {
-            FDB.logger.emergency("Stop network timeout (\(self.networkStopTimeout) seconds)")
+            FDB.logger.critical("Stop network timeout (\(self.networkStopTimeout) seconds)")
             exit(1)
         }
         FDB.logger.debug("Network stopped")
@@ -151,11 +151,11 @@ public class FDB {
     /// are healthy and ready to use
     private func checkIsAlive() throws -> FDB {
         guard let statusBytes = try self.get(key: [0xFF, 0xFF] + "/status/json".bytes) else {
-            FDB.logger.emergency("Could not get system status key")
+            FDB.logger.critical("Could not get system status key")
             throw FDB.Error.connectionError
         }
         guard let json = try JSONSerialization.jsonObject(with: Data(statusBytes)) as? [String: Any] else {
-            FDB.logger.emergency("Could not parse JSON from system status: \(statusBytes)")
+            FDB.logger.critical("Could not parse JSON from system status: \(statusBytes)")
             throw FDB.Error.connectionError
         }
         guard
@@ -164,7 +164,7 @@ public class FDB {
             let available = dbStatus["available"],
             available == true
         else {
-            FDB.logger.emergency("DB is not available according to system status info: \(json)")
+            FDB.logger.critical("DB is not available according to system status info: \(json)")
             throw FDB.Error.connectionError
         }
 

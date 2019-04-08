@@ -26,7 +26,7 @@ public extension FDB {
                 )
             )
         } catch {
-            FDB.logger.alert("Failed to start transaction with eventloop \(Swift.type(of: eventLoop)): \(error)")
+            FDB.logger.error("Failed to start transaction with eventloop \(Swift.type(of: eventLoop)): \(error)")
             return FDB.dummyEventLoop.makeFailedFuture(error)
         }
     }
