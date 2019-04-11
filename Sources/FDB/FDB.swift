@@ -58,7 +58,7 @@ public class FDB {
     }
 
     /// Performs an explicit disconnect routine.
-    func disconnect() {
+    public func disconnect() {
         if !self.isConnected {
             FDB.logger.error("Trying to disconnect from FDB while not connected")
             return
@@ -192,7 +192,7 @@ public class FDB {
     }
 
     /// Performs explicit connection to FDB cluster
-    func connect() throws {
+    public func connect() throws {
         _ = try self.getDB()
         FDB.logger.debug("Connected")
     }

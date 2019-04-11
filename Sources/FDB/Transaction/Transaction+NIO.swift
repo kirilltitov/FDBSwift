@@ -2,7 +2,7 @@ import CFDB
 import NIO
 
 internal extension EventLoopFuture {
-    func checkingRetryableError(for transaction: FDB.Transaction) -> EventLoopFuture {
+    @usableFromInline func checkingRetryableError(for transaction: FDB.Transaction) -> EventLoopFuture {
         return self.flatMapError { error in
             guard let FDBError = error as? FDB.Error else {
                 return self.eventLoop.makeFailedFuture(error)

@@ -5,7 +5,7 @@ public extension FDB {
     typealias Errno = fdb_error_t
 }
 
-extension FDB.Errno {
+internal extension FDB.Errno {
     /// Converts non-zero error number to throwable error
     func orThrow() throws {
         if self == 0 {
@@ -263,7 +263,7 @@ public extension FDB {
         }
 
         /// Returns human-readable description of current FDB error
-        func getDescription() -> String {
+        public func getDescription() -> String {
             if self.errno == 8000 {
                 return "You should replay this transaction"
             }
