@@ -258,7 +258,7 @@ public extension FDB {
 
             try transaction.commitSync()
 
-            return bytes.cast()
+            return bytes.unsafeCast()
         }
     }
 
