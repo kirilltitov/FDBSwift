@@ -92,7 +92,7 @@ extension FDB.Tuple {
             let end = begin + n
             try sanityCheck(begin: begin, end: end)
             return (
-                (Array<Byte>(repeating: 0x00, count: 8 - n) + input[begin ..< end]).reversed().cast() as Int,
+                (Array<Byte>(repeating: 0x00, count: 8 - n) + input[begin ..< end]).reversed().unsafeCast() as Int,
                 end
             )
         } else if code > FDB.Tuple.Prefix.NEG_INT_START && code < FDB.Tuple.Prefix.INT_ZERO_CODE {
@@ -111,7 +111,7 @@ extension FDB.Tuple {
                             count: 8 - n
                         )
                             + input[begin ..< end]
-                    ).reversed().cast() as Int
+                    ).reversed().unsafeCast() as Int
                 ) - sizeLimits[n],
                 end
             )
@@ -139,7 +139,7 @@ extension FDB.Tuple {
             var bytes = Bytes(input[(pos + 1) ..< end])
             transformFloatingPoint(bytes: &bytes, start: 0, encode: false)
             return (
-                Float32(bitPattern: (bytes.cast() as UInt32).bigEndian),
+                Float32(bitPattern: (bytes.unsafeCast() as UInt32).bigEndian),
                 end
             )
         } else if code == FDB.Tuple.Prefix.DOUBLE {
@@ -148,7 +148,7 @@ extension FDB.Tuple {
             var bytes = Bytes(input[(pos + 1) ..< end])
             transformFloatingPoint(bytes: &bytes, start: 0, encode: false)
             return (
-                Double(bitPattern: (bytes.cast() as UInt64).bigEndian),
+                Double(bitPattern: (bytes.unsafeCast() as UInt64).bigEndian),
                 end
             )
         } else if code == FDB.Tuple.Prefix.BOOL_TRUE || code == FDB.Tuple.Prefix.BOOL_FALSE {
@@ -160,7 +160,7 @@ extension FDB.Tuple {
             let end = pos + 1 + MemoryLayout<uuid_t>.size
             try sanityCheck(begin: pos + 1, end: end)
             return (
-                UUID(uuid: Bytes(input[(pos + 1) ..< end]).cast()),
+                UUID(uuid: Bytes(input[(pos + 1) ..< end]).unsafeCast()),
                 end
             )
         }
