@@ -10,8 +10,7 @@
 /// It must be wrapped with control characters first.
 /// This is why you should additionally call .pack() from your
 /// resulting byte array (see Tuple+Array.swift). Otherwise packing
-/// will be incorrect, but most importantly - unpacking will
-/// fail with a fatal error.
+/// will be incorrect and will fail with an error.
 /// Example of custom pack() implementation:
 /// ```
 /// extension MyValue: FDBTuplePackable {

@@ -94,7 +94,7 @@ class FDBTests: XCTestCase {
         XCTAssertNoThrow(try fdb.increment(key: key))
         let result = try fdb.get(key: key)
         XCTAssertNotNil(result)
-        XCTAssertEqual(result!.unsafeCast() as Int64, expected)
+        try XCTAssertEqual(result!.cast() as Int64, expected)
         XCTAssertEqual(result, getBytes(expected))
         XCTAssertEqual(try fdb.increment(key: key), expected + 1)
         XCTAssertEqual(try fdb.increment(key: key, value: -1), expected)
@@ -233,7 +233,7 @@ class FDBTests: XCTestCase {
         let _ = semaphore.wait(for: 10)
         let result: Bytes? = try tr.get(key: key).wait()
         XCTAssertNotNil(result)
-        XCTAssertEqual(result!.unsafeCast() as Int64, expected)
+        try XCTAssertEqual(result!.cast() as Int64, expected)
         XCTAssertEqual(result, getBytes(expected))
 //      TODO:
 //      XCTAssertEqual(try fdb.increment(key: key), expected + 1)
@@ -306,7 +306,7 @@ class FDBTests: XCTestCase {
                     try transaction.commitSync()
                     return value
                 }
-                resultSync.append(resultValue!.unsafeCast())
+                try! resultSync.append(resultValue!.cast())
                 if resultSync.count == etalon.count {
                     semaphoreSync.signal()
                 }
@@ -319,7 +319,7 @@ class FDBTests: XCTestCase {
                             return transaction.get(key: keyAsync, commit: true)
                         }
                         .map { (bytes: Bytes?, transaction: FDB.Transaction) -> Void in
-                            let value: Int64 = bytes!.unsafeCast()
+                            let value: Int64 = try! bytes!.cast()
                             resultAsync.append(value)
                             if resultAsync.count == etalon.count {
                                 semaphoreAsync.signal()
