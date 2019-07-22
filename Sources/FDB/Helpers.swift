@@ -5,16 +5,6 @@ import NIO
 public typealias Byte = UInt8
 public typealias Bytes = [Byte]
 
-internal func _precondition(
-    _ condition: @autoclosure () -> Bool,
-    _ message: @autoclosure () -> String = String(),
-    file: StaticString = #file, line: UInt = #line
-) {
-    guard condition() == true else {
-        fatalError("Precondition failed: \(message())", file: file, line: line)
-    }
-}
-
 internal extension FDB {
     struct OptionsHelper {
         @usableFromInline internal static func stringOptionToPointer(
@@ -62,11 +52,15 @@ internal extension Bool {
 }
 
 internal extension Array where Element == Byte {
-    @usableFromInline func unsafeCast<R>() -> R {
-        _precondition(
-            MemoryLayout<R>.size == self.count,
-            "Memory layout size for result type '\(R.self)' (\(MemoryLayout<R>.size) bytes) does not match with given byte array length (\(self.count) bytes)"
-        )
+    @usableFromInline func cast<R>() throws -> R {
+        guard MemoryLayout<R>.size == self.count else {
+            throw FDB.Error.unexpectedError(
+                """
+                    Memory layout size for result type '\(R.self)' (\(MemoryLayout<R>.size) bytes) does
+                    not match with given byte array length (\(self.count) bytes)
+                """
+            )
+        }
         return self.withUnsafeBytes {
             $0.baseAddress!.assumingMemoryBound(to: R.self).pointee
         }
