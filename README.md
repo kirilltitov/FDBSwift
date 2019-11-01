@@ -1,4 +1,4 @@
-# FDBSwift v3 β <img src="https://img.shields.io/badge/Swift-5.0-brightgreen.svg" alt="Swift: 5.0" /> <img src="https://travis-ci.org/kirilltitov/FDBSwift.svg?branch=master" />
+# FDBSwift v3 <img src="https://img.shields.io/badge/Swift-5.0-brightgreen.svg" alt="Swift: 5.0" /> <img src="https://travis-ci.org/kirilltitov/FDBSwift.svg?branch=master" />
 > **Fine. I'll do it myself.**
 >> _Episode III: Revenge of FoundationDB_
 
