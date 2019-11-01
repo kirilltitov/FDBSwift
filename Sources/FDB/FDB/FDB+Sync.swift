@@ -96,7 +96,7 @@ public extension FDB {
     /// - parameters:
     ///   - key: FDB key
     ///   - snapshot: Snapshot read (i.e. whether this read create a conflict range or not)
-    func get(key: AnyFDBKey, snapshot: Bool = false) throws -> Bytes? {
+    func get(key: AnyFDBKey, snapshot: Bool) throws -> Bytes? {
         return try self.withTransaction {
             try $0.get(key: key, snapshot: snapshot, commit: true)
         }
@@ -109,7 +109,7 @@ public extension FDB {
     /// - parameters:
     ///   - subspace: Subspace
     ///   - snapshot: Snapshot read (i.e. whether this read create a conflict range or not)
-    func get(subspace: Subspace, snapshot: Bool = false) throws -> KeyValuesResult {
+    func get(subspace: Subspace, snapshot: Bool) throws -> KeyValuesResult {
         return try self.withTransaction {
             try $0.get(range: subspace.range, snapshot: snapshot)
         }
@@ -135,16 +135,16 @@ public extension FDB {
     func get(
         begin: AnyFDBKey,
         end: AnyFDBKey,
-        beginEqual: Bool = false,
-        beginOffset: Int32 = 1,
-        endEqual: Bool = false,
-        endOffset: Int32 = 1,
-        limit: Int32 = 0,
-        targetBytes: Int32 = 0,
-        mode: FDB.StreamingMode = .wantAll,
-        iteration: Int32 = 1,
-        snapshot: Bool = false,
-        reverse: Bool = false
+        beginEqual: Bool,
+        beginOffset: Int32,
+        endEqual: Bool,
+        endOffset: Int32,
+        limit: Int32,
+        targetBytes: Int32,
+        mode: FDB.StreamingMode,
+        iteration: Int32,
+        snapshot: Bool,
+        reverse: Bool
     ) throws -> FDB.KeyValuesResult {
         return try self.withTransaction {
             try $0.get(
@@ -183,16 +183,16 @@ public extension FDB {
     ///   - reverse: If `true`, key-value pairs will be returned in reverse lexicographical order
     func get(
         range: FDB.RangeKey,
-        beginEqual: Bool = false,
-        beginOffset: Int32 = 1,
-        endEqual: Bool = false,
-        endOffset: Int32 = 1,
-        limit: Int32 = 0,
-        targetBytes: Int32 = 0,
-        mode: FDB.StreamingMode = .wantAll,
-        iteration: Int32 = 1,
-        snapshot: Bool = false,
-        reverse: Bool = false
+        beginEqual: Bool,
+        beginOffset: Int32,
+        endEqual: Bool,
+        endOffset: Int32,
+        limit: Int32,
+        targetBytes: Int32,
+        mode: FDB.StreamingMode,
+        iteration: Int32,
+        snapshot: Bool,
+        reverse: Bool
     ) throws -> FDB.KeyValuesResult {
         return try self.get(
             begin: range.begin,
@@ -248,7 +248,7 @@ public extension FDB {
     /// - parameters:
     ///   - key: FDB key
     ///   - value: Integer
-    @discardableResult func increment(key: AnyFDBKey, value: Int64 = 1) throws -> Int64 {
+    @discardableResult func increment(key: AnyFDBKey, value: Int64) throws -> Int64 {
         return try self.withTransaction { transaction in
             try transaction.atomic(.add, key: key, value: getBytes(value), commit: false) as Void
 
@@ -269,7 +269,7 @@ public extension FDB {
     /// - parameters:
     ///   - key: FDB key
     ///   - value: Integer
-    @discardableResult func decrement(key: AnyFDBKey, value: Int64 = 1) throws -> Int64 {
+    @discardableResult func decrement(key: AnyFDBKey, value: Int64) throws -> Int64 {
         return try self.increment(key: key, value: -value)
     }
 }

@@ -3,7 +3,7 @@ import Logging
 import CFDB
 import NIO
 
-public class FDB {
+public final class FDB: AnyFDB {
     internal typealias Cluster = OpaquePointer
     internal typealias Database = OpaquePointer
 

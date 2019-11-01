@@ -22,7 +22,7 @@ public extension FDB.Transaction {
     ///   - key: FDB key
     ///   - value: Bytes value
     ///   - commit: Whether to commit this transaction after action or not
-    func set(key: AnyFDBKey, value: Bytes, commit: Bool = false) throws {
+    func set(key: AnyFDBKey, value: Bytes, commit: Bool) throws {
         self.set(key: key, value: value)
         if commit {
             try self.commitSync()
@@ -39,7 +39,7 @@ public extension FDB.Transaction {
     ///   - commit: Whether to commit this transaction after action or not
     ///
     /// - returns: Bytes result or `nil` if no key
-    func get(key: AnyFDBKey, snapshot: Bool = false, commit: Bool = false) throws -> Bytes? {
+    func get(key: AnyFDBKey, snapshot: Bool, commit: Bool) throws -> Bytes? {
         let result: Bytes? = try self.get(key: key, snapshot: snapshot).wait()
         if commit {
             try self.commitSync()
@@ -66,21 +66,21 @@ public extension FDB.Transaction {
     ///   - reverse: If `true`, key-value pairs will be returned in reverse lexicographical order
     ///   - commit: Whether to commit this transaction after action or not
     ///
-    /// - returns: `(FDB.KeyValuesResult, FDB.Transaction)`
+    /// - returns: `(FDB.KeyValuesResult, AnyFDBTransaction)`
     func get(
         begin: AnyFDBKey,
         end: AnyFDBKey,
-        beginEqual: Bool = false,
-        beginOffset: Int32 = 1,
-        endEqual: Bool = false,
-        endOffset: Int32 = 1,
-        limit: Int32 = 0,
-        targetBytes: Int32 = 0,
-        mode: FDB.StreamingMode = .wantAll,
-        iteration: Int32 = 1,
-        snapshot: Bool = false,
-        reverse: Bool = false,
-        commit: Bool = false
+        beginEqual: Bool,
+        beginOffset: Int32,
+        endEqual: Bool,
+        endOffset: Int32,
+        limit: Int32,
+        targetBytes: Int32,
+        mode: FDB.StreamingMode,
+        iteration: Int32,
+        snapshot: Bool,
+        reverse: Bool,
+        commit: Bool
     ) throws -> FDB.KeyValuesResult {
         let future: FDB.Future = try self.get(
             begin: begin,
@@ -120,20 +120,20 @@ public extension FDB.Transaction {
     ///   - reverse: If `true`, key-value pairs will be returned in reverse lexicographical order
     ///   - commit: Whether to commit this transaction after action or not
     ///
-    /// - returns: `(FDB.KeyValuesResult, FDB.Transaction)`
+    /// - returns: `(FDB.KeyValuesResult, AnyFDBTransaction)`
     func get(
         range: FDB.RangeKey,
-        beginEqual: Bool = false,
-        beginOffset: Int32 = 1,
-        endEqual: Bool = false,
-        endOffset: Int32 = 1,
-        limit: Int32 = 0,
-        targetBytes: Int32 = 0,
-        mode: FDB.StreamingMode = .wantAll,
-        iteration: Int32 = 1,
-        snapshot: Bool = false,
-        reverse: Bool = false,
-        commit: Bool = false
+        beginEqual: Bool,
+        beginOffset: Int32,
+        endEqual: Bool,
+        endOffset: Int32,
+        limit: Int32,
+        targetBytes: Int32,
+        mode: FDB.StreamingMode,
+        iteration: Int32,
+        snapshot: Bool,
+        reverse: Bool,
+        commit: Bool
     ) throws -> FDB.KeyValuesResult {
         let future: FDB.Future = self.get(
             begin: range.begin,
@@ -162,7 +162,7 @@ public extension FDB.Transaction {
     /// - parameters:
     ///   - key: FDB key
     ///   - commit: Whether to commit this transaction after action or not
-    func clear(key: AnyFDBKey, commit: Bool = false) throws {
+    func clear(key: AnyFDBKey, commit: Bool) throws {
         self.clear(key: key)
         if commit {
             try self.commitSync()
@@ -177,7 +177,7 @@ public extension FDB.Transaction {
     ///   - begin: Begin key
     ///   - end: End key
     ///   - commit: Whether to commit this transaction after action or not
-    func clear(begin: AnyFDBKey, end: AnyFDBKey, commit: Bool = false) throws {
+    func clear(begin: AnyFDBKey, end: AnyFDBKey, commit: Bool) throws {
         self.clear(begin: begin, end: end)
         if commit {
             try self.commitSync()
@@ -191,7 +191,7 @@ public extension FDB.Transaction {
     /// - parameters:
     ///   - range: Range key
     ///   - commit: Whether to commit this transaction after action or not
-    func clear(range: FDB.RangeKey, commit: Bool = false) throws {
+    func clear(range: FDB.RangeKey, commit: Bool) throws {
         try self.clear(begin: range.begin, end: range.end, commit: commit) as Void
     }
 
@@ -204,7 +204,7 @@ public extension FDB.Transaction {
     ///   - key: FDB key
     ///   - value: Value bytes
     ///   - commit: Whether to commit this transaction after action or not
-    func atomic(_ op: FDB.MutationType, key: AnyFDBKey, value: Bytes, commit: Bool = false) throws {
+    func atomic(_ op: FDB.MutationType, key: AnyFDBKey, value: Bytes, commit: Bool) throws {
         self.atomic(op, key: key, value: value)
         if commit {
             try self.commitSync()
@@ -220,7 +220,7 @@ public extension FDB.Transaction {
     ///   - key: FDB key
     ///   - value: Value bytes
     ///   - commit: Whether to commit this transaction after action or not
-    func atomic<T>(_ op: FDB.MutationType, key: AnyFDBKey, value: T, commit: Bool = false) throws {
+    func atomic<T>(_ op: FDB.MutationType, key: AnyFDBKey, value: T, commit: Bool) throws {
         self.atomic(op, key: key, value: getBytes(value))
         if commit {
             try self.commitSync()

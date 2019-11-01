@@ -4,7 +4,7 @@ import NIO
 
 public extension FDB {
     /// Begins a new FDB transaction without an event loop
-    func begin() throws -> FDB.Transaction {
+    func begin() throws -> AnyFDBTransaction {
         FDB.logger.debug("Trying to start transaction without eventloop")
 
         return try FDB.Transaction.begin(try self.getDB())
@@ -15,7 +15,7 @@ public extension FDB {
     /// - parameters:
     ///   - eventLoop: Swift-NIO EventLoop to run future computations
     /// - returns: `EventLoopFuture` with a transaction instance as future value.
-    func begin(on eventLoop: EventLoop) -> EventLoopFuture<FDB.Transaction> {
+    func begin(on eventLoop: EventLoop) -> EventLoopFuture<AnyFDBTransaction> {
         do {
             FDB.logger.debug("Trying to start transaction with eventloop \(Swift.type(of: eventLoop))")
 
@@ -38,9 +38,9 @@ public extension FDB {
     /// unexpected behaviour.
     func withTransaction<T>(
         on eventLoop: EventLoop,
-        _ block: @escaping (FDB.Transaction) throws -> EventLoopFuture<T>
+        _ block: @escaping (AnyFDBTransaction) throws -> EventLoopFuture<T>
     ) -> EventLoopFuture<T> {
-        func transactionRoutine(_ transaction: FDB.Transaction) -> EventLoopFuture<T> {
+        func transactionRoutine(_ transaction: AnyFDBTransaction) -> EventLoopFuture<T> {
             let result: EventLoopFuture<T>
 
             do {
@@ -51,7 +51,7 @@ public extension FDB {
 
             return result.flatMapError { (error: Swift.Error) -> EventLoopFuture<T> in
                 if case let FDB.Error.transactionRetry(transaction) = error {
-                    transaction.incrementRetries()
+                    (transaction as? FDB.Transaction)?.incrementRetries()
                     return transactionRoutine(transaction)
                 }
                 return eventLoop.makeFailedFuture(error)
@@ -70,14 +70,12 @@ public extension FDB {
     /// Retry logic kicks in if `notCommitted` (1020) error was thrown during commit event. You must commit
     /// the transaction yourself. Additionally, this transactional closure should be idempotent in order to exclude
     /// unexpected behaviour.
-    func withTransaction<T>(
-        _ block: @escaping (FDB.Transaction) throws -> T
-    ) throws -> T {
-        func transactionRoutine(_ transaction: FDB.Transaction) throws -> T {
+    func withTransaction<T>(_ block: @escaping (AnyFDBTransaction) throws -> T) throws -> T {
+        func transactionRoutine(_ transaction: AnyFDBTransaction) throws -> T {
             do {
                 return try block(transaction)
             } catch let FDB.Error.transactionRetry(transaction) {
-                transaction.incrementRetries()
+                (transaction as? FDB.Transaction)?.incrementRetries()
                 return try transactionRoutine(transaction)
             }
         }

@@ -3,7 +3,7 @@ import NIO
 import Logging
 
 public extension FDB {
-    class Transaction {
+    class Transaction: AnyFDBTransaction {
         internal typealias Pointer = OpaquePointer
 
         internal let pointer: Pointer
@@ -51,7 +51,7 @@ public extension FDB {
         }
 
         /// Begins a new FDB transactionon on given FDB database pointer and optional event loop
-        internal class func begin(_ db: FDB.Database, _ eventLoop: EventLoop? = nil) throws -> FDB.Transaction {
+        internal class func begin(_ db: FDB.Database, _ eventLoop: EventLoop? = nil) throws -> AnyFDBTransaction {
             var pointer: Pointer!
 
             try fdb_database_create_transaction(db, &pointer).orThrow()
@@ -103,7 +103,6 @@ public extension FDB {
 
         /// Peforms an atomic operation in FDB cluster on given key with given value bytes
         ///
-        ///
         /// - parameters:
         ///   - _: Atomic operation
         ///   - key: FDB key
@@ -123,8 +122,8 @@ public extension FDB {
         /// Sets the snapshot read version used by a transaction
         ///
         /// This is not needed in simple cases. If the given version is too old, subsequent reads will fail
-        /// with error_code_past_version; if it is too new, subsequent reads may be delayed indefinitely and/or fail
-        /// with error_code_future_version. If any of fdb_transaction_get_*() have been called
+        /// with `error_code_past_version`; if it is too new, subsequent reads may be delayed indefinitely and/or fail
+        /// with `error_code_future_version`. If any of `fdb_transaction_get_*()` have been called
         /// on this transaction already, the result is undefined.
         public func setReadVersion(version: Int64) {
             fdb_transaction_set_read_version(self.pointer, version)

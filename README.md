@@ -36,7 +36,7 @@ public typealias TuplePackable = FDBTuplePackable
 public typealias FDBKey = AnyFDBKey
 public extension FDB {
     @available(*, deprecated, renamed: "begin(on:)")
-    public func begin(eventLoop: EventLoop) -> EventLoopFuture<FDB.Transaction> {
+    public func begin(eventLoop: EventLoop) -> EventLoopFuture<AnyFDBTransaction> {
         return self.begin(on: eventLoop)
     }
 }
@@ -264,7 +264,7 @@ It's not really necessary to commit readonly transaction though :)
 
 Additionally you may set transaction options using `transaction.setOption(_:)` method:
 ```swift
-let transaction: FDB.Transaction = ...
+let transaction: AnyFDBTransaction = ...
 try transaction.setOption(.transactionLoggingEnable(identifier: "debuggable_transaction"))
 try transaction.setOption(.snapshotRywDisable)
 ```
@@ -292,7 +292,7 @@ This transaction now supports asynchronous methods (if you try to call asynchron
 
 Since FoundationDB is _quite_ a transactional database, sometimes `commit`s might not succeed due to serialization failures. This can happen when two or more transactions create overlapping conflict ranges. Or, simply speaking, when they try to access or modify same keys (unless they are not in `snapshot` read mode) at the same time. This is expected (and, in a way, welcomed) behaviour because this is how ACID is achieved.
 
-In these [not-so-rare] cases transaction is allowed to be replayed again. How do you know if transaction can be replayed? It's failed with a special `FDB.Error` case `.transactionRetry(FDB.Transaction)` which holds current transaction as an associated value. If your transaction (or its respective `EventLoopFuture`) is failed with this particular error, it means that the transaction has already been rolled back to its initial state and is ready to be executed again.
+In these [not-so-rare] cases transaction is allowed to be replayed again. How do you know if transaction can be replayed? It's failed with a special `FDB.Error` case `.transactionRetry(AnyFDBTransaction)` which holds current transaction as an associated value. If your transaction (or its respective `EventLoopFuture`) is failed with this particular error, it means that the transaction has already been rolled back to its initial state and is ready to be executed again.
 
 You can implement this retry logic manually or you can just use `FDB` instance method `withTransaction`. This function, as always, comes with two flavors: synchronous and NIO. Following example should be self-explanatory:
 
@@ -338,7 +338,7 @@ let future: EventLoopFuture<String> = fdb.withTransaction(on: myEventLoop) { tra
         .flatMap { transaction in
             transaction.get(key: key, snapshot: true)
         }
-        .flatMapThrowing { (maybeBytes, transaction) -> (String, FDB.Transaction) in
+        .flatMapThrowing { (maybeBytes, transaction) -> (String, AnyFDBTransaction) in
             guard let bytes = maybeBytes else {
                 throw MyApplicationError.Something("Bytes are not bytes")
             }
