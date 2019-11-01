@@ -29,7 +29,6 @@ public extension FDB {
             self.destroy()
         }
 
-        /// Destroys current transaction. It becomes unusable after this.
         public func destroy() {
             fdb_transaction_destroy(self.pointer)
         }
@@ -59,54 +58,31 @@ public extension FDB {
             return FDB.Transaction(pointer, eventLoop)
         }
 
-        /// Cancels the transaction. All pending or future uses of the transaction will return
-        /// a `transaction_cancelled` error. The transaction can be used again after it is `reset`.
         public func cancel() {
             self.log("Cancelling transaction")
             fdb_transaction_cancel(self.pointer)
         }
 
-        /// Reset transaction to its initial state.
-        /// This is similar to creating a new transaction after destroying previous one.
         public func reset() {
             self.log("Resetting transaction")
             fdb_transaction_reset(self.pointer)
         }
 
-        /// Clears given key in FDB cluster
-        ///
-        /// - parameters:
-        ///   - key: FDB key
         public func clear(key: AnyFDBKey) {
             let keyBytes = key.asFDBKey()
             fdb_transaction_clear(self.pointer, keyBytes, keyBytes.length)
         }
 
-        /// Clears keys in given range in FDB cluster
-        ///
-        /// - parameters:
-        ///   - begin: Begin key
-        ///   - end: End key
         public func clear(begin: AnyFDBKey, end: AnyFDBKey) {
             let beginBytes = begin.asFDBKey()
             let endBytes = end.asFDBKey()
             fdb_transaction_clear_range(self.pointer, beginBytes, beginBytes.length, endBytes, endBytes.length)
         }
 
-        /// Clears keys in given range in FDB cluster
-        ///
-        /// - parameters:
-        ///   - range: Range key
         public func clear(range: FDB.RangeKey) {
             self.clear(begin: range.begin, end: range.end)
         }
 
-        /// Peforms an atomic operation in FDB cluster on given key with given value bytes
-        ///
-        /// - parameters:
-        ///   - _: Atomic operation
-        ///   - key: FDB key
-        ///   - value: Value bytes
         public func atomic(_ op: FDB.MutationType, key: AnyFDBKey, value: Bytes) {
             let keyBytes = key.asFDBKey()
             fdb_transaction_atomic_op(
@@ -119,12 +95,6 @@ public extension FDB {
             )
         }
 
-        /// Sets the snapshot read version used by a transaction
-        ///
-        /// This is not needed in simple cases. If the given version is too old, subsequent reads will fail
-        /// with `error_code_past_version`; if it is too new, subsequent reads may be delayed indefinitely and/or fail
-        /// with `error_code_future_version`. If any of `fdb_transaction_get_*()` have been called
-        /// on this transaction already, the result is undefined.
         public func setReadVersion(version: Int64) {
             fdb_transaction_set_read_version(self.pointer, version)
         }

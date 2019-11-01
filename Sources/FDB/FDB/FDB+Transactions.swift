@@ -3,18 +3,12 @@ import CFDB
 import NIO
 
 public extension FDB {
-    /// Begins a new FDB transaction without an event loop
     func begin() throws -> AnyFDBTransaction {
         FDB.logger.debug("Trying to start transaction without eventloop")
 
         return try FDB.Transaction.begin(try self.getDB())
     }
 
-    /// Begins a new FDB transaction with given event loop
-    ///
-    /// - parameters:
-    ///   - eventLoop: Swift-NIO EventLoop to run future computations
-    /// - returns: `EventLoopFuture` with a transaction instance as future value.
     func begin(on eventLoop: EventLoop) -> EventLoopFuture<AnyFDBTransaction> {
         do {
             FDB.logger.debug("Trying to start transaction with eventloop \(Swift.type(of: eventLoop))")
@@ -31,11 +25,6 @@ public extension FDB {
         }
     }
 
-    /// Executes given transactional closure with appropriate retry logic
-    ///
-    /// Retry logic kicks in if `notCommitted` (1020) error was thrown during commit event. You must commit
-    /// the transaction yourself. Additionally, this transactional closure should be idempotent in order to exclude
-    /// unexpected behaviour.
     func withTransaction<T>(
         on eventLoop: EventLoop,
         _ block: @escaping (AnyFDBTransaction) throws -> EventLoopFuture<T>
@@ -63,13 +52,6 @@ public extension FDB {
             .flatMap(transactionRoutine)
     }
 
-    /// Executes given transactional closure with appropriate retry logic
-    ///
-    /// This function will block current thread during execution
-    ///
-    /// Retry logic kicks in if `notCommitted` (1020) error was thrown during commit event. You must commit
-    /// the transaction yourself. Additionally, this transactional closure should be idempotent in order to exclude
-    /// unexpected behaviour.
     func withTransaction<T>(_ block: @escaping (AnyFDBTransaction) throws -> T) throws -> T {
         func transactionRoutine(_ transaction: AnyFDBTransaction) throws -> T {
             do {
