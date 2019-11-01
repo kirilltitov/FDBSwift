@@ -168,7 +168,7 @@ public extension FDB.Transaction {
     /// - parameters:
     ///   - option: Transaction option
     /// - returns: current transaction (`self`)
-    func setOption(_ option: FDB.Transaction.Option) throws -> FDB.Transaction {
+    func setOption(_ option: FDB.Transaction.Option) throws -> AnyFDBTransaction {
         try option.setOption(transaction: self)
 
         return self
