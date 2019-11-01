@@ -1,6 +1,6 @@
-# FDBSwift v3 <img src="https://img.shields.io/badge/Swift-5.0-brightgreen.svg" alt="Swift: 5.0" /> <img src="https://travis-ci.org/kirilltitov/FDBSwift.svg?branch=master" />
+# FDBSwift v4 ɑ <img src="https://img.shields.io/badge/Swift-5.1-brightgreen.svg" alt="Swift: 5.1" /> <img src="https://img.shields.io/badge/Swift-5.0-brightgreen.svg" alt="Swift: 5.0" /> <img src="https://travis-ci.org/kirilltitov/FDBSwift.svg?branch=master" />
 > **Fine. I'll do it myself.**
->> _Episode III: Revenge of FoundationDB_
+>> _Episode IV: A New Swift_
 
 This is FoundationDB client for Swift. It's quite low-level, (almost) `Foundation`less and can into Swift-NIO.
 
@@ -13,42 +13,17 @@ chmod +x ./scripts/install_pkgconfig.sh
 ```
 or copy `scripts/libfdb.pc` (choose your platform) to `/usr/local/lib/pkgconfig/` on macOS or `/usr/lib/pkgconfig/libfdb.pc` on Linux.
 
-## Migration to v3
+## Migration to v4
 
-Since v3 is a major version, it reshapes the whole FDBSwift public API reducing it to three (and a half) global names:
-* `FDB` — this is where all stuff lays now.
-* `AnyFDBKey` — a type-erased FDB key value.
-* `FDBTuplePackable` — a type-erased Tuple value.
-* (it's the half) `Byte` and `Bytes` (just typealiases for `UInt8` and `[UInt8]`), and should probably be defined as a part of Swift Foundation.
+v4 isn't a major API upgrade, still breaking and quite massive internally.
 
-Given the above, you should migrate all your v2 and v1 code to new names. You can simplify this process by using this shim which will help you with migration to v3:
+The main change is introduction of `AnyFDB` and `AnyFDBTransaction` protocols with all public API. Existing `FDB` and `FDB.Transaction` classes now adopt these two protocols respectively. All your code that states `FDB.Transaction` as an argument or return type should be refactored to `AnyFDBTransaction` its_not_that_hard_steve_brule.jpg
 
-```swift
-@available(*, deprecated, renamed: "FDB.Transaction")
-public typealias Transaction = FDB.Transaction
-@available(*, deprecated, renamed: "FDB.Tuple")
-public typealias Tuple = FDB.Tuple
-@available(*, deprecated, renamed: "FDB.Subspace")
-public typealias Subspace = FDB.Subspace
-@available(*, deprecated, renamed: "FDBTuplePackable")
-public typealias TuplePackable = FDBTuplePackable
-@available(*, deprecated, renamed: "AnyFDBKey")
-public typealias FDBKey = AnyFDBKey
-public extension FDB {
-    @available(*, deprecated, renamed: "begin(on:)")
-    public func begin(eventLoop: EventLoop) -> EventLoopFuture<FDB.Transaction> {
-        return self.begin(on: eventLoop)
-    }
-}
-```
+This is done in order to enable advanced testability and mocking (Barbara Liskov as in SOLID, bruh).
 
-Just place it in `main.swift` or somewhere else, and you will able to track down all deprecated FDB names usages.
+Also FDBSwift now supports Swift 5.1 (_may_ require in future).
 
-**Q**: Why haven't you committed this shim to repository?
-
-**A**: I don't like littering the global namespace, and I don't want to wait two more major versions until I'm able to actually delete these definitions (one version to deprecate, and another to delete for good).
-
-Note: I don't really like leaving `AnyFDBKey` and `FDBTuplePackable` in the global namespace, I'd love to hide them all under the `FDB` name as well. However, Swift _currently_ doesn't allow to define nested protocols, which is a shame. But worry not, the day Swift allows to do that, I will release a respective update :)
+Everything else is the same as in v3. For now, at least. Since this version is still in alpha stage, things might change.
 
 ## Usage
 
@@ -264,7 +239,7 @@ It's not really necessary to commit readonly transaction though :)
 
 Additionally you may set transaction options using `transaction.setOption(_:)` method:
 ```swift
-let transaction: FDB.Transaction = ...
+let transaction: AnyFDBTransaction = ...
 try transaction.setOption(.transactionLoggingEnable(identifier: "debuggable_transaction"))
 try transaction.setOption(.snapshotRywDisable)
 ```
@@ -292,7 +267,7 @@ This transaction now supports asynchronous methods (if you try to call asynchron
 
 Since FoundationDB is _quite_ a transactional database, sometimes `commit`s might not succeed due to serialization failures. This can happen when two or more transactions create overlapping conflict ranges. Or, simply speaking, when they try to access or modify same keys (unless they are not in `snapshot` read mode) at the same time. This is expected (and, in a way, welcomed) behaviour because this is how ACID is achieved.
 
-In these [not-so-rare] cases transaction is allowed to be replayed again. How do you know if transaction can be replayed? It's failed with a special `FDB.Error` case `.transactionRetry(FDB.Transaction)` which holds current transaction as an associated value. If your transaction (or its respective `EventLoopFuture`) is failed with this particular error, it means that the transaction has already been rolled back to its initial state and is ready to be executed again.
+In these [not-so-rare] cases transaction is allowed to be replayed again. How do you know if transaction can be replayed? It's failed with a special `FDB.Error` case `.transactionRetry(AnyFDBTransaction)` which holds current transaction as an associated value. If your transaction (or its respective `EventLoopFuture`) is failed with this particular error, it means that the transaction has already been rolled back to its initial state and is ready to be executed again.
 
 You can implement this retry logic manually or you can just use `FDB` instance method `withTransaction`. This function, as always, comes with two flavors: synchronous and NIO. Following example should be self-explanatory:
 
@@ -338,7 +313,7 @@ let future: EventLoopFuture<String> = fdb.withTransaction(on: myEventLoop) { tra
         .flatMap { transaction in
             transaction.get(key: key, snapshot: true)
         }
-        .flatMapThrowing { (maybeBytes, transaction) -> (String, FDB.Transaction) in
+        .flatMapThrowing { (maybeBytes, transaction) -> (String, AnyFDBTransaction) in
             guard let bytes = maybeBytes else {
                 throw MyApplicationError.Something("Bytes are not bytes")
             }

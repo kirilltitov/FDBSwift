@@ -88,7 +88,7 @@ public extension FDB {
         case unknownError
         case internalError
 
-        case transactionRetry(transaction: FDB.Transaction)
+        case transactionRetry(transaction: AnyFDBTransaction)
         case unexpectedError(String)
         case noEventLoopProvided
         case connectionError
