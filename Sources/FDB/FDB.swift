@@ -3,7 +3,7 @@ import Logging
 import CFDB
 import NIO
 
-public final class FDB: AnyFDB {
+public class FDB {
     internal typealias Cluster = OpaquePointer
     internal typealias Database = OpaquePointer
 
@@ -27,6 +27,11 @@ public final class FDB: AnyFDB {
 
     private let semaphore = DispatchSemaphore(value: 0)
 
+    /// Creates a new instance of FDB client with optional cluster file path and network stop timeout
+    ///
+    /// - parameters:
+    ///   - clusterFile: path to `fdb.cluster` file. If not specified, default path (platform-specific) is chosen
+    ///   - networkStopTimeout: timeout (in seconds) in which client should disconnect from FDB and stop all inner jobs
     public init(clusterFile: String? = nil, networkStopTimeout: Int = 10) {
         if let clusterFile = clusterFile {
             self.clusterFile = clusterFile
@@ -52,6 +57,7 @@ public final class FDB: AnyFDB {
         }
     }
 
+    /// Performs an explicit disconnect routine.
     public func disconnect() {
         if !self.isConnected {
             FDB.logger.error("Trying to disconnect from FDB while not connected")
@@ -185,6 +191,7 @@ public final class FDB: AnyFDB {
         return try self.getDB()
     }
 
+    /// Performs explicit connection to FDB cluster
     public func connect() throws {
         _ = try self.getDB()
         FDB.logger.debug("Connected")

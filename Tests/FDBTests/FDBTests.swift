@@ -59,7 +59,7 @@ class FDBTests: XCTestCase {
     func testTransaction() throws {
         let key = FDBTests.subspace["transaction"]
         let value = self.getRandomBytes()
-        let transaction = try FDBTests.fdb.begin() as! FDB.Transaction
+        let transaction = try FDBTests.fdb.begin()
         transaction.set(key: key, value: value)
         XCTAssertEqual(try transaction.get(key: key), value)
         XCTAssertNoThrow(try transaction.commit().waitAndCheck())
@@ -129,11 +129,11 @@ class FDBTests: XCTestCase {
         XCTAssertEqual(E.unexpectedError("FOo bar").getDescription(), "Error is unexpected, it shouldn't really happen")
     }
 
-    func begin() throws -> EventLoopFuture<AnyFDBTransaction> {
+    func begin() throws -> EventLoopFuture<FDB.Transaction> {
         return FDBTests.fdb.begin(on: self.eventLoop)
     }
 
-    func genericTestCommit() throws -> AnyFDBTransaction {
+    func genericTestCommit() throws -> FDB.Transaction {
         FDB.logger.info("Starting transaction")
         let tr = try self.begin().wait()
         let _ = try tr.set(key: FDBTests.subspace["testcommit"], value: Bytes([1,2,3])).wait()
@@ -315,10 +315,10 @@ class FDBTests: XCTestCase {
                 .withTransaction(on: group.next()) { transaction in
                     return transaction
                         .atomic(.add, key: keyAsync, value: Int64(1))
-                        .flatMap { (transaction: AnyFDBTransaction) in
+                        .flatMap { (transaction: FDB.Transaction) in
                             return transaction.get(key: keyAsync, commit: true)
                         }
-                        .map { (bytes: Bytes?, transaction: AnyFDBTransaction) -> Void in
+                        .map { (bytes: Bytes?, transaction: FDB.Transaction) -> Void in
                             let value: Int64 = try! bytes!.cast()
                             resultAsync.append(value)
                             if resultAsync.count == etalon.count {
@@ -349,7 +349,7 @@ class FDBTests: XCTestCase {
 
         let _ = try FDBTests.fdb.withTransaction { transaction in
             XCTAssertNoThrow(transaction.setReadVersion(version: version))
-            XCTAssertNoThrow(try transaction.get(key: key) as Bytes?)
+            XCTAssertNoThrow(transaction.get(key: key))
         }
     }
 
