@@ -43,6 +43,16 @@ internal extension String {
     @usableFromInline var bytes: Bytes {
         return Bytes(self.utf8)
     }
+
+    @usableFromInline var safe: String {
+        return self.unicodeScalars.lazy
+            .map { scalar in
+                scalar == "\n"
+                    ? "\n"
+                    : scalar.escaped(asASCII: true)
+            }
+            .joined(separator: "")
+    }
 }
 
 internal extension Bool {
@@ -68,6 +78,10 @@ internal extension Array where Element == Byte {
 
     @usableFromInline var length: Int32 {
         return Int32(self.count)
+    }
+
+    @usableFromInline var string: String {
+        return String(bytes: self, encoding: .ascii)!
     }
 }
 

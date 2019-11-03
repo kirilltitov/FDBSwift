@@ -14,7 +14,7 @@ internal extension FDB.Transaction {
     ///   - value: bytes value
     func set(key: AnyFDBKey, value: Bytes) {
         let keyBytes = key.asFDBKey()
-        self.log("Setting key '\(String(bytes: key.asFDBKey(), encoding: .ascii)!)'")
+        self.log("Setting key '\(keyBytes.string.safe)'")
         fdb_transaction_set(self.pointer, keyBytes, keyBytes.length, value, value.length)
     }
 
