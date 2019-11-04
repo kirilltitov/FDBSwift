@@ -30,6 +30,8 @@ public extension FDB {
         }
 
         public func destroy() {
+            self.log("Destroying transaction")
+
             fdb_transaction_destroy(self.pointer)
         }
 
@@ -60,22 +62,30 @@ public extension FDB {
 
         public func cancel() {
             self.log("Cancelling transaction")
+
             fdb_transaction_cancel(self.pointer)
         }
 
         public func reset() {
             self.log("Resetting transaction")
+
             fdb_transaction_reset(self.pointer)
         }
 
         public func clear(key: AnyFDBKey) {
             let keyBytes = key.asFDBKey()
+
+            self.log("Clearing key '\(keyBytes.string.safe)'")
+
             fdb_transaction_clear(self.pointer, keyBytes, keyBytes.length)
         }
 
         public func clear(begin: AnyFDBKey, end: AnyFDBKey) {
             let beginBytes = begin.asFDBKey()
             let endBytes = end.asFDBKey()
+
+            self.log("Clearing range from key '\(beginBytes.string.safe)' to '\(endBytes.string.safe)'")
+
             fdb_transaction_clear_range(self.pointer, beginBytes, beginBytes.length, endBytes, endBytes.length)
         }
 
@@ -85,6 +95,9 @@ public extension FDB {
 
         public func atomic(_ op: FDB.MutationType, key: AnyFDBKey, value: Bytes) {
             let keyBytes = key.asFDBKey()
+
+            self.log("[Atomic] [\(op)] Setting '\(value.string.safe)' to key '\(keyBytes.string.safe)'")
+
             fdb_transaction_atomic_op(
                 self.pointer,
                 keyBytes,
@@ -96,6 +109,8 @@ public extension FDB {
         }
 
         public func setReadVersion(version: Int64) {
+            self.log("Setting read version to '\(version)'")
+
             fdb_transaction_set_read_version(self.pointer, version)
         }
     }
