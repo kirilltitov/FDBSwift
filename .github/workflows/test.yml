@@ -30,4 +30,5 @@ jobs:
     - name: Run tests
       run: |
         ls -la
+        swift --version
         swift test
