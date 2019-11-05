@@ -14,7 +14,9 @@ internal extension FDB.Transaction {
     ///   - value: bytes value
     func set(key: AnyFDBKey, value: Bytes) {
         let keyBytes = key.asFDBKey()
-        self.log("Setting key '\(String(bytes: key.asFDBKey(), encoding: .ascii)!)'")
+
+        self.log("Setting \(value.count) bytes to key '\(keyBytes.string.safe)'")
+
         fdb_transaction_set(self.pointer, keyBytes, keyBytes.length, value, value.length)
     }
 
@@ -25,6 +27,9 @@ internal extension FDB.Transaction {
     ///   - snapshot: Snapshot read (i.e. whether this read create a conflict range or not)
     func get(key: AnyFDBKey, snapshot: Bool = false) -> FDB.Future {
         let keyBytes = key.asFDBKey()
+
+        self.log("Getting key '\(keyBytes.string.safe)'")
+
         return fdb_transaction_get(self.pointer, keyBytes, keyBytes.length, snapshot.int).asFuture()
     }
 
@@ -59,6 +64,9 @@ internal extension FDB.Transaction {
     ) -> FDB.Future {
         let beginBytes = begin.asFDBKey()
         let endBytes = end.asFDBKey()
+
+        self.log("Getting range from key '\(beginBytes.string.safe)' to '\(endBytes.string.safe)'")
+
         return fdb_transaction_get_range(
             self.pointer,
             beginBytes,
