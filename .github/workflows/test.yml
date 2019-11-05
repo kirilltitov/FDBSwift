@@ -1,0 +1,26 @@
+name: FDBSwift
+
+on: [push]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+    strategy:
+      max-parallel: 4
+
+    steps:
+    - uses: actions/checkout@v1
+    - name: Install swiftenv
+      run: eval "$(curl -sL https://swiftenv.fuller.li/install.sh)";
+    - name: Install FoundationDB
+      run: |
+        apt-get install -y wget
+        wget https://www.foundationdb.org/downloads/6.0.18/ubuntu/installers/foundationdb-clients_6.0.18-1_amd64.deb
+        wget https://www.foundationdb.org/downloads/6.0.18/ubuntu/installers/foundationdb-server_6.0.18-1_amd64.deb
+        dpkg -i foundationdb-clients_6.0.18-1_amd64.deb foundationdb-server_6.0.18-1_amd64.deb
+        service foundationdb start
+        chmod +x scripts/install_pkgconfig.sh
+        ./scripts/install_pkgconfig.sh
+    - name: Run tests
+      run: swift test
