@@ -28,4 +28,6 @@ jobs:
         chmod +x scripts/install_pkgconfig.sh
         sudo ./scripts/install_pkgconfig.sh
     - name: Run tests
-      run: swift test
+      run: |
+        ls -la
+        swift test
