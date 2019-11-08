@@ -23,7 +23,7 @@ extension FDB.Future {
     /// Should be called only when future is resolved
     func getVersion() throws -> Int64 {
         var version: Int64 = 0
-        try fdb_future_get_version(self.pointer, &version).orThrow()
+        try fdb_future_get_int64(self.pointer, &version).orThrow()
         return version
     }
 }

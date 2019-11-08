@@ -64,7 +64,6 @@ public final class FDB: AnyFDB {
         }
         FDB.logger.debug("Network stopped")
         fdb_database_destroy(self.db)
-        fdb_cluster_destroy(self.cluster)
         FDB.logger.debug("Cluster and database destroyed")
         self.isConnected = false
     }
@@ -121,23 +120,12 @@ public final class FDB: AnyFDB {
         return self
     }
 
-    /// Inits FDB cluster
-    private func initCluster() throws -> FDB {
-        let clusterFuture: Future = try fdb_create_cluster(self.clusterFile).waitForFuture()
-        try fdb_future_get_cluster(clusterFuture.pointer, &self.cluster).orThrow()
-        FDB.logger.debug("Cluster ready")
-        return self
-    }
-
     /// Inits FDB database
     private func initDB() throws -> FDB {
-        let dbFuture: Future = try fdb_cluster_create_database(
-            self.cluster,
-            FDB.dbName.utf8Start,
-            Int32(FDB.dbName.utf8CodeUnitCount)
-        ).waitForFuture()
-        try fdb_future_get_database(dbFuture.pointer, &self.db).orThrow()
+        try fdb_create_database(self.clusterFile, &self.db).orThrow()
+
         FDB.logger.debug("Database ready")
+
         return self
     }
 
@@ -175,7 +163,6 @@ public final class FDB: AnyFDB {
 
         _ = try self
             .initNetwork()
-            .initCluster()
             .initDB()
             .checkIsAlive()
         self.isConnected = true
