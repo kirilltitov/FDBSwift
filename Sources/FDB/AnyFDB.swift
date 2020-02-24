@@ -226,7 +226,8 @@ public protocol AnyFDB {
     /// - parameters:
     ///   - key: FDB key
     ///   - value: Integer
-    @discardableResult func increment(key: AnyFDBKey, value: Int64) throws -> Int64
+    @discardableResult
+    func increment(key: AnyFDBKey, value: Int64) throws -> Int64
 
     /// Peforms a quasi-atomic decrement operation in FDB cluster on given key with given integer
     ///
@@ -235,7 +236,8 @@ public protocol AnyFDB {
     /// - parameters:
     ///   - key: FDB key
     ///   - value: Integer
-    @discardableResult func decrement(key: AnyFDBKey, value: Int64) throws -> Int64
+    @discardableResult
+    func decrement(key: AnyFDBKey, value: Int64) throws -> Int64
 }
 
 public extension AnyFDB {
@@ -364,7 +366,8 @@ public extension AnyFDB {
     /// - parameters:
     ///   - key: FDB key
     ///   - value: Integer
-    @discardableResult func increment(key: AnyFDBKey, value: Int64 = 1) throws -> Int64 {
+    @discardableResult
+    func increment(key: AnyFDBKey, value: Int64 = 1) throws -> Int64 {
         return try self.increment(key: key, value: value)
     }
 
@@ -375,7 +378,8 @@ public extension AnyFDB {
     /// - parameters:
     ///   - key: FDB key
     ///   - value: Integer
-    @discardableResult func decrement(key: AnyFDBKey, value: Int64 = 1) throws -> Int64 {
+    @discardableResult
+    func decrement(key: AnyFDBKey, value: Int64 = 1) throws -> Int64 {
         return try self.decrement(key: key, value: value)
     }
 }

@@ -38,7 +38,8 @@ internal extension FDB {
         }
 
         /// Blocks current thread until future is resolved
-        @discardableResult func wait() throws -> Future {
+        @discardableResult
+        func wait() throws -> Future {
             try fdb_future_block_until_ready(self.pointer).orThrow()
             return self
         }
@@ -50,7 +51,8 @@ internal extension FDB {
         }
 
         /// Blocks current thread until current future is resolved and checks if it's in error state
-        @discardableResult func waitAndCheck() throws -> Future {
+        @discardableResult
+        func waitAndCheck() throws -> Future {
             return try self.wait().checkError()
         }
 

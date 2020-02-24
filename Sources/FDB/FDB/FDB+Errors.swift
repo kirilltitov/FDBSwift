@@ -7,6 +7,7 @@ public extension FDB {
 
 internal extension FDB.Errno {
     /// Converts non-zero error number to throwable error
+    @inlinable
     func orThrow() throws {
         if self == 0 {
             return
@@ -15,6 +16,7 @@ internal extension FDB.Errno {
     }
 
     /// Converts non-zero error number to fatal runtime error
+    @inlinable
     func orDie() {
         try! self.orThrow()
     }

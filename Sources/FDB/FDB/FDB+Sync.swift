@@ -121,7 +121,8 @@ public extension FDB {
         try self.atomic(op, key: key, value: getBytes(value))
     }
 
-    @discardableResult func increment(key: AnyFDBKey, value: Int64) throws -> Int64 {
+    @discardableResult
+    func increment(key: AnyFDBKey, value: Int64) throws -> Int64 {
         return try self.withTransaction { transaction in
             try transaction.atomic(.add, key: key, value: getBytes(value), commit: false) as Void
 
@@ -135,7 +136,8 @@ public extension FDB {
         }
     }
 
-    @discardableResult func decrement(key: AnyFDBKey, value: Int64) throws -> Int64 {
+    @discardableResult
+    func decrement(key: AnyFDBKey, value: Int64) throws -> Int64 {
         return try self.increment(key: key, value: -value)
     }
 }
