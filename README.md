@@ -1,4 +1,4 @@
-# FDBSwift v4 ɑ <img src="https://img.shields.io/badge/Swift-5.1-brightgreen.svg" alt="Swift: 5.1" /> <img src="https://img.shields.io/badge/Swift-5.0-brightgreen.svg" alt="Swift: 5.0" /> <img src="https://travis-ci.org/kirilltitov/FDBSwift.svg?branch=master" />
+# FDBSwift v4 <img src="https://img.shields.io/badge/Swift-5.1-brightgreen.svg" alt="Swift: 5.1" /> <img src="https://img.shields.io/badge/Swift-5.0-brightgreen.svg" alt="Swift: 5.0" /> <img src="https://travis-ci.org/kirilltitov/FDBSwift.svg?branch=master" />
 > **Fine. I'll do it myself.**
 >> _Episode IV: A New Swift_
 
@@ -23,7 +23,7 @@ This is done in order to enable advanced testability and mocking (Barbara Liskov
 
 Also FDBSwift now supports Swift 5.1 (_may_ require in future). Additionally, FoundationDB 6.2.7 is now supported (hence your FDB servers should be updated in order to use this package).
 
-Everything else is the same as in v3. For now, at least. Since this version is still in alpha stage, things might change.
+Everything else is the same as in v3. For now, at least.
 
 ## Usage
 
