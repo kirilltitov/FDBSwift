@@ -41,7 +41,8 @@ public extension FDB {
         }
 
         /// Logs message to Logger (if `FDB.verbose` is `true`)
-        @inlinable internal func log(_ message: String, level: Logger.Level = .debug) {
+        @inlinable
+        internal func log(_ message: String, level: Logger.Level = .debug) {
             var logger = FDB.logger
             logger[metadataKey: "trid"] = "\(ObjectIdentifier(self).hashValue)"
 

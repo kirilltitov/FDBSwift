@@ -92,75 +92,71 @@ public extension FDB {
         /// WARNING: this feature is not recommended for use in production.
         case enableSlowTaskProfiling
 
+        @inlinable
         internal func setOption() throws {
             let internalOption: FDBNetworkOption
-            var param: UnsafePointer<Byte>?
-            var length: Int32 = 0
+            var value: Bytes = []
 
             switch self {
             case let .traceEnable(directory):
-                FDB.OptionsHelper.stringOptionToPointer(string: directory, pointer: &param, length: &length)
                 internalOption = FDB_NET_OPTION_TRACE_ENABLE
+                value = directory.bytes
             case let .traceRollSize(size):
-                param = getPtr(size)
-                length = 8
                 internalOption = FDB_NET_OPTION_TRACE_ROLL_SIZE
+                value = getBytes(size)
             case let .traceMaxLogsSize(size):
-                param = getPtr(size)
-                length = 8
                 internalOption = FDB_NET_OPTION_TRACE_MAX_LOGS_SIZE
+                value = getBytes(size)
             case let .traceLogGroup(name):
-                FDB.OptionsHelper.stringOptionToPointer(string: name, pointer: &param, length: &length)
                 internalOption = FDB_NET_OPTION_TRACE_LOG_GROUP
-            case let .knob(key, value):
-                FDB.OptionsHelper.stringOptionToPointer(string: "\(key)=\(value)", pointer: &param, length: &length)
+                value = name.bytes
+            case let .knob(key, val):
                 internalOption = FDB_NET_OPTION_KNOB
+                value = "\(key)=\(val)".bytes
             case let .TLSCertBytes(bytes):
-                FDB.OptionsHelper.bytesOptionToPointer(bytes: bytes, pointer: &param, length: &length)
                 internalOption = FDB_NET_OPTION_TLS_CERT_BYTES
+                value = bytes
             case let .TLSCertPath(path):
-                FDB.OptionsHelper.stringOptionToPointer(string: path, pointer: &param, length: &length)
                 internalOption = FDB_NET_OPTION_TLS_CERT_PATH
+                value = path.bytes
             case let .TLSKeyBytes(bytes):
-                FDB.OptionsHelper.bytesOptionToPointer(bytes: bytes, pointer: &param, length: &length)
                 internalOption = FDB_NET_OPTION_TLS_KEY_BYTES
+                value = bytes
             case let .TLSKeyPath(path):
-                FDB.OptionsHelper.stringOptionToPointer(string: path, pointer: &param, length: &length)
                 internalOption = FDB_NET_OPTION_TLS_KEY_PATH
+                value = path.bytes
             case let .TLSVerifyPeers(bytes):
-                FDB.OptionsHelper.bytesOptionToPointer(bytes: bytes, pointer: &param, length: &length)
                 internalOption = FDB_NET_OPTION_TLS_VERIFY_PEERS
+                value = bytes
             case let .TLSCABytes(bytes):
-                FDB.OptionsHelper.bytesOptionToPointer(bytes: bytes, pointer: &param, length: &length)
                 internalOption = FDB_NET_OPTION_TLS_CA_BYTES
+                value = bytes
             case let .TLSCAPath(path):
-                FDB.OptionsHelper.stringOptionToPointer(string: path, pointer: &param, length: &length)
                 internalOption = FDB_NET_OPTION_TLS_CA_PATH
+                value = path.bytes
             case let .TLSPassword(password):
-                FDB.OptionsHelper.stringOptionToPointer(string: password, pointer: &param, length: &length)
                 internalOption = FDB_NET_OPTION_TLS_PASSWORD
+                value = password.bytes
             case .buggifyEnable:
                 internalOption = FDB_NET_OPTION_BUGGIFY_ENABLE
             case .buggifyDisable:
                 internalOption = FDB_NET_OPTION_BUGGIFY_DISABLE
             case let .buggifySectionActivatedProbability(probability):
-                param = getPtr(probability)
-                length = 8
                 internalOption = FDB_NET_OPTION_BUGGIFY_SECTION_ACTIVATED_PROBABILITY
+                value = getBytes(probability)
             case let .buggifySectionFiredProbability(probability):
-                param = getPtr(probability)
-                length = 8
                 internalOption = FDB_NET_OPTION_BUGGIFY_SECTION_FIRED_PROBABILITY
+                value = getBytes(probability)
             case .disableMultiVersionClientAPI:
                 internalOption = FDB_NET_OPTION_DISABLE_MULTI_VERSION_CLIENT_API
             case .callbacksOnExternalThreads:
                 internalOption = FDB_NET_OPTION_CALLBACKS_ON_EXTERNAL_THREADS
             case let .externalClientLibrary(path):
-                FDB.OptionsHelper.stringOptionToPointer(string: path, pointer: &param, length: &length)
                 internalOption = FDB_NET_OPTION_EXTERNAL_CLIENT_LIBRARY
+                value = path.bytes
             case let .externalClientDirectory(directory):
-                FDB.OptionsHelper.stringOptionToPointer(string: directory, pointer: &param, length: &length)
                 internalOption = FDB_NET_OPTION_EXTERNAL_CLIENT_DIRECTORY
+                value = directory.bytes
             case .disableLocalClient:
                 internalOption = FDB_NET_OPTION_DISABLE_LOCAL_CLIENT
             case .disableClientStatisticsLogging:
@@ -169,7 +165,7 @@ public extension FDB {
                 internalOption = FDB_NET_OPTION_ENABLE_SLOW_TASK_PROFILING
             }
 
-            try fdb_network_set_option(internalOption, param, length).orThrow()
+            try fdb_network_set_option(internalOption, value, value.length).orThrow()
         }
     }
 
