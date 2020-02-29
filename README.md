@@ -6,7 +6,7 @@ This is FoundationDB client for Swift. It's quite low-level, (almost) `Foundatio
 
 ## Installation
 
-Obviously, you need to install `FoundationDB` first. Download it from [official website](https://www.foundationdb.org/download/). Next part is tricky because subpackage [CFDBSwift](https://github.com/kirilltitov/CFDBSwift) (C bindings) won't link `libfdb_c` library on its own, and FoundationDB doesn't yet ship `pkg-config` during installation. Therefore you must install it yourself. Run
+Obviously, you need to install `FoundationDB` first. Download it from [official website](https://www.foundationdb.org/download/). Next part is tricky because module CFDBSwift (C bindings) won't link `libfdb_c` library on its own, and FoundationDB doesn't yet ship `pkg-config` during installation. Therefore you must install it yourself. Run
 ```bash
 chmod +x ./scripts/install_pkgconfig.sh
 ./scripts/install_pkgconfig.sh
