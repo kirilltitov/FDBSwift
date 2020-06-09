@@ -166,7 +166,7 @@ public extension FDB {
             }
 
             if case let .failure(error) = fdb_network_set_option(internalOption, value, value.length).toResult() {
-                FDB.logger.error("Network option '\(self)' setting failed: [\(error.errno)] \(error.getDescription)")
+                FDB.logger.error("Network option '\(self)' setting failed: [\(error.errno)] \(error.getDescription())")
                 throw error
             }
 
