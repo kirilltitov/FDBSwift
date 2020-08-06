@@ -42,18 +42,20 @@ internal extension FDB.Tuple {
     static let NULL_ESCAPE_SEQUENCE: Bytes = [NULL, 0xFF]
 
     enum Prefix {
-        static let BYTE_STRING   = Byte(0x01)
-        static let UTF_STRING    = Byte(0x02)
-        static let NESTED_TUPLE  = Byte(0x05)
-        static let INT_ZERO_CODE = Byte(0x14)
-        static let POS_INT_END   = Byte(0x1D)
-        static let NEG_INT_START = Byte(0x0B)
-        static let FLOAT         = Byte(0x20)
-        static let DOUBLE        = Byte(0x21)
-        static let LONG_DOUBLE   = Byte(0x22)
-        static let BOOL_FALSE    = Byte(0x26)
-        static let BOOL_TRUE     = Byte(0x27)
-        static let UUID          = Byte(0x30)
+        static let BYTE_STRING          = Byte(0x01)
+        static let UTF_STRING           = Byte(0x02)
+        static let NESTED_TUPLE         = Byte(0x05)
+        static let INT_ZERO_CODE        = Byte(0x14)
+        static let POS_INT_END          = Byte(0x1D)
+        static let NEG_INT_START        = Byte(0x0B)
+        static let FLOAT                = Byte(0x20)
+        static let DOUBLE               = Byte(0x21)
+        static let LONG_DOUBLE          = Byte(0x22)
+        static let BOOL_FALSE           = Byte(0x26)
+        static let BOOL_TRUE            = Byte(0x27)
+        static let UUID                 = Byte(0x30)
+        static let VERSIONSTAMP_80BIT   = Byte(0x32)
+        static let VERSIONSTAMP_96BIT   = Byte(0x33)
     }
 }
 

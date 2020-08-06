@@ -131,6 +131,8 @@ class TupleTests: XCTestCase {
             false,
             FDB.Null(),
             "foo\u{00}bar",
+            FDB.Versionstamp(transactionCommitVersion: 42, batchNumber: 42),
+            FDB.Versionstamp(userData: 73),
         ]
         let etalonTuple = FDB.Tuple(input)
         let packed = etalonTuple.pack()
@@ -238,6 +240,25 @@ class TupleTests: XCTestCase {
         XCTAssertEqual(uuid, unpacked.tuple[0] as! UUID)
         XCTAssertEqual(packed, unpacked.pack())
     }
+    
+    func testVersionstamp() throws {
+        let cases: [(FDB.Versionstamp, Bytes)] = [
+            (FDB.Versionstamp(transactionCommitVersion: 42, batchNumber: 196), [50, 00, 00, 00, 00, 00, 00, 00, 42, 00, 196]),
+            (FDB.Versionstamp(transactionCommitVersion: 42, batchNumber: 196, userData: nil), [50, 00, 00, 00, 00, 00, 00, 00, 42, 00, 196]),
+            (FDB.Versionstamp(transactionCommitVersion: 42, batchNumber: 196, userData: 0), [51, 00, 00, 00, 00, 00, 00, 00, 42, 00, 196, 00, 00]),
+            (FDB.Versionstamp(transactionCommitVersion: 42, batchNumber: 196, userData: 24), [51, 00, 00, 00, 00, 00, 00, 00, 42, 00, 196, 00, 24]),
+            (FDB.Versionstamp(), [50, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00]),
+            (FDB.Versionstamp(userData: nil), [50, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00]),
+            (FDB.Versionstamp(userData: 0), [51, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00]),
+            (FDB.Versionstamp(userData: 24), [51, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 24]),
+        ]
+
+        for (input, expectedBytes) in cases {
+            XCTAssertEqual(expectedBytes, input.pack())
+            let unpacked = try FDB.Tuple(from: expectedBytes)
+            XCTAssertEqual(input, unpacked.tuple[0] as! FDB.Versionstamp)
+        }
+    }
 
     static var allTests = [
         ("testPackUnicodeString", testPackUnicodeString),
@@ -252,5 +273,6 @@ class TupleTests: XCTestCase {
         ("testDouble", testDouble),
         ("testBool", testBool),
         ("testUUID", testUUID),
+        ("testVersionstamp", testVersionstamp),
     ]
 }

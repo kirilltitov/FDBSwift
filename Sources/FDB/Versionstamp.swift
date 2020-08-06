@@ -27,3 +27,23 @@ public extension FDB {
         }
     }
 }
+
+extension FDB.Versionstamp: FDBTuplePackable {
+    public func pack() -> Bytes {
+        var result = Bytes()
+        if userData == nil {
+            result.append(FDB.Tuple.Prefix.VERSIONSTAMP_80BIT)
+        } else {
+            result.append(FDB.Tuple.Prefix.VERSIONSTAMP_96BIT)
+        }
+        
+        result.append(contentsOf: getBytes(transactionCommitVersion.bigEndian))
+        result.append(contentsOf: getBytes(batchNumber.bigEndian))
+        
+        if let userData = userData {
+            result.append(contentsOf: getBytes(userData.bigEndian))
+        }
+        
+        return result
+    }
+}
