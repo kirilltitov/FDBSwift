@@ -362,4 +362,39 @@ public extension FDB.Transaction {
 
         return promise.futureResult
     }
+    
+    /// Returns versionstamp which was used by any versionstamp operations in this transaction
+    func getVersionstamp() -> EventLoopFuture<FDB.Versionstamp> {
+        guard let eventLoop = self.eventLoop else {
+            self.log("[getVersionstamp] No event loop", level: .error)
+            return FDB.dummyEventLoop.makeFailedFuture(FDB.Error.noEventLoopProvided)
+        }
+
+        let promise: EventLoopPromise<FDB.Versionstamp> = eventLoop.makePromise()
+        
+        let future: FDB.Future = self.getVersionstamp()
+        future.whenError { (error) in
+            promise.fail(error)
+        }
+        
+        do {
+            try future.whenBytesReady { bytes in
+                guard let input = bytes, input.count == 10 else {
+                    self.log("[getVersionstamp] Bytes that do not represent a versionstamp were returned: \(String(describing: bytes))", level: .error)
+                    promise.fail(FDB.Error.invalidVersionstamp)
+                    return
+                }
+                
+                let transactionCommitVersion = try! UInt64(bigEndian: Bytes(input[0..<8]).cast())
+                let batchNumber = try! UInt16(bigEndian: Bytes(input[8..<10]).cast())
+                
+                let versionstamp = FDB.Versionstamp(transactionCommitVersion: transactionCommitVersion, batchNumber: batchNumber)
+                promise.succeed(versionstamp)
+            }
+        } catch {
+            promise.fail(error)
+        }
+
+        return promise.futureResult
+    }
 }

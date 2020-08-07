@@ -111,7 +111,18 @@ class FDBTests: XCTestCase {
         
         let tr = try self.begin().wait()
         XCTAssertNoThrow(try tr.set(versionstampedKey: key, value: getBytes(value.utf8)) as Void)
+        let future: EventLoopFuture<FDB.Versionstamp> = tr.getVersionstamp()
         XCTAssertNoThrow(try tr.commitSync())
+        
+        var versionstamp = try future.wait()
+        XCTAssertNil(versionstamp.userData)
+        versionstamp.userData = 42
+        
+        let updatedKey = subspace[versionstamp]["mykey"]
+
+        let result = try fdb.get(key: updatedKey)
+        XCTAssertNotNil(result)
+        try XCTAssertEqual(result!.cast() as String, value)
     }
 
     func testClear() throws {
@@ -408,6 +419,7 @@ class FDBTests: XCTestCase {
         ("testTransaction", testTransaction),
         ("testGetRange", testGetRange),
         ("testAtomicAdd", testAtomicAdd),
+        ("testSetVersionstampedKey", testSetVersionstampedKey),
         ("testClear", testClear),
         ("testStringKeys", testStringKeys),
         ("testStaticStringKeys", testStaticStringKeys),

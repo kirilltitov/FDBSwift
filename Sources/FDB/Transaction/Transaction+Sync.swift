@@ -138,4 +138,8 @@ public extension FDB.Transaction {
     func getReadVersion() throws -> Int64 {
         return try self.getReadVersion().wait()
     }
+
+    func getVersionstamp() throws -> FDB.Versionstamp {
+        return try self.getVersionstamp().wait()
+    }
 }

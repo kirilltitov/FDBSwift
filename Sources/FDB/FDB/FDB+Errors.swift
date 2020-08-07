@@ -101,6 +101,7 @@ public extension FDB {
         case unpackInvalidString
         
         case missingIncompleteVersionstamp
+        case invalidVersionstamp
 
         /// Returns and instance of FDB.Error from FDB error number
         public static func from(errno: FDB.Errno) -> Error {
@@ -178,6 +179,7 @@ public extension FDB {
             case 9704: result = .unpackInvalidBoundaries
             case 9705: result = .unpackInvalidString
             case 9800: result = .missingIncompleteVersionstamp
+            case 9801: result = .invalidVersionstamp
             default:
             FDB.logger.error("Unknown errno \(errno)")
             result = .unknownError
@@ -263,6 +265,7 @@ public extension FDB {
             case .unpackInvalidBoundaries:                result = 9704
             case .unpackInvalidString:                    result = 9705
             case .missingIncompleteVersionstamp:          result = 9800
+            case .invalidVersionstamp:                    result = 9801
             }
 
             return result

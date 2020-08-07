@@ -291,6 +291,11 @@ public protocol AnyFDBTransaction {
     /// - returns: EventLoopFuture with future Int64 value
     func getReadVersion() -> EventLoopFuture<Int64>
 
+    /// Returns versionstamp which was used by any versionstamp operations in this transaction
+    ///
+    /// - returns: EventLoopFuture with future FDB.Versionstamp value
+    func getVersionstamp() -> EventLoopFuture<FDB.Versionstamp>
+
     /// Sync methods
 
     /// Commits current transaction
@@ -460,6 +465,13 @@ public protocol AnyFDBTransaction {
     ///
     /// - returns: Read version as Int64
     func getReadVersion() throws -> Int64
+
+    /// Returns versionstamp which was used by any versionstamp operations in this transaction
+    ///
+    /// This function will block current thread during execution
+    ///
+    /// - returns: Version stamp as FDB.Versionstamp
+    func getVersionstamp() throws -> FDB.Versionstamp
 }
 
 /// Sync methods
