@@ -102,6 +102,18 @@ class FDBTests: XCTestCase {
         XCTAssertEqual(try fdb.decrement(key: key), 0)
     }
 
+    func testSetVersionstampedKey() throws {
+        let fdb = FDBTests.fdb!
+        let subspace = FDBTests.subspace.subspace("atomic_versionstamp")
+        let key = subspace[FDB.Versionstamp(userData: 42)]["mykey"]
+        
+        let value: String = "hello!"
+        
+        let tr = try self.begin().wait()
+        XCTAssertNoThrow(try tr.set(versionstampedKey: key, value: getBytes(value.utf8)) as Void)
+        XCTAssertNoThrow(try tr.commitSync())
+    }
+
     func testClear() throws {
         XCTAssertNoThrow(try FDBTests.fdb.clear(key: FDBTests.subspace["empty"]))
     }

@@ -25,6 +25,10 @@ public extension FDB {
         public init(userData: UInt16? = nil) {
             self.init(transactionCommitVersion: 0, batchNumber: 0, userData: userData)
         }
+        
+        public var isComplete: Bool {
+            transactionCommitVersion != 0 || batchNumber != 0
+        }
     }
 }
 
@@ -45,5 +49,38 @@ extension FDB.Versionstamp: FDBTuplePackable {
         }
         
         return result
+    }
+}
+
+extension FDB.Tuple {
+    
+    /// Locates the first incomplete versionstamp, that is one that has all 0s for its transactionCommitVersion and batchNumber.
+    /// - Parameter bytes: The tuple key to search.
+    /// - Throws: Throws FDB.Error.missingIncompleteVersionstamp if a versionstamp cannot be found
+    /// - Returns: The byte offset of the transactionCommitVersion of the versionstamp.
+    internal static func offsetOfFirstIncompleteVersionstamp(from bytes: Bytes) throws -> UInt32 {
+        var pos = 0
+        let length = bytes.count
+        while pos < length {
+            let slice = Bytes(bytes[pos...])
+            let res = try FDB.Tuple._unpack(slice)
+            if let versionstamp = res.0 as? FDB.Versionstamp {
+                if !versionstamp.isComplete {
+                    return UInt32(pos + 1)
+                }
+            } else if res.0 is FDB.Tuple {
+                let nestedSlice = Bytes(bytes[(pos + 1) ..< (pos + res.1)])
+                
+                // This will throw FDB.Error.missingIncompleteVersionstamp if it doesn't find anything in the nested tuple.
+                if let offset = try? offsetOfFirstIncompleteVersionstamp(from: nestedSlice) {
+                    return offset + UInt32(pos + 1)
+                }
+            }
+            
+            pos += res.1
+        }
+        
+        FDB.logger.error("An incomplete version stamp was not found while parsing \(bytes)")
+        throw FDB.Error.missingIncompleteVersionstamp
     }
 }

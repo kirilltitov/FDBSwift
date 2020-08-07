@@ -60,6 +60,14 @@ public extension FDB.Transaction {
         return future
     }
 
+    func set(versionstampedKey: AnyFDBKey, value: Bytes, commit: Bool) throws -> EventLoopFuture<AnyFDBTransaction> {
+        var serializedKey = versionstampedKey.asFDBKey()
+        let offset = try FDB.Tuple.offsetOfFirstIncompleteVersionstamp(from: serializedKey)
+        serializedKey.append(contentsOf: getBytes(offset.littleEndian))
+        
+        return self.atomic(.setVersionstampedKey, key: serializedKey, value: value, commit: commit)
+    }
+
     func get(
         key: AnyFDBKey,
         snapshot: Bool,

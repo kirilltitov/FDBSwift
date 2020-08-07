@@ -259,6 +259,43 @@ class TupleTests: XCTestCase {
             XCTAssertEqual(input, unpacked.tuple[0] as! FDB.Versionstamp)
         }
     }
+    
+    func testIncompleteVersionstampDetection() throws {
+        let cases: [(Bytes, UInt32)] = [
+            (FDB.Tuple(FDB.Versionstamp()).pack(), 1),
+            (FDB.Tuple(FDB.Versionstamp(userData: 0)).pack(), 1),
+            (FDB.Tuple("foo", FDB.Versionstamp()).pack(), 6),
+            (FDB.Tuple("foo", FDB.Versionstamp(userData: 0)).pack(), 6),
+            (FDB.Tuple("foo", FDB.Versionstamp(), FDB.Versionstamp()).pack(), 6),
+            (FDB.Tuple("foo", FDB.Versionstamp(transactionCommitVersion: 12, batchNumber: 0), FDB.Versionstamp(), FDB.Versionstamp()).pack(), 17),
+            (FDB.Tuple("foo", FDB.Versionstamp(transactionCommitVersion: 0, batchNumber: 12), FDB.Versionstamp(), FDB.Versionstamp()).pack(), 17),
+            (FDB.Tuple("foo", FDB.Tuple(FDB.Versionstamp())).pack(), 7),
+            (FDB.Tuple("foo", FDB.Tuple(FDB.Versionstamp()), FDB.Versionstamp()).pack(), 7),
+            (FDB.Tuple("foo", FDB.Tuple("bar", FDB.Versionstamp()), FDB.Versionstamp()).pack(), 12),
+        ]
+
+        for (packedInput, offset) in cases {
+            let actualOffset = try FDB.Tuple.offsetOfFirstIncompleteVersionstamp(from: packedInput)
+            XCTAssertEqual(offset, actualOffset, "\(packedInput) version stamp offset was at \(actualOffset), not \(offset)")
+        }
+        
+        let invalidCases: [Bytes] = [
+            FDB.Tuple().pack(),
+            FDB.Tuple(42, "foo").pack(),
+            FDB.Tuple(FDB.Versionstamp(transactionCommitVersion: 42, batchNumber: 0)).pack(),
+            FDB.Tuple(FDB.Versionstamp(transactionCommitVersion: 0, batchNumber: 12)).pack(),
+            FDB.Tuple(FDB.Versionstamp(transactionCommitVersion: 42, batchNumber: 12, userData: 0)).pack(),
+            FDB.Tuple(42, "foo", FDB.Versionstamp(transactionCommitVersion: 42, batchNumber: 0)).pack(),
+            FDB.Tuple(42, "foo", FDB.Versionstamp(transactionCommitVersion: 0, batchNumber: 12)).pack(),
+            FDB.Tuple(42, "foo", FDB.Versionstamp(transactionCommitVersion: 42, batchNumber: 12, userData: 0)).pack(),
+        ]
+
+        for packedInput in invalidCases {
+            XCTAssertThrowsError(try FDB.Tuple.offsetOfFirstIncompleteVersionstamp(from: packedInput)) { error in
+                XCTAssertEqual((error as! FDB.Error).errno, FDB.Error.missingIncompleteVersionstamp.errno)
+            }
+        }
+    }
 
     static var allTests = [
         ("testPackUnicodeString", testPackUnicodeString),
@@ -274,5 +311,6 @@ class TupleTests: XCTestCase {
         ("testBool", testBool),
         ("testUUID", testUUID),
         ("testVersionstamp", testVersionstamp),
+        ("testIncompleteVersionstampDetection", testIncompleteVersionstampDetection)
     ]
 }

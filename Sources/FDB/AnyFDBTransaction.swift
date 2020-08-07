@@ -64,6 +64,19 @@ public protocol AnyFDBTransaction {
     /// - returns: EventLoopFuture with future Transaction (`self`) value
     func set(key: AnyFDBKey, value: Bytes, commit: Bool) -> EventLoopFuture<AnyFDBTransaction>
 
+    /// Sets bytes to given versionstamped key in FDB cluster. If versionstampedKey does not contain
+    /// an incomplete version stamp, this method will throw an error. The actual version stamp used
+    /// may be retrieved by calling `getVersionstamp()` on the transaction.
+    ///
+    /// - parameters:
+    ///   - versionstampedKey: FDB key containing an incomplete Versionstamp
+    ///   - value: Bytes value
+    ///   - commit: Whether to commit this transaction after action or not
+    ///
+    /// - Throws: Throws FDB.Error.missingIncompleteVersionstamp if a version stamp cannot be found
+    /// - returns: EventLoopFuture with future Transaction (`self`) value
+    func set(versionstampedKey: AnyFDBKey, value: Bytes, commit: Bool) throws -> EventLoopFuture<AnyFDBTransaction>
+
     /// Returns bytes value for given key (or `nil` if no key)
     ///
     /// - parameters:
@@ -295,6 +308,20 @@ public protocol AnyFDBTransaction {
     ///   - commit: Whether to commit this transaction after action or not
     func set(key: AnyFDBKey, value: Bytes, commit: Bool) throws
 
+    /// Sets bytes to given versionstamped key in FDB cluster. If versionstampedKey does not contain
+    /// an incomplete version stamp, this method will throw an error. The actual version stamp used
+    /// may be retrieved by calling `getVersionstamp()` on the transaction.
+    ///
+    /// This function will block current thread during execution
+    ///
+    /// - parameters:
+    ///   - versionstampedKey: FDB key containing an incomplete Versionstamp
+    ///   - value: Bytes value
+    ///   - commit: Whether to commit this transaction after action or not
+    ///
+    /// - Throws: Throws FDB.Error.missingIncompleteVersionstamp if a version stamp cannot be found
+    func set(versionstampedKey: AnyFDBKey, value: Bytes, commit: Bool) throws
+
     /// Returns bytes value for given key (or `nil` if no key)
     ///
     /// This function will block current thread during execution
@@ -447,6 +474,22 @@ public extension AnyFDBTransaction {
     ///   - commit: Whether to commit this transaction after action or not
     func set(key: AnyFDBKey, value: Bytes, commit: Bool = false) throws {
         try self.set(key: key, value: value, commit: commit) as Void
+    }
+
+    /// Sets bytes to given versionstamped key in FDB cluster. If versionstampedKey does not contain
+    /// an incomplete version stamp, this method will throw an error. The actual version stamp used
+    /// may be retrieved by calling `getVersionstamp()` on the transaction.
+    ///
+    /// This function will block current thread during execution
+    ///
+    /// - parameters:
+    ///   - versionstampedKey: FDB key containing an incomplete Versionstamp
+    ///   - value: Bytes value
+    ///   - commit: Whether to commit this transaction after action or not
+    ///
+    /// - Throws: Throws FDB.Error.missingIncompleteVersionstamp if a version stamp cannot be found
+    func set(versionstampedKey: AnyFDBKey, value: Bytes, commit: Bool = false) throws {
+        try self.set(versionstampedKey: versionstampedKey, value: value, commit: commit) as Void
     }
 
     /// Returns bytes value for given key (or `nil` if no key)
@@ -633,6 +676,21 @@ public extension AnyFDBTransaction {
     /// - returns: EventLoopFuture with future Transaction (`self`) value
     func set(key: AnyFDBKey, value: Bytes, commit: Bool = false) -> EventLoopFuture<AnyFDBTransaction> {
         return self.set(key: key, value: value, commit: commit)
+    }
+
+    /// Sets bytes to given versionstamped key in FDB cluster. If versionstampedKey does not contain
+    /// an incomplete version stamp, this method will throw an error. The actual version stamp used
+    /// may be retrieved by calling `getVersionstamp()` on the transaction.
+    ///
+    /// - parameters:
+    ///   - versionstampedKey: FDB key containing an incomplete Versionstamp
+    ///   - value: Bytes value
+    ///   - commit: Whether to commit this transaction after action or not
+    ///
+    /// - Throws: Throws FDB.Error.missingIncompleteVersionstamp if a version stamp cannot be found
+    /// - returns: EventLoopFuture with future Transaction (`self`) value
+    func set(versionstampedKey: AnyFDBKey, value: Bytes, commit: Bool = false) throws -> EventLoopFuture<AnyFDBTransaction> {
+        return try self.set(versionstampedKey: versionstampedKey, value: value, commit: commit)
     }
 
     /// Returns bytes value for given key (or `nil` if no key)
