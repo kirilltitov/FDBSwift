@@ -378,15 +378,15 @@ public extension FDB.Transaction {
         }
         
         do {
-            try future.whenBytesReady { bytes in
-                guard let input = bytes, input.count == 10 else {
+            try future.whenKeyBytesReady { bytes in
+                guard bytes.count == 10 else {
                     self.log("[getVersionstamp] Bytes that do not represent a versionstamp were returned: \(String(describing: bytes))", level: .error)
                     promise.fail(FDB.Error.invalidVersionstamp)
                     return
                 }
                 
-                let transactionCommitVersion = try! UInt64(bigEndian: Bytes(input[0..<8]).cast())
-                let batchNumber = try! UInt16(bigEndian: Bytes(input[8..<10]).cast())
+                let transactionCommitVersion = try! UInt64(bigEndian: Bytes(bytes[0..<8]).cast())
+                let batchNumber = try! UInt16(bigEndian: Bytes(bytes[8..<10]).cast())
                 
                 let versionstamp = FDB.Versionstamp(transactionCommitVersion: transactionCommitVersion, batchNumber: batchNumber)
                 promise.succeed(versionstamp)
