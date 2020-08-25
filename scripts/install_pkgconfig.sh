@@ -8,6 +8,5 @@ DEST_DIR="lib/pkgconfig/${FILE}"
 if [ "$(uname)" == "Darwin" ]; then
     cp "${PKGCONFIG}.mac" "/usr/local/${DEST_DIR}"
 elif [ "$(expr substr $(uname -s) 1 5)" == "Linux" ]; then
-    # I'M NOT SURE!!!
     cp "${PKGCONFIG}.linux" "/usr/${DEST_DIR}"
 fi
