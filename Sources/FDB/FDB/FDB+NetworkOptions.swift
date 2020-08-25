@@ -165,7 +165,12 @@ public extension FDB {
                 internalOption = FDB_NET_OPTION_ENABLE_SLOW_TASK_PROFILING
             }
 
-            try fdb_network_set_option(internalOption, value, value.length).orThrow()
+            if case let .failure(error) = fdb_network_set_option(internalOption, value, value.length).toResult() {
+                FDB.logger.error("Network option '\(self)' setting failed: [\(error.errno)] \(error.getDescription())")
+                throw error
+            }
+
+            FDB.logger.debug("Network option '\(self)' successfully set")
         }
     }
 
