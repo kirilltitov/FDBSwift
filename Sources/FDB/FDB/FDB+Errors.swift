@@ -9,10 +9,18 @@ internal extension FDB.Errno {
     /// Converts non-zero error number to throwable error
     @inlinable
     func orThrow() throws {
-        if self == 0 {
-            return
+        if case let .failure(error) = self.toResult() {
+            throw error
         }
-        throw FDB.Error.from(errno: self)
+    }
+
+    @inlinable
+    func toResult() -> Result<Void, FDB.Error> {
+        if self == 0 {
+            return .success(())
+        }
+
+        return .failure(FDB.Error.from(errno: self))
     }
 
     /// Converts non-zero error number to fatal runtime error
