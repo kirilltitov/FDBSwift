@@ -133,16 +133,16 @@ class FDBTests: XCTestCase {
         let fdb = FDBTests.fdb!
         let key = "foo"
         let value: Bytes = [0, 1, 2]
-        XCTAssertNoThrow(try fdb.set(key: key, value: value))
-        XCTAssertEqual(try fdb.get(key: key), value)
+        XCTAssertNoThrow(try fdb.set(key: FDBTests.subspace[key], value: value))
+        XCTAssertEqual(try fdb.get(key: FDBTests.subspace[key]), value)
     }
 
     func testStaticStringKeys() throws {
         let fdb = FDBTests.fdb!
         let key: StaticString = "foo"
         let value: Bytes = [0, 1, 2]
-        XCTAssertNoThrow(try fdb.set(key: key, value: value))
-        XCTAssertEqual(try fdb.get(key: key), value)
+        XCTAssertNoThrow(try fdb.set(key: FDBTests.subspace[key], value: value))
+        XCTAssertEqual(try fdb.get(key: FDBTests.subspace[key]), value)
     }
 
     func testErrorDescription() {
