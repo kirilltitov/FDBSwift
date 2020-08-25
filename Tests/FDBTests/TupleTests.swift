@@ -131,6 +131,8 @@ class TupleTests: XCTestCase {
             false,
             FDB.Null(),
             "foo\u{00}bar",
+            FDB.Versionstamp(transactionCommitVersion: 42, batchNumber: 42),
+            FDB.Versionstamp(userData: 73),
         ]
         let etalonTuple = FDB.Tuple(input)
         let packed = etalonTuple.pack()
@@ -238,6 +240,62 @@ class TupleTests: XCTestCase {
         XCTAssertEqual(uuid, unpacked.tuple[0] as! UUID)
         XCTAssertEqual(packed, unpacked.pack())
     }
+    
+    func testVersionstamp() throws {
+        let cases: [(FDB.Versionstamp, Bytes)] = [
+            (FDB.Versionstamp(transactionCommitVersion: 42, batchNumber: 196), [50, 00, 00, 00, 00, 00, 00, 00, 42, 00, 196]),
+            (FDB.Versionstamp(transactionCommitVersion: 42, batchNumber: 196, userData: nil), [50, 00, 00, 00, 00, 00, 00, 00, 42, 00, 196]),
+            (FDB.Versionstamp(transactionCommitVersion: 42, batchNumber: 196, userData: 0), [51, 00, 00, 00, 00, 00, 00, 00, 42, 00, 196, 00, 00]),
+            (FDB.Versionstamp(transactionCommitVersion: 42, batchNumber: 196, userData: 24), [51, 00, 00, 00, 00, 00, 00, 00, 42, 00, 196, 00, 24]),
+            (FDB.Versionstamp(), [50, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00]),
+            (FDB.Versionstamp(userData: nil), [50, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00]),
+            (FDB.Versionstamp(userData: 0), [51, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00]),
+            (FDB.Versionstamp(userData: 24), [51, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 24]),
+        ]
+
+        for (input, expectedBytes) in cases {
+            XCTAssertEqual(expectedBytes, input.pack())
+            let unpacked = try FDB.Tuple(from: expectedBytes)
+            XCTAssertEqual(input, unpacked.tuple[0] as! FDB.Versionstamp)
+        }
+    }
+    
+    func testIncompleteVersionstampDetection() throws {
+        let cases: [(Bytes, UInt32)] = [
+            (FDB.Tuple(FDB.Versionstamp()).pack(), 1),
+            (FDB.Tuple(FDB.Versionstamp(userData: 0)).pack(), 1),
+            (FDB.Tuple("foo", FDB.Versionstamp()).pack(), 6),
+            (FDB.Tuple("foo", FDB.Versionstamp(userData: 0)).pack(), 6),
+            (FDB.Tuple("foo", FDB.Versionstamp(), FDB.Versionstamp()).pack(), 6),
+            (FDB.Tuple("foo", FDB.Versionstamp(transactionCommitVersion: 12, batchNumber: 0), FDB.Versionstamp(), FDB.Versionstamp()).pack(), 17),
+            (FDB.Tuple("foo", FDB.Versionstamp(transactionCommitVersion: 0, batchNumber: 12), FDB.Versionstamp(), FDB.Versionstamp()).pack(), 17),
+            (FDB.Tuple("foo", FDB.Tuple(FDB.Versionstamp())).pack(), 7),
+            (FDB.Tuple("foo", FDB.Tuple(FDB.Versionstamp()), FDB.Versionstamp()).pack(), 7),
+            (FDB.Tuple("foo", FDB.Tuple("bar", FDB.Versionstamp()), FDB.Versionstamp()).pack(), 12),
+        ]
+
+        for (packedInput, offset) in cases {
+            let actualOffset = try FDB.Tuple.offsetOfFirstIncompleteVersionstamp(from: packedInput)
+            XCTAssertEqual(offset, actualOffset, "\(packedInput) version stamp offset was at \(actualOffset), not \(offset)")
+        }
+        
+        let invalidCases: [Bytes] = [
+            FDB.Tuple().pack(),
+            FDB.Tuple(42, "foo").pack(),
+            FDB.Tuple(FDB.Versionstamp(transactionCommitVersion: 42, batchNumber: 0)).pack(),
+            FDB.Tuple(FDB.Versionstamp(transactionCommitVersion: 0, batchNumber: 12)).pack(),
+            FDB.Tuple(FDB.Versionstamp(transactionCommitVersion: 42, batchNumber: 12, userData: 0)).pack(),
+            FDB.Tuple(42, "foo", FDB.Versionstamp(transactionCommitVersion: 42, batchNumber: 0)).pack(),
+            FDB.Tuple(42, "foo", FDB.Versionstamp(transactionCommitVersion: 0, batchNumber: 12)).pack(),
+            FDB.Tuple(42, "foo", FDB.Versionstamp(transactionCommitVersion: 42, batchNumber: 12, userData: 0)).pack(),
+        ]
+
+        for packedInput in invalidCases {
+            XCTAssertThrowsError(try FDB.Tuple.offsetOfFirstIncompleteVersionstamp(from: packedInput)) { error in
+                XCTAssertEqual((error as! FDB.Error).errno, FDB.Error.missingIncompleteVersionstamp.errno)
+            }
+        }
+    }
 
     static var allTests = [
         ("testPackUnicodeString", testPackUnicodeString),
@@ -252,5 +310,7 @@ class TupleTests: XCTestCase {
         ("testDouble", testDouble),
         ("testBool", testBool),
         ("testUUID", testUUID),
+        ("testVersionstamp", testVersionstamp),
+        ("testIncompleteVersionstampDetection", testIncompleteVersionstampDetection)
     ]
 }

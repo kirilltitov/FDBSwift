@@ -135,4 +135,9 @@ internal extension FDB.Transaction {
     func getReadVersion() -> FDB.Future {
         return fdb_transaction_get_read_version(self.pointer).asFuture()
     }
+
+    /// Returns versionstamp which was used by any versionstamp operations in this transaction
+    func getVersionstamp() -> FDB.Future {
+        return fdb_transaction_get_versionstamp(self.pointer).asFuture()
+    }
 }

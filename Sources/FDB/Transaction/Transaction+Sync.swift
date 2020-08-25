@@ -17,6 +17,14 @@ public extension FDB.Transaction {
             try self.commitSync()
         }
     }
+    
+    func set(versionstampedKey: AnyFDBKey, value: Bytes, commit: Bool) throws {
+        var serializedKey = versionstampedKey.asFDBKey()
+        let offset = try FDB.Tuple.offsetOfFirstIncompleteVersionstamp(from: serializedKey)
+        serializedKey.append(contentsOf: getBytes(offset.littleEndian))
+            
+        try self.atomic(.setVersionstampedKey, key: serializedKey, value: value, commit: commit) as Void
+    }
 
     func get(key: AnyFDBKey, snapshot: Bool, commit: Bool) throws -> Bytes? {
         let result: Bytes? = try self.get(key: key, snapshot: snapshot).wait()
@@ -129,5 +137,9 @@ public extension FDB.Transaction {
 
     func getReadVersion() throws -> Int64 {
         return try self.getReadVersion().wait()
+    }
+
+    func getVersionstamp() throws -> FDB.Versionstamp {
+        return try self.getVersionstamp().wait()
     }
 }

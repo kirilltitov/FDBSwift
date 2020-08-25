@@ -60,6 +60,14 @@ public extension FDB.Transaction {
         return future
     }
 
+    func set(versionstampedKey: AnyFDBKey, value: Bytes, commit: Bool) throws -> EventLoopFuture<AnyFDBTransaction> {
+        var serializedKey = versionstampedKey.asFDBKey()
+        let offset = try FDB.Tuple.offsetOfFirstIncompleteVersionstamp(from: serializedKey)
+        serializedKey.append(contentsOf: getBytes(offset.littleEndian))
+        
+        return self.atomic(.setVersionstampedKey, key: serializedKey, value: value, commit: commit)
+    }
+
     func get(
         key: AnyFDBKey,
         snapshot: Bool,
@@ -348,6 +356,41 @@ public extension FDB.Transaction {
 
         do {
             try future.whenInt64Ready(promise.succeed)
+        } catch {
+            promise.fail(error)
+        }
+
+        return promise.futureResult
+    }
+    
+    /// Returns versionstamp which was used by any versionstamp operations in this transaction
+    func getVersionstamp() -> EventLoopFuture<FDB.Versionstamp> {
+        guard let eventLoop = self.eventLoop else {
+            self.log("[getVersionstamp] No event loop", level: .error)
+            return FDB.dummyEventLoop.makeFailedFuture(FDB.Error.noEventLoopProvided)
+        }
+
+        let promise: EventLoopPromise<FDB.Versionstamp> = eventLoop.makePromise()
+        
+        let future: FDB.Future = self.getVersionstamp()
+        future.whenError { (error) in
+            promise.fail(error)
+        }
+        
+        do {
+            try future.whenKeyBytesReady { bytes in
+                guard bytes.count == 10 else {
+                    self.log("[getVersionstamp] Bytes that do not represent a versionstamp were returned: \(String(describing: bytes))", level: .error)
+                    promise.fail(FDB.Error.invalidVersionstamp)
+                    return
+                }
+                
+                let transactionCommitVersion = try! UInt64(bigEndian: Bytes(bytes[0..<8]).cast())
+                let batchNumber = try! UInt16(bigEndian: Bytes(bytes[8..<10]).cast())
+                
+                let versionstamp = FDB.Versionstamp(transactionCommitVersion: transactionCommitVersion, batchNumber: batchNumber)
+                promise.succeed(versionstamp)
+            }
         } catch {
             promise.fail(error)
         }

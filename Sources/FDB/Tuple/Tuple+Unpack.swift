@@ -163,6 +163,28 @@ extension FDB.Tuple {
                 UUID(uuid: Bytes(input[(pos + 1) ..< end]).cast()),
                 end
             )
+        } else if code == FDB.Tuple.Prefix.VERSIONSTAMP_80BIT || code == FDB.Tuple.Prefix.VERSIONSTAMP_96BIT {
+            var pos = pos
+            var end = pos + 1 + MemoryLayout<UInt64>.size
+            try sanityCheck(begin: pos + 1, end: end)
+            let transactionCommitVersion = try UInt64(bigEndian: Bytes(input[(pos + 1) ..< end]).cast())
+            
+            pos = end
+            end = pos + MemoryLayout<UInt16>.size
+            try sanityCheck(begin: pos, end: end)
+            let batchNumber = try UInt16(bigEndian: Bytes(input[pos ..< end]).cast())
+            
+            var userData: UInt16? = nil
+            if code == FDB.Tuple.Prefix.VERSIONSTAMP_96BIT {
+                pos = end
+                end = pos + MemoryLayout<UInt16>.size
+                try sanityCheck(begin: pos, end: end)
+                userData = try UInt16(bigEndian: Bytes(input[pos ..< end]).cast())
+            }
+            return (
+                FDB.Versionstamp(transactionCommitVersion: transactionCommitVersion, batchNumber: batchNumber, userData: userData),
+                end
+            )
         }
 
         FDB.logger.error("Unknown tuple code '\(code)' while parsing \(input)")
