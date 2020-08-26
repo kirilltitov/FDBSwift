@@ -140,6 +140,18 @@ public extension FDB.Transaction {
     }
 
     func getVersionstamp() throws -> FDB.Versionstamp {
-        return try self.getVersionstamp().wait()
+        let future: FDB.Future = self.getVersionstamp()
+        try self.commitSync()
+        let bytes = try future.waitAndCheck().parseKeyBytes()
+        
+        guard bytes.count == 10 else {
+            self.log("[getVersionstamp] Bytes that do not represent a versionstamp were returned: \(String(describing: bytes))", level: .error)
+            throw FDB.Error.invalidVersionstamp
+        }
+        
+        let transactionCommitVersion = try! UInt64(bigEndian: Bytes(bytes[0..<8]).cast())
+        let batchNumber = try! UInt16(bigEndian: Bytes(bytes[8..<10]).cast())
+        
+        return FDB.Versionstamp(transactionCommitVersion: transactionCommitVersion, batchNumber: batchNumber)
     }
 }

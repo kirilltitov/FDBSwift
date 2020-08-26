@@ -23,11 +23,11 @@ public extension FDB {
         /// Initializes a new incomplete Versionstamp suitable for passing to an atomic operation with the .setVersionstampedKey option. If the user data is specified, a 96-bit versionstamp will be encoded, otherwise an 80-bit verstion stamp without the user data will be encoded.
         /// - Parameter userData: Extra ordering information to order writes within a single transaction, thereby providing a global order for all versions.
         public init(userData: UInt16? = nil) {
-            self.init(transactionCommitVersion: 0, batchNumber: 0, userData: userData)
+            self.init(transactionCommitVersion: 0xFFFFFFFFFFFFFFFF, batchNumber: 0xFFFF, userData: userData)
         }
         
         public var isComplete: Bool {
-            transactionCommitVersion != 0 || batchNumber != 0
+            transactionCommitVersion != 0xFFFFFFFFFFFFFFFF as UInt64 || batchNumber != 0xFFFF
         }
     }
 }

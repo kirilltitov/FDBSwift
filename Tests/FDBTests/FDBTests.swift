@@ -105,24 +105,126 @@ class FDBTests: XCTestCase {
     func testSetVersionstampedKey() throws {
         let fdb = FDBTests.fdb!
         let subspace = FDBTests.subspace.subspace("atomic_versionstamp")
-        let key = subspace[FDB.Versionstamp(userData: 42)]["mykey"]
         
-        let value: String = "hello!"
+        do { // Test synchronous variations
+            let value: String = "basic sync value"
+            let nonVersionstampedKey = subspace[FDB.Versionstamp(transactionCommitVersion: 1, batchNumber: 2)]["aSyncKey"]
+            
+            let versionStamp: FDB.Versionstamp = try fdb.withTransaction { transaction in
+                XCTAssertNoThrow(try transaction.set(versionstampedKey: subspace[FDB.Versionstamp()]["aSyncKey"], value: Bytes(value.utf8)) as Void)
+                XCTAssertThrowsError(try transaction.set(versionstampedKey: nonVersionstampedKey, value: getBytes(value.utf8)) as Void) { error in
+                    switch error {
+                    case FDB.Error.missingIncompleteVersionstamp: break
+                    default: XCTFail("Invalid error returned: \(error)")
+                    }
+                }
+                
+                return try transaction.getVersionstamp()
+            }
+            
+            XCTAssertNil(versionStamp.userData)
+            
+            let result = try fdb.get(key: subspace[versionStamp]["aSyncKey"])
+            XCTAssertEqual(String(bytes: result ?? [], encoding: .utf8), value)
+        }
         
-        let tr = try self.begin().wait()
-        XCTAssertNoThrow(try tr.set(versionstampedKey: key, value: getBytes(value.utf8)) as Void)
-        let future: EventLoopFuture<FDB.Versionstamp> = tr.getVersionstamp()
-        XCTAssertNoThrow(try tr.commitSync())
+        do { // Test synchronous variations, with userData and multiple writes
+            let valueA: String = "advanced sync value A"
+            let valueB: String = "advanced sync value B"
+            
+            var versionStamp: FDB.Versionstamp = try fdb.withTransaction { transaction in
+                try transaction.set(versionstampedKey: subspace[FDB.Versionstamp(userData: 1)]["aSyncKey"], value: Bytes(valueA.utf8)) as Void
+                try transaction.set(versionstampedKey: subspace[FDB.Versionstamp(userData: 2)]["aSyncKey"], value: Bytes(valueB.utf8)) as Void
+                return try transaction.getVersionstamp()
+            }
+            
+            XCTAssertNil(versionStamp.userData)
+            
+            versionStamp.userData = 1
+            let resultA = try fdb.get(key: subspace[versionStamp]["aSyncKey"])
+            XCTAssertEqual(String(bytes: resultA ?? [], encoding: .utf8), valueA)
+            
+            versionStamp.userData = 2
+            let resultB = try fdb.get(key: subspace[versionStamp]["aSyncKey"])
+            XCTAssertEqual(String(bytes: resultB ?? [], encoding: .utf8), valueB)
+        }
         
-        var versionstamp = try future.wait()
-        XCTAssertNil(versionstamp.userData)
-        versionstamp.userData = 42
+        do { // Test asynchronous variations
+            let value: String = "basic async value"
+            
+            let result: String? = try fdb.withTransaction(on: self.eventLoop) { transaction in
+                transaction
+                    .set(versionstampedKey: subspace[FDB.Versionstamp()]["anAsyncKey"], value: Bytes(value.utf8))
+                    .flatMap { _ -> EventLoopFuture<FDB.Versionstamp> in
+                        let versionstamp = transaction.getVersionstamp() as EventLoopFuture<FDB.Versionstamp>
+                        return transaction.commit().flatMap { versionstamp }
+                    }
+            }.flatMap { versionstamp in
+                XCTAssertNil(versionstamp.userData)
+                
+                return fdb.withTransaction(on: self.eventLoop) { transaction in
+                    transaction
+                        .get(key: subspace[versionstamp]["anAsyncKey"], commit: true)
+                        .map { bytes, _ in
+                            return String(bytes: bytes ?? [], encoding: .utf8)
+                        }
+                }
+            }.wait()
+            
+            XCTAssertEqual(result, value)
+        }
         
-        let updatedKey = subspace[versionstamp]["mykey"]
-
-        let result = try fdb.get(key: updatedKey)
-        XCTAssertNotNil(result)
-        try XCTAssertEqual(result!.cast() as String, value)
+        do { // Test asynchronous variations with invalid versionstamp
+            let value: String = "invalid async value"
+            let nonVersionstampedKey = subspace[FDB.Versionstamp(transactionCommitVersion: 1, batchNumber: 2)]["aSyncKey"]
+            
+            let result: EventLoopFuture<Void> = fdb.withTransaction(on: self.eventLoop) { transaction in
+                transaction
+                    .set(versionstampedKey: subspace[nonVersionstampedKey]["anAsyncKey"], value: Bytes(value.utf8))
+                    .flatMap { _ -> EventLoopFuture<FDB.Versionstamp> in
+                        XCTFail("We should never get to this point")
+                        let versionstamp = transaction.getVersionstamp() as EventLoopFuture<FDB.Versionstamp>
+                        return transaction.commit().flatMap { versionstamp }
+                    }
+            }.flatMap { _ in
+                XCTFail("We should never get to this point")
+                
+                return self.eventLoop.makeSucceededFuture(())
+            }
+        
+            XCTAssertThrowsError(try result.wait()) { error in
+                switch error {
+                case FDB.Error.missingIncompleteVersionstamp: break
+                default: XCTFail("Invalid error returned: \(error)")
+                }
+            }
+        }
+        
+        do { // Test asynchronous variations, with userData and committing inline
+            let value: String = "advanced async value"
+            
+            let result: String? = try fdb.withTransaction(on: self.eventLoop) { transaction in
+                transaction
+                    .set(versionstampedKey: subspace[FDB.Versionstamp(userData: 42)]["anAsyncKey"], value: Bytes(value.utf8))
+                    .flatMap { _ in
+                        return transaction.getVersionstamp(commit: true)
+                    }
+            }.flatMap { versionstamp in
+                var versionstamp = versionstamp
+                XCTAssertNil(versionstamp.userData)
+                versionstamp.userData = 42
+                
+                return fdb.withTransaction(on: self.eventLoop) { transaction in
+                    transaction
+                        .get(key: subspace[versionstamp]["anAsyncKey"], commit: true)
+                        .map { bytes, _ in
+                            return String(bytes: bytes ?? [], encoding: .utf8)
+                        }
+                }
+            }.wait()
+            
+            XCTAssertEqual(result, value)
+        }
     }
 
     func testClear() throws {

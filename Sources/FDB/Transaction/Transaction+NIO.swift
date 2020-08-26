@@ -60,12 +60,21 @@ public extension FDB.Transaction {
         return future
     }
 
-    func set(versionstampedKey: AnyFDBKey, value: Bytes, commit: Bool) throws -> EventLoopFuture<AnyFDBTransaction> {
-        var serializedKey = versionstampedKey.asFDBKey()
-        let offset = try FDB.Tuple.offsetOfFirstIncompleteVersionstamp(from: serializedKey)
-        serializedKey.append(contentsOf: getBytes(offset.littleEndian))
-        
-        return self.atomic(.setVersionstampedKey, key: serializedKey, value: value, commit: commit)
+    func set(versionstampedKey: AnyFDBKey, value: Bytes, commit: Bool) -> EventLoopFuture<AnyFDBTransaction> {
+        guard let eventLoop = self.eventLoop else {
+            self.log("[set versionstampedKey] No event loop", level: .error)
+            return FDB.dummyEventLoop.makeFailedFuture(FDB.Error.noEventLoopProvided)
+        }
+
+        do {
+            var serializedKey = versionstampedKey.asFDBKey()
+            let offset = try FDB.Tuple.offsetOfFirstIncompleteVersionstamp(from: serializedKey)
+            serializedKey.append(contentsOf: getBytes(offset.littleEndian))
+            
+            return self.atomic(.setVersionstampedKey, key: serializedKey, value: value, commit: commit)
+        } catch {
+            return eventLoop.makeFailedFuture(error)
+        }
     }
 
     func get(
@@ -363,8 +372,20 @@ public extension FDB.Transaction {
         return promise.futureResult
     }
     
-    /// Returns versionstamp which was used by any versionstamp operations in this transaction
+    /// Returns a future for the versionstamp which was used by any versionstamp operations
+    /// in this transaction. Unlike the synchronous version of the same name, this method
+    /// does _not_ commit by default.
+    ///
+    /// - returns: EventLoopFuture with future FDB.Versionstamp value
     func getVersionstamp() -> EventLoopFuture<FDB.Versionstamp> {
+        return getVersionstamp(commit: false)
+    }
+    
+    /// Returns a future for the versionstamp which was used by any versionstamp operations
+    /// in this transaction, and optionally commit the transaction right afterwards
+    ///
+    /// - returns: EventLoopFuture with future FDB.Versionstamp value
+    func getVersionstamp(commit shouldCommit: Bool) -> EventLoopFuture<FDB.Versionstamp> {
         guard let eventLoop = self.eventLoop else {
             self.log("[getVersionstamp] No event loop", level: .error)
             return FDB.dummyEventLoop.makeFailedFuture(FDB.Error.noEventLoopProvided)
@@ -394,7 +415,11 @@ public extension FDB.Transaction {
         } catch {
             promise.fail(error)
         }
-
-        return promise.futureResult
+        
+        if shouldCommit {
+            return self.commit().flatMap { promise.futureResult }
+        } else {
+            return promise.futureResult
+        }
     }
 }

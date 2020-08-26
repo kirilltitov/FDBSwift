@@ -296,6 +296,39 @@ let maybeStringFuture: EventLoopFuture<String?> = fdb.withTransaction(on: myEven
 
 Thus your block of code will be gently retried until transaction is successfully committed.
 
+### Writing to Versionstamped Keys
+
+As a special type of atomic operation, values can be written to special keys that are guaranteed to be unique. These keys make use of an incomplete versionstamp within their tuples, which will be completed by the underlying cluster when data is written. The Versionstamp that was used within a transaction can then be retrieved so it can be referenced elsewhere.
+
+An incomplete versionstamp can be created and added to tuples using the `FDB.Versionstamp()` initializer. The `userData` field is optional, and serves to further order keys if multiple are written within the same transaction.
+
+Within a transaction's block, the `set(versionstampedKey: key, value: value)` method can be used to write to keys with incomplete versionstamps. This method will search the key for an incomplete versionstamp, and if one is found, will flag it to be replaced by a complete versionstamp once it's written to the cluster. If an incomplete versionstamp was not found, a `FDB.Error.missingIncompleteVersionstamp` error will be thrown.
+
+If you need the complete versionstamp that was used within the key, you can call `getVersionstamp()` before the transaction is committed. Note that this method must be called within the same transaction that a versionstamped key was written in, otherwise it won't know which versionstamp to return. Also note that this versionstamp does not include any user data that was associated with it, since it will be the same versionstamp no matter how many versionstamped keys were written.
+
+```swift
+let keyWithVersionstampPlaceholder = self.subspace[FDB.Versionstamp(userData: 42)]["anotherKey"]
+let valueToWrite: String = "Hello, World!"
+
+let versionstampedKeyFuture: EventLoopFuture<FDB.Versionstamp> = fdb.withTransaction(on: self.eventLoop) { transaction in
+    transaction
+        .set(versionstampedKey: keyWithVersionstampPlaceholder, value: Bytes(valueToWrite.utf8))
+        .flatMap { _ in
+            return transaction.getVersionstamp(commit: true)
+        }
+}
+
+// When the versionstamp eventually resolves…
+versionstampedKeyFuture.whenSuccess { versionstamp in
+    var versionstamp = versionstamp
+    versionstamp.userData = 42
+    
+    let actualKey = self.subspace[versionstamp]["anotherKey"]
+    
+    // … return it to user, save it as a reference to another entry, etc…
+}
+```
+
 ### Complete example
 
 ```swift

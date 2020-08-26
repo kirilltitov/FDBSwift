@@ -247,10 +247,10 @@ class TupleTests: XCTestCase {
             (FDB.Versionstamp(transactionCommitVersion: 42, batchNumber: 196, userData: nil), [50, 00, 00, 00, 00, 00, 00, 00, 42, 00, 196]),
             (FDB.Versionstamp(transactionCommitVersion: 42, batchNumber: 196, userData: 0), [51, 00, 00, 00, 00, 00, 00, 00, 42, 00, 196, 00, 00]),
             (FDB.Versionstamp(transactionCommitVersion: 42, batchNumber: 196, userData: 24), [51, 00, 00, 00, 00, 00, 00, 00, 42, 00, 196, 00, 24]),
-            (FDB.Versionstamp(), [50, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00]),
-            (FDB.Versionstamp(userData: nil), [50, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00]),
-            (FDB.Versionstamp(userData: 0), [51, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00]),
-            (FDB.Versionstamp(userData: 24), [51, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 24]),
+            (FDB.Versionstamp(), [50, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF]),
+            (FDB.Versionstamp(userData: nil), [50, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF]),
+            (FDB.Versionstamp(userData: 0), [51, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 00, 00]),
+            (FDB.Versionstamp(userData: 24), [51, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 00, 24]),
         ]
 
         for (input, expectedBytes) in cases {
