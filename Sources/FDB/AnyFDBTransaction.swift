@@ -68,14 +68,15 @@ public protocol AnyFDBTransaction {
     /// an incomplete version stamp, this method will throw an error. The actual version stamp used
     /// may be retrieved by calling `getVersionstamp()` on the transaction.
     ///
+    /// If a version stamp cannot be found, this will return a failed future with FDB.Error.missingIncompleteVersionstamp.
+    ///
     /// - parameters:
     ///   - versionstampedKey: FDB key containing an incomplete Versionstamp
     ///   - value: Bytes value
     ///   - commit: Whether to commit this transaction after action or not
     ///
-    /// - Throws: Throws FDB.Error.missingIncompleteVersionstamp if a version stamp cannot be found
     /// - returns: EventLoopFuture with future Transaction (`self`) value
-    func set(versionstampedKey: AnyFDBKey, value: Bytes, commit: Bool) throws -> EventLoopFuture<AnyFDBTransaction>
+    func set(versionstampedKey: AnyFDBKey, value: Bytes, commit: Bool) -> EventLoopFuture<AnyFDBTransaction>
 
     /// Returns bytes value for given key (or `nil` if no key)
     ///
@@ -291,10 +292,18 @@ public protocol AnyFDBTransaction {
     /// - returns: EventLoopFuture with future Int64 value
     func getReadVersion() -> EventLoopFuture<Int64>
 
-    /// Returns versionstamp which was used by any versionstamp operations in this transaction
+    /// Returns a future for the versionstamp which was used by any versionstamp operations
+    /// in this transaction. Unlike the synchronous version of the same name, this method
+    /// does _not_ commit by default.
     ///
     /// - returns: EventLoopFuture with future FDB.Versionstamp value
     func getVersionstamp() -> EventLoopFuture<FDB.Versionstamp>
+
+    /// Returns a future for the versionstamp which was used by any versionstamp operations
+    /// in this transaction, and optionally commit the transaction right afterwards
+    ///
+    /// - returns: EventLoopFuture with future FDB.Versionstamp value
+    func getVersionstamp(commit shouldCommit: Bool) -> EventLoopFuture<FDB.Versionstamp>
 
     /// Sync methods
 
@@ -466,7 +475,9 @@ public protocol AnyFDBTransaction {
     /// - returns: Read version as Int64
     func getReadVersion() throws -> Int64
 
-    /// Returns versionstamp which was used by any versionstamp operations in this transaction
+    /// Commits transaction and returns versionstamp which was used by any versionstamp operations
+    /// in this transaction. Note that this method must commit the transaction in order to wait for the
+    /// versionstamp to become available.
     ///
     /// This function will block current thread during execution
     ///
@@ -694,15 +705,16 @@ public extension AnyFDBTransaction {
     /// an incomplete version stamp, this method will throw an error. The actual version stamp used
     /// may be retrieved by calling `getVersionstamp()` on the transaction.
     ///
+    /// If a version stamp cannot be found, this will return a failed future with FDB.Error.missingIncompleteVersionstamp.
+    ///
     /// - parameters:
     ///   - versionstampedKey: FDB key containing an incomplete Versionstamp
     ///   - value: Bytes value
     ///   - commit: Whether to commit this transaction after action or not
     ///
-    /// - Throws: Throws FDB.Error.missingIncompleteVersionstamp if a version stamp cannot be found
     /// - returns: EventLoopFuture with future Transaction (`self`) value
-    func set(versionstampedKey: AnyFDBKey, value: Bytes, commit: Bool = false) throws -> EventLoopFuture<AnyFDBTransaction> {
-        return try self.set(versionstampedKey: versionstampedKey, value: value, commit: commit)
+    func set(versionstampedKey: AnyFDBKey, value: Bytes, commit: Bool = false) -> EventLoopFuture<AnyFDBTransaction> {
+        return self.set(versionstampedKey: versionstampedKey, value: value, commit: commit)
     }
 
     /// Returns bytes value for given key (or `nil` if no key)
@@ -995,5 +1007,26 @@ public extension AnyFDBTransaction {
         commit: Bool = false
     ) -> EventLoopFuture<AnyFDBTransaction> {
         return self.atomic(op, key: key, value: value, commit: commit)
+    }
+    
+    /// Returns a future for the versionstamp which was used by any versionstamp operations
+    /// in this transaction. Unlike the synchronous version of the same name, this method
+    /// does _not_ commit by default.
+    ///
+    /// - returns: EventLoopFuture with future FDB.Versionstamp value
+    func getVersionstamp() -> EventLoopFuture<(FDB.Versionstamp, AnyFDBTransaction)> {
+        return self
+            .getVersionstamp()
+            .map { ($0, self) }
+    }
+
+    /// Returns a future for the versionstamp which was used by any versionstamp operations
+    /// in this transaction, and optionally commit the transaction right afterwards
+    ///
+    /// - returns: EventLoopFuture with future FDB.Versionstamp value
+    func getVersionstamp(commit shouldCommit: Bool) -> EventLoopFuture<(FDB.Versionstamp, AnyFDBTransaction)> {
+        return self
+            .getVersionstamp(commit: shouldCommit)
+            .map { ($0, self) }
     }
 }
