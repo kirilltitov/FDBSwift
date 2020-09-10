@@ -107,6 +107,7 @@ class FDBTests: XCTestCase {
         let subspace = FDBTests.subspace.subspace("atomic_versionstamp")
         
         do { // Test synchronous variations
+            FDB.logger.info("Testing synchronous variations")
             let value: String = "basic sync value"
             let nonVersionstampedKey = subspace[FDB.Versionstamp(transactionCommitVersion: 1, batchNumber: 2)]["aSyncKey"]
             
@@ -126,9 +127,11 @@ class FDBTests: XCTestCase {
             
             let result = try fdb.get(key: subspace[versionStamp]["aSyncKey"])
             XCTAssertEqual(String(bytes: result ?? [], encoding: .utf8), value)
+            FDB.logger.info("Finished testing synchronous variations")
         }
         
         do { // Test synchronous variations, with userData and multiple writes
+            FDB.logger.info("Testing synchronous variations, with userData and multiple writes")
             let valueA: String = "advanced sync value A"
             let valueB: String = "advanced sync value B"
             
@@ -147,9 +150,11 @@ class FDBTests: XCTestCase {
             versionStamp.userData = 2
             let resultB = try fdb.get(key: subspace[versionStamp]["aSyncKey"])
             XCTAssertEqual(String(bytes: resultB ?? [], encoding: .utf8), valueB)
+            FDB.logger.info("Finished testing synchronous variations, with userData and multiple writes")
         }
         
         do { // Test asynchronous variations
+            FDB.logger.info("Testing asynchronous variations")
             let value: String = "basic async value"
             
             let result: String? = try fdb.withTransaction(on: self.eventLoop) { transaction in
@@ -172,15 +177,17 @@ class FDBTests: XCTestCase {
             }.wait()
             
             XCTAssertEqual(result, value)
+            FDB.logger.info("Finished testing asynchronous variations")
         }
         
         do { // Test asynchronous variations with invalid versionstamp
+            FDB.logger.info("Testing asynchronous variations with invalid versionstamp")
             let value: String = "invalid async value"
-            let nonVersionstampedKey = subspace[FDB.Versionstamp(transactionCommitVersion: 1, batchNumber: 2)]["aSyncKey"]
+            let nonVersionstampedKey = subspace[FDB.Versionstamp(transactionCommitVersion: 1, batchNumber: 2)]["anAsyncKey"]
             
             let result: EventLoopFuture<Void> = fdb.withTransaction(on: self.eventLoop) { transaction in
                 transaction
-                    .set(versionstampedKey: subspace[nonVersionstampedKey]["anAsyncKey"], value: Bytes(value.utf8))
+                    .set(versionstampedKey: nonVersionstampedKey, value: Bytes(value.utf8))
                     .flatMap { _ -> EventLoopFuture<FDB.Versionstamp> in
                         XCTFail("We should never get to this point")
                         let versionstamp = transaction.getVersionstamp() as EventLoopFuture<FDB.Versionstamp>
@@ -198,9 +205,11 @@ class FDBTests: XCTestCase {
                 default: XCTFail("Invalid error returned: \(error)")
                 }
             }
+            FDB.logger.info("Finished testing asynchronous variations with invalid versionstamp")
         }
         
         do { // Test asynchronous variations, with userData and committing inline
+            FDB.logger.info("Testing asynchronous variations, with userData and committing inline")
             let value: String = "advanced async value"
             
             let result: String? = try fdb.withTransaction(on: self.eventLoop) { transaction in
@@ -224,6 +233,7 @@ class FDBTests: XCTestCase {
             }.wait()
             
             XCTAssertEqual(result, value)
+            FDB.logger.info("Finished testing asynchronous variations, with userData and committing inline")
         }
     }
 
