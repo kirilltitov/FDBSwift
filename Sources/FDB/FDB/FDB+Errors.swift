@@ -279,6 +279,12 @@ public extension FDB {
             return result
         }
 
+        /// Indicates if current error is a native FoundationDB error
+        /// (i.e. errno is less than `8000`, after which custom FDBSwift errors start)
+        internal var isNative: Bool {
+            self.errno < 8000
+        }
+
         /// Returns human-readable description of current FDB error
         public func getDescription() -> String {
             if self.errno == 8000 {

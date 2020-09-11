@@ -6,13 +6,14 @@ internal extension EventLoopFuture {
     func checkingRetryableError(for transaction: AnyFDBTransaction) -> EventLoopFuture {
         return self.flatMapError { error in
             guard
-                let FDBError = error as? FDB.Error,
-                let realTransaction = transaction as? FDB.Transaction
+                let fdbError = error as? FDB.Error,
+                let realTransaction = transaction as? FDB.Transaction,
+                fdbError.isNative
             else {
                 return self.eventLoop.makeFailedFuture(error)
             }
 
-            let onErrorFuture: FDB.Future = fdb_transaction_on_error(realTransaction.pointer, FDBError.errno).asFuture()
+            let onErrorFuture: FDB.Future = fdb_transaction_on_error(realTransaction.pointer, fdbError.errno).asFuture()
 
             let promise: EventLoopPromise<Value> = self.eventLoop.makePromise()
 
