@@ -408,6 +408,8 @@ class FDBTests: XCTestCase {
     func testNetworkOptions() throws {
         //XCTAssertThrowsError(try FDBTests.fdb.setOption(.TLSCertPath(path: "/tmp/invalidname")))
         //XCTAssertThrowsError(try FDBTests.fdb.setOption(.TLSCABytes(bytes: Bytes([1,2,3]))))
+        XCTAssertNoThrow(try FDBTests.fdb.setOption(.TLSVerifyPeers(string: "Check.Valid=0")))
+        XCTAssertNoThrow(try FDBTests.fdb.setOption(.TLSPassword(password: "some secret password")))
         XCTAssertNoThrow(try FDBTests.fdb.setOption(.buggifyDisable))
         XCTAssertNoThrow(try FDBTests.fdb.setOption(.buggifySectionActivatedProbability(probability: 0)))
     }

@@ -36,8 +36,8 @@ public extension FDB {
         /// Set the file from which to load the private key corresponding to your own certificate
         case TLSKeyPath(path: String)
 
-        /// Set the ca bundle
-        case TLSVerifyPeers(bytes: Bytes)
+        /// Set the verify peers string for the certificate
+        case TLSVerifyPeers(string: String)
 
         /// Set the file from which to load the certificate authority bundle
         case TLSCABytes(bytes: Bytes)
@@ -92,10 +92,17 @@ public extension FDB {
         /// WARNING: this feature is not recommended for use in production.
         case enableSlowTaskProfiling
 
+        /// Set the verify peers string for the certificate
+        @available(*, deprecated, renamed: "TLSVerifyPeers(string:)")
+        public static func TLSVerifyPeers(bytes: Bytes) -> Self {
+            return self.TLSVerifyPeers(string: bytes.string)
+        }
+
         @inlinable
         internal func setOption() throws {
             let internalOption: FDBNetworkOption
             var value: Bytes = []
+            var logSelf: NetworkOption? = nil
 
             switch self {
             case let .traceEnable(directory):
@@ -125,9 +132,9 @@ public extension FDB {
             case let .TLSKeyPath(path):
                 internalOption = FDB_NET_OPTION_TLS_KEY_PATH
                 value = path.bytes
-            case let .TLSVerifyPeers(bytes):
+            case let .TLSVerifyPeers(string):
                 internalOption = FDB_NET_OPTION_TLS_VERIFY_PEERS
-                value = bytes
+                value = string.bytes
             case let .TLSCABytes(bytes):
                 internalOption = FDB_NET_OPTION_TLS_CA_BYTES
                 value = bytes
@@ -137,6 +144,7 @@ public extension FDB {
             case let .TLSPassword(password):
                 internalOption = FDB_NET_OPTION_TLS_PASSWORD
                 value = password.bytes
+                logSelf = .TLSPassword(password: "<private>")
             case .buggifyEnable:
                 internalOption = FDB_NET_OPTION_BUGGIFY_ENABLE
             case .buggifyDisable:
@@ -165,12 +173,16 @@ public extension FDB {
                 internalOption = FDB_NET_OPTION_ENABLE_SLOW_TASK_PROFILING
             }
 
+            FDB.logger.debug("Trying to set network option \(logSelf ?? self)")
+
             if case let .failure(error) = fdb_network_set_option(internalOption, value, value.length).toResult() {
-                FDB.logger.error("Network option '\(self)' setting failed: [\(error.errno)] \(error.getDescription())")
+                FDB.logger.error(
+                    "Network option '\(logSelf ?? self)' setting failed: [\(error.errno)] \(error.getDescription())"
+                )
                 throw error
             }
 
-            FDB.logger.debug("Network option '\(self)' successfully set")
+            FDB.logger.debug("Network option '\(logSelf ?? self)' successfully set")
         }
     }
 
@@ -181,8 +193,6 @@ public extension FDB {
     ///   - option: Network option
     /// - returns: current FDB instance (`self`)
     func setOption(_ option: FDB.NetworkOption) throws -> FDB {
-        FDB.logger.debug("Trying to set network option \(option)")
-
         try option.setOption()
 
         return self
