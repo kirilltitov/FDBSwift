@@ -25,7 +25,7 @@ extension FDB.Future {
 
     /// Blocks current thread until future is resolved
     internal func wait() throws -> Bytes? {
-        return try self.waitAndCheck().parseBytes()
+        try self.waitAndCheck().parseBytes()
     }
 
     /// Parses value bytes result from current future

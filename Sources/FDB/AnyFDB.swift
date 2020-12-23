@@ -1,5 +1,4 @@
 import Logging
-import NIO
 import _Concurrency
 
 public protocol AnyFDB {
@@ -18,25 +17,8 @@ public protocol AnyFDB {
     /// Performs an explicit disconnect routine
     func disconnect()
 
-    /// Begins a new FDB transaction without an event loop
+    /// Begins a new FDB transaction
     func begin() throws -> AnyFDBTransaction
-
-    /// Begins a new FDB transaction with given event loop
-    ///
-    /// - parameters:
-    ///   - eventLoop: Swift-NIO EventLoop to run future computations
-    /// - returns: `EventLoopFuture` with a transaction instance as future value.
-    func begin(on eventLoop: EventLoop) -> EventLoopFuture<AnyFDBTransaction>
-
-    /// Executes given transactional closure with appropriate retry logic
-    ///
-    /// Retry logic kicks in if `notCommitted` (1020) error was thrown during commit event. You must commit
-    /// the transaction yourself. Additionally, this transactional closure should be idempotent in order to exclude
-    /// unexpected behaviour.
-    func withTransaction<T>(
-        on eventLoop: EventLoop,
-        _ block: @escaping (AnyFDBTransaction) throws -> EventLoopFuture<T>
-    ) -> EventLoopFuture<T>
 
     /// Executes given transactional closure with appropriate retry logic
     ///
@@ -79,8 +61,6 @@ public protocol AnyFDB {
 
     /// Returns bytes value for given key (or `nil` if no key)
     ///
-    /// This function will block current thread during execution
-    ///
     /// - parameters:
     ///   - key: FDB key
     ///   - snapshot: Snapshot read (i.e. whether this read create a conflict range or not)
@@ -88,16 +68,12 @@ public protocol AnyFDB {
 
     /// Returns a range of keys and their respective values under given subspace
     ///
-    /// This function will block current thread during execution
-    ///
     /// - parameters:
     ///   - subspace: Subspace
     ///   - snapshot: Snapshot read (i.e. whether this read create a conflict range or not)
     func get(subspace: FDB.Subspace, snapshot: Bool) async throws -> FDB.KeyValuesResult
 
     /// Returns a range of keys and their respective values in given key range
-    ///
-    /// This function will block current thread during execution
     ///
     /// - parameters:
     ///   - begin: Begin key
@@ -128,8 +104,6 @@ public protocol AnyFDB {
     ) async throws -> FDB.KeyValuesResult
 
     /// Returns a range of keys and their respective values in given key range
-    ///
-    /// This function will block current thread during execution
     ///
     /// - parameters:
     ///   - range: Range key
@@ -159,8 +133,6 @@ public protocol AnyFDB {
 
     /// Peforms an atomic operation in FDB cluster on given key with given value bytes
     ///
-    /// This function will block current thread during execution
-    ///
     /// - parameters:
     ///   - op: Atomic operation
     ///   - key: FDB key
@@ -169,8 +141,6 @@ public protocol AnyFDB {
 
     /// Peforms an atomic operation in FDB cluster on given key with given signed integer value
     ///
-    /// This function will block current thread during execution
-    ///
     /// - parameters:
     ///   - op: Atomic operation
     ///   - key: FDB key
@@ -178,8 +148,6 @@ public protocol AnyFDB {
     func atomic<T: SignedInteger>(_ op: FDB.MutationType, key: AnyFDBKey, value: T) async throws
 
     /// Peforms a quasi-atomic increment operation in FDB cluster on given key with given integer
-    ///
-    /// This function will block current thread during execution
     ///
     /// Warning: though this function uses atomic `.add` increment, immediate serializable read of incremented key
     /// negates all benefits of atomicity, and therefore it shouldn't be considered truly atomical. However, it still
@@ -194,8 +162,6 @@ public protocol AnyFDB {
 
     /// Peforms a quasi-atomic decrement operation in FDB cluster on given key with given integer
     ///
-    /// This function will block current thread during execution
-    ///
     /// - parameters:
     ///   - key: FDB key
     ///   - value: Integer
@@ -205,8 +171,6 @@ public protocol AnyFDB {
 
 public extension AnyFDB {
     /// Returns a range of keys and their respective values in given key range
-    ///
-    /// This function will block current thread during execution
     ///
     /// - parameters:
     ///   - begin: Begin key
@@ -235,7 +199,7 @@ public extension AnyFDB {
         snapshot: Bool = false,
         reverse: Bool = false
     ) async throws -> FDB.KeyValuesResult {
-        return await try self.get(
+        await try self.get(
             begin: begin,
             end: end,
             beginEqual: beginEqual,
@@ -252,8 +216,6 @@ public extension AnyFDB {
     }
 
     /// Returns a range of keys and their respective values in given key range
-    ///
-    /// This function will block current thread during execution
     ///
     /// - parameters:
     ///   - range: Range key
@@ -280,7 +242,7 @@ public extension AnyFDB {
         snapshot: Bool = false,
         reverse: Bool = false
     ) async throws -> FDB.KeyValuesResult {
-        return await try self.get(
+        await try self.get(
             range: range,
             beginEqual: beginEqual,
             beginOffset: beginOffset,
@@ -297,8 +259,6 @@ public extension AnyFDB {
 
     /// Returns bytes value for given key (or `nil` if no key)
     ///
-    /// This function will block current thread during execution
-    ///
     /// - parameters:
     ///   - key: FDB key
     ///   - snapshot: Snapshot read (i.e. whether this read create a conflict range or not)
@@ -308,8 +268,6 @@ public extension AnyFDB {
 
     /// Returns a range of keys and their respective values under given subspace
     ///
-    /// This function will block current thread during execution
-    ///
     /// - parameters:
     ///   - subspace: Subspace
     ///   - snapshot: Snapshot read (i.e. whether this read create a conflict range or not)
@@ -318,8 +276,6 @@ public extension AnyFDB {
     }
 
     /// Peforms a quasi-atomic increment operation in FDB cluster on given key with given integer
-    ///
-    /// This function will block current thread during execution
     ///
     /// Warning: though this function uses atomic `.add` increment, immediate serializable read of incremented key
     /// negates all benefits of atomicity, and therefore it shouldn't be considered truly atomical. However, it still
@@ -331,18 +287,16 @@ public extension AnyFDB {
     ///   - value: Integer
     @discardableResult
     func increment(key: AnyFDBKey, value: Int64 = 1) async throws -> Int64 {
-        return await try self.increment(key: key, value: value)
+        await try self.increment(key: key, value: value)
     }
 
     /// Peforms a quasi-atomic decrement operation in FDB cluster on given key with given integer
-    ///
-    /// This function will block current thread during execution
     ///
     /// - parameters:
     ///   - key: FDB key
     ///   - value: Integer
     @discardableResult
     func decrement(key: AnyFDBKey, value: Int64 = 1) async throws -> Int64 {
-        return await try self.decrement(key: key, value: value)
+        await try self.decrement(key: key, value: value)
     }
 }

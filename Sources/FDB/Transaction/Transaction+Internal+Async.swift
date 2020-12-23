@@ -7,19 +7,6 @@ internal extension FDB.Transaction {
         return fdb_transaction_commit(self.pointer).asFuture(ref: self)
     }
 
-    /// Sets bytes to given key in FDB cluster
-    ///
-    /// - parameters:
-    ///   - key: FDB key
-    ///   - value: bytes value
-    func set(key: AnyFDBKey, value: Bytes) {
-        let keyBytes = key.asFDBKey()
-
-        self.log("Setting \(value.count) bytes to key '\(keyBytes.string.safe)'")
-
-        fdb_transaction_set(self.pointer, keyBytes, keyBytes.length, value, value.length)
-    }
-
     /// Returns bytes value for given key (or `nil` if no key)
     ///
     /// - parameters:
@@ -88,8 +75,6 @@ internal extension FDB.Transaction {
 
     /// Returns a range of keys and their respective values in given key range
     ///
-    /// This function will block current thread during execution
-    ///
     /// - parameters:
     ///   - range: Range key
     ///   - beginEqual: Should begin key also include exact key value
@@ -115,7 +100,7 @@ internal extension FDB.Transaction {
         snapshot: Bool = false,
         reverse: Bool = false
     ) -> FDB.Future {
-        return self.get(
+        self.get(
             begin: range.begin,
             end: range.end,
             beginEqual: beginEqual,
@@ -133,11 +118,11 @@ internal extension FDB.Transaction {
 
     /// Returns transaction snapshot read version
     func getReadVersion() -> FDB.Future {
-        return fdb_transaction_get_read_version(self.pointer).asFuture()
+        fdb_transaction_get_read_version(self.pointer).asFuture()
     }
 
     /// Returns versionstamp which was used by any versionstamp operations in this transaction
     func getVersionstamp() -> FDB.Future {
-        return fdb_transaction_get_versionstamp(self.pointer).asFuture()
+        fdb_transaction_get_versionstamp(self.pointer).asFuture()
     }
 }

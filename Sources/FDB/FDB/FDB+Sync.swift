@@ -1,19 +1,22 @@
 public extension FDB {
     func set(key: AnyFDBKey, value: Bytes) async throws {
         await try self.withTransaction {
-            await try $0.set(key: key, value: value, commit: true) as Void
+            $0.set(key: key, value: value)
+            await try $0.commit()
         }
     }
 
     func clear(key: AnyFDBKey) async throws {
         await try self.withTransaction {
-            await try $0.clear(key: key, commit: true) as Void
+            $0.clear(key: key)
+            await try $0.commit()
         }
     }
 
     func clear(begin: AnyFDBKey, end: AnyFDBKey) async throws {
         await try self.withTransaction {
-            await try $0.clear(begin: begin, end: end, commit: true) as Void
+            $0.clear(begin: begin, end: end)
+            await try $0.commit()
         }
     }
 
@@ -26,14 +29,18 @@ public extension FDB {
     }
 
     func get(key: AnyFDBKey, snapshot: Bool) async throws -> Bytes? {
-        return await try self.withTransaction {
-            await try $0.get(key: key, snapshot: snapshot, commit: true)
+        await try self.withTransaction {
+            let result = await try $0.get(key: key, snapshot: snapshot)
+            await try $0.commit()
+            return result
         }
     }
 
     func get(subspace: Subspace, snapshot: Bool) async throws -> FDB.KeyValuesResult {
-        return await try self.withTransaction {
-            return await try $0.get(range: subspace.range, snapshot: snapshot, commit: true)
+        await try self.withTransaction {
+            let result = await try $0.get(range: subspace.range, snapshot: snapshot)
+            await try $0.commit()
+            return result
         }
     }
 
@@ -51,8 +58,8 @@ public extension FDB {
         snapshot: Bool,
         reverse: Bool
     ) async throws -> FDB.KeyValuesResult {
-        return await try self.withTransaction {
-            await try $0.get(
+        await try self.withTransaction {
+            let result = await try $0.get(
                 begin: begin,
                 end: end,
                 beginEqual: beginEqual,
@@ -64,9 +71,10 @@ public extension FDB {
                 mode: mode,
                 iteration: iteration,
                 snapshot: snapshot,
-                reverse: reverse,
-                commit: true
+                reverse: reverse
             )
+            await try $0.commit()
+            return result
         }
     }
 
@@ -83,7 +91,7 @@ public extension FDB {
         snapshot: Bool,
         reverse: Bool
     ) async throws -> FDB.KeyValuesResult {
-        return await try self.get(
+        await try self.get(
             begin: range.begin,
             end: range.end,
             beginEqual: beginEqual,
@@ -101,7 +109,8 @@ public extension FDB {
 
     func atomic(_ op: FDB.MutationType, key: AnyFDBKey, value: Bytes) async throws {
         await try self.withTransaction {
-            await try $0.atomic(op, key: key, value: value, commit: true) as Void
+            $0.atomic(op, key: key, value: value)
+            await try $0.commit()
         }
     }
 
@@ -111,8 +120,8 @@ public extension FDB {
 
     @discardableResult
     func increment(key: AnyFDBKey, value: Int64) async throws -> Int64 {
-        return await try self.withTransaction { transaction in
-            await try transaction.atomic(.add, key: key, value: getBytes(value), commit: false) as Void
+        await try self.withTransaction { transaction in
+            transaction.atomic(.add, key: key, value: getBytes(value))
 
             guard let bytes: Bytes = await try transaction.get(key: key) else {
                 throw FDB.Error.unexpectedError("Couldn't get key '\(key)' after increment")
@@ -126,6 +135,6 @@ public extension FDB {
 
     @discardableResult
     func decrement(key: AnyFDBKey, value: Int64) async throws -> Int64 {
-        return await try self.increment(key: key, value: -value)
+        await try self.increment(key: key, value: -value)
     }
 }

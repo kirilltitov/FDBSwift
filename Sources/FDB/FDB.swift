@@ -1,7 +1,6 @@
 import Foundation
 import Logging
 import CFDB
-import NIO
 import _Concurrency
 
 public final class FDB: AnyFDB {
@@ -9,8 +8,6 @@ public final class FDB: AnyFDB {
     internal typealias Database = OpaquePointer
 
     private static let dbName: StaticString = "DB"
-
-    internal static let dummyEventLoop = EmbeddedEventLoop()
 
     private let version: Int32 = FDB_API_VERSION
     private let networkStopTimeout: Int
@@ -132,6 +129,9 @@ public final class FDB: AnyFDB {
 
     /// Performs all sanity checks after connection established and ensures that client and remote FDB server
     /// are healthy and ready to use
+    ///
+    /// Will block current thread during execution (on first call) while waiting for status response from FDB server
+    ///
     private func checkIsAlive() throws -> FDB {
         let tr = try self.begin()
 

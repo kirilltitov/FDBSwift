@@ -9,14 +9,13 @@ let package = Package(
         .executable(name: "FDBTestDrive", targets: ["FDBTestDrive"]),
     ],
     dependencies: [
-        .package(url: "https://github.com/apple/swift-nio.git", .upToNextMajor(from: "2.0.0")),
         .package(url: "https://github.com/apple/swift-log.git", .upToNextMajor(from: "1.0.0")),
     ],
     targets: [
         .systemLibrary(name: "CFDB", pkgConfig: "libfdb"),
         .target(
             name: "FDB",
-            dependencies: ["CFDB", "NIO", "Logging"],
+            dependencies: ["CFDB", "Logging"],
             swiftSettings: [.unsafeFlags(["-Xfrontend", "-enable-experimental-concurrency"])]
         ),
         .target(
