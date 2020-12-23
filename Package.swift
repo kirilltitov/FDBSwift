@@ -6,6 +6,7 @@ let package = Package(
     name: "FDBSwift",
     products: [
         .library(name: "FDB", targets: ["FDB"]),
+        .executable(name: "FDBTestDrive", targets: ["FDBTestDrive"]),
     ],
     dependencies: [
         .package(url: "https://github.com/apple/swift-nio.git", .upToNextMajor(from: "2.0.0")),
@@ -13,7 +14,20 @@ let package = Package(
     ],
     targets: [
         .systemLibrary(name: "CFDB", pkgConfig: "libfdb"),
-        .target(name: "FDB", dependencies: ["CFDB", "NIO", "Logging"]),
-        .testTarget(name: "FDBTests", dependencies: ["FDB"]),
+        .target(
+            name: "FDB",
+            dependencies: ["CFDB", "NIO", "Logging"],
+            swiftSettings: [.unsafeFlags(["-Xfrontend", "-enable-experimental-concurrency"])]
+        ),
+        .target(
+            name: "FDBTestDrive",
+            dependencies: ["FDB"],
+            swiftSettings: [.unsafeFlags(["-Xfrontend", "-enable-experimental-concurrency"])]
+        ),
+//        .testTarget(
+//            name: "FDBTests",
+//            dependencies: ["FDB"],
+//            swiftSettings: [.unsafeFlags(["-Xfrontend", "-enable-experimental-concurrency"])]
+//        ),
     ]
 )

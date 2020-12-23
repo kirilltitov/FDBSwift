@@ -2,7 +2,7 @@ import CFDB
 
 extension FDB.Future {
     /// Sets a closure to be executed when current future is resolved, returning bytes for the value
-    func whenBytesReady(_ callback: @escaping (Bytes?) -> Void) throws {
+    func whenBytesReady(_ callback: @escaping (Bytes?) -> Void) {
         self.whenReady { future in
             do {
                 try callback(future.parseBytes())
@@ -13,7 +13,7 @@ extension FDB.Future {
     }
     
     /// Sets a closure to be executed when current future is resolved, returning bytes for the key
-    func whenKeyBytesReady(_ callback: @escaping (Bytes) -> Void) throws {
+    func whenKeyBytesReady(_ callback: @escaping (Bytes) -> Void) {
         self.whenReady { future in
             do {
                 try callback(future.parseKeyBytes())

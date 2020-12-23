@@ -10,10 +10,12 @@ public extension FDB {
     }
 
     func begin(on eventLoop: EventLoop) -> EventLoopFuture<AnyFDBTransaction> {
-        do {
-            FDB.logger.debug("Trying to start transaction with eventloop \(Swift.type(of: eventLoop))")
+        FDB.logger.debug("Trying to start transaction with eventloop \(Swift.type(of: eventLoop))")
 
-            return eventLoop.makeSucceededFuture(
+        let promise: EventLoopPromise<AnyFDBTransaction> = eventLoop.makePromise()
+
+        do {
+            promise.succeed(
                 try FDB.Transaction.begin(
                     try self.getDB(),
                     eventLoop
@@ -21,8 +23,10 @@ public extension FDB {
             )
         } catch {
             FDB.logger.error("Failed to start transaction with eventloop \(Swift.type(of: eventLoop)): \(error)")
-            return FDB.dummyEventLoop.makeFailedFuture(error)
+            promise.fail(error)
         }
+
+        return promise.futureResult
     }
 
     func withTransaction<T>(
@@ -52,16 +56,16 @@ public extension FDB {
             .flatMap(transactionRoutine)
     }
 
-    func withTransaction<T>(_ block: @escaping (AnyFDBTransaction) throws -> T) throws -> T {
-        func transactionRoutine(_ transaction: AnyFDBTransaction) throws -> T {
+    func withTransaction<T>(_ block: @escaping (AnyFDBTransaction) async throws -> T) async throws -> T {
+        func transactionRoutine(_ transaction: AnyFDBTransaction) async throws -> T {
             do {
-                return try block(transaction)
+                return await try block(transaction)
             } catch let FDB.Error.transactionRetry(transaction) {
                 (transaction as? FDB.Transaction)?.incrementRetries()
-                return try transactionRoutine(transaction)
+                return await try transactionRoutine(transaction)
             }
         }
 
-        return try transactionRoutine(self.begin())
+        return await try transactionRoutine(self.begin())
     }
 }

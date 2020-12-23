@@ -2,10 +2,10 @@ import CFDB
 
 extension FDB.Future {
     /// Sets a closure to be executed when current future is resolved
-    func whenInt64Ready(_ callback: @escaping (Int64) -> Void) throws {
+    func whenInt64Ready(_ callback: @escaping (Int64) -> Void) {
         self.whenReady { future in
             do {
-                try callback(future.getVersion())
+                callback(try future.getVersion())
             } catch {
                 future.fail(with: error)
             }

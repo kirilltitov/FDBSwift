@@ -2,10 +2,10 @@ import CFDB
 
 extension FDB.Future {
     /// Sets a closure to be executed when current future is resolved
-    func whenKeyValuesReady(_ callback: @escaping (FDB.KeyValuesResult) -> Void) throws {
+    func whenKeyValuesReady(_ callback: @escaping (FDB.KeyValuesResult) -> Void) {
         self.whenReady { future in
             do {
-                try callback(self.parseKeyValues())
+                callback(try self.parseKeyValues())
             } catch {
                 future.fail(with: error)
             }

@@ -90,15 +90,9 @@ public extension FDB.Transaction {
 
         let promise: EventLoopPromise<Bytes?> = eventLoop.makePromise()
 
-        do {
-            let resultFuture = self.get(key: key, snapshot: snapshot)
-            try resultFuture.whenBytesReady {
-                promise.succeed($0)
-            }
-            resultFuture.whenError(promise.fail)
-        } catch {
-            promise.fail(error)
-        }
+        let resultFuture = self.get(key: key, snapshot: snapshot)
+        resultFuture.whenBytesReady(promise.succeed)
+        resultFuture.whenError(promise.fail)
 
         var future = promise.futureResult
 
@@ -145,28 +139,24 @@ public extension FDB.Transaction {
 
         let promise: EventLoopPromise<FDB.KeyValuesResult> = eventLoop.makePromise()
 
-        do {
-            let future: FDB.Future = self.get(
-                begin: begin,
-                end: end,
-                beginEqual: beginEqual,
-                beginOffset: beginOffset,
-                endEqual: endEqual,
-                endOffset: endOffset,
-                limit: limit,
-                targetBytes: targetBytes,
-                mode: mode,
-                iteration: iteration,
-                snapshot: snapshot,
-                reverse: reverse
-            )
-            try future.whenKeyValuesReady {
-                promise.succeed($0)
-            }
-            future.whenError(promise.fail)
-        } catch {
-            promise.fail(error)
+        let internalFuture: FDB.Future = self.get(
+            begin: begin,
+            end: end,
+            beginEqual: beginEqual,
+            beginOffset: beginOffset,
+            endEqual: endEqual,
+            endOffset: endOffset,
+            limit: limit,
+            targetBytes: targetBytes,
+            mode: mode,
+            iteration: iteration,
+            snapshot: snapshot,
+            reverse: reverse
+        )
+        internalFuture.whenKeyValuesReady {
+            promise.succeed($0)
         }
+        internalFuture.whenError(promise.fail)
 
         var future = promise.futureResult
 
@@ -363,12 +353,7 @@ public extension FDB.Transaction {
 
         let future: FDB.Future = self.getReadVersion()
         future.whenError(promise.fail)
-
-        do {
-            try future.whenInt64Ready(promise.succeed)
-        } catch {
-            promise.fail(error)
-        }
+        future.whenInt64Ready(promise.succeed)
 
         return promise.futureResult
     }
@@ -395,26 +380,20 @@ public extension FDB.Transaction {
         let promise: EventLoopPromise<FDB.Versionstamp> = eventLoop.makePromise()
         
         let future: FDB.Future = self.getVersionstamp()
-        future.whenError { (error) in
-            promise.fail(error)
-        }
+        future.whenError(promise.fail)
         
-        do {
-            try future.whenKeyBytesReady { bytes in
-                guard bytes.count == 10 else {
-                    self.log("[getVersionstamp] Bytes that do not represent a versionstamp were returned: \(String(describing: bytes))", level: .error)
-                    promise.fail(FDB.Error.invalidVersionstamp)
-                    return
-                }
-                
-                let transactionCommitVersion = try! UInt64(bigEndian: Bytes(bytes[0..<8]).cast())
-                let batchNumber = try! UInt16(bigEndian: Bytes(bytes[8..<10]).cast())
-                
-                let versionstamp = FDB.Versionstamp(transactionCommitVersion: transactionCommitVersion, batchNumber: batchNumber)
-                promise.succeed(versionstamp)
+        future.whenKeyBytesReady { bytes in
+            guard bytes.count == 10 else {
+                self.log("[getVersionstamp] Bytes that do not represent a versionstamp were returned: \(String(describing: bytes))", level: .error)
+                promise.fail(FDB.Error.invalidVersionstamp)
+                return
             }
-        } catch {
-            promise.fail(error)
+            
+            let transactionCommitVersion = try! UInt64(bigEndian: Bytes(bytes[0..<8]).cast())
+            let batchNumber = try! UInt16(bigEndian: Bytes(bytes[8..<10]).cast())
+            
+            let versionstamp = FDB.Versionstamp(transactionCommitVersion: transactionCommitVersion, batchNumber: batchNumber)
+            promise.succeed(versionstamp)
         }
         
         if shouldCommit {

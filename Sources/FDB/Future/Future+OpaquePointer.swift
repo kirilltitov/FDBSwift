@@ -11,4 +11,11 @@ internal extension OpaquePointer {
             .asFuture()
             .waitAndCheck()
     }
+
+    @discardableResult
+    func futureReady() async throws -> FDB.Future {
+        return await try self
+            .asFuture()
+            .ready()
+    }
 }

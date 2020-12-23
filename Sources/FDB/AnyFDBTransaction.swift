@@ -1,6 +1,8 @@
 import NIO
 
 public protocol AnyFDBTransaction {
+    // MARK: - Sync methods
+
     /// Destroys current transaction. It becomes unusable after this.
     func destroy()
 
@@ -47,7 +49,186 @@ public protocol AnyFDBTransaction {
     /// on this transaction already, the result is undefined.
     func setReadVersion(version: Int64)
 
-    /// NIO methods
+    // MARK: - Async methods
+
+    /// Commits current transaction
+    ///
+    /// This function will block current thread during execution
+    func commit() async throws
+
+    /// Sets bytes to given key in FDB cluster
+    ///
+    /// This function will block current thread during execution
+    ///
+    /// - parameters:
+    ///   - key: FDB key
+    ///   - value: Bytes value
+    ///   - commit: Whether to commit this transaction after action or not
+    func set(key: AnyFDBKey, value: Bytes, commit: Bool) async throws
+
+    /// Sets bytes to given versionstamped key in FDB cluster. If versionstampedKey does not contain
+    /// an incomplete version stamp, this method will throw an error. The actual version stamp used
+    /// may be retrieved by calling `getVersionstamp()` on the transaction.
+    ///
+    /// This function will block current thread during execution
+    ///
+    /// - parameters:
+    ///   - versionstampedKey: FDB key containing an incomplete Versionstamp
+    ///   - value: Bytes value
+    ///   - commit: Whether to commit this transaction after action or not
+    ///
+    /// - Throws: Throws FDB.Error.missingIncompleteVersionstamp if a version stamp cannot be found
+    func set(versionstampedKey: AnyFDBKey, value: Bytes, commit: Bool) async throws
+
+    /// Returns bytes value for given key (or `nil` if no key)
+    ///
+    /// This function will block current thread during execution
+    ///
+    /// - parameters:
+    ///   - key: FDB key
+    ///   - snapshot: Snapshot read (i.e. whether this read create a conflict range or not)
+    ///   - commit: Whether to commit this transaction after action or not
+    ///
+    /// - returns: Bytes result or `nil` if no key
+    func get(key: AnyFDBKey, snapshot: Bool, commit: Bool) async throws -> Bytes?
+
+    /// Returns a range of keys and their respective values in given key range
+    ///
+    /// This function will block current thread during execution
+    ///
+    /// - parameters:
+    ///   - begin: Begin key
+    ///   - end: End key
+    ///   - beginEqual: Should begin key also include exact key value
+    ///   - beginOffset: Begin key offset
+    ///   - endEqual: Should end key also include exact key value
+    ///   - endOffset: End key offset
+    ///   - limit: Limit returned key-value pairs (only relevant when `mode` is `.exact`)
+    ///   - targetBytes: If non-zero, indicates a soft cap on the combined number of bytes of keys and values to return
+    ///   - mode: The manner in which rows are returned (see `FDB.StreamingMode` docs)
+    ///   - iteration: If `mode` is `.iterator`, this arg represent current read iteration (should start from 1)
+    ///   - snapshot: Snapshot read (i.e. whether this read create a conflict range or not)
+    ///   - reverse: If `true`, key-value pairs will be returned in reverse lexicographical order
+    ///   - commit: Whether to commit this transaction after action or not
+    ///
+    /// - returns: `(FDB.KeyValuesResult, AnyFDBTransaction)`
+    func get(
+        begin: AnyFDBKey,
+        end: AnyFDBKey,
+        beginEqual: Bool,
+        beginOffset: Int32,
+        endEqual: Bool,
+        endOffset: Int32,
+        limit: Int32,
+        targetBytes: Int32,
+        mode: FDB.StreamingMode,
+        iteration: Int32,
+        snapshot: Bool,
+        reverse: Bool,
+        commit: Bool
+    ) async throws -> FDB.KeyValuesResult
+
+    /// Returns a range of keys and their respective values in given key range
+    ///
+    /// This function will block current thread during execution
+    ///
+    /// - parameters:
+    ///   - range: Range key
+    ///   - beginEqual: Should begin key also include exact key value
+    ///   - beginOffset: Begin key offset
+    ///   - endEqual: Should end key also include exact key value
+    ///   - endOffset: End key offset
+    ///   - limit: Limit returned key-value pairs (only relevant when `mode` is `.exact`)
+    ///   - targetBytes: If non-zero, indicates a soft cap on the combined number of bytes of keys and values to return
+    ///   - mode: The manner in which rows are returned (see `FDB.StreamingMode` docs)
+    ///   - iteration: If `mode` is `.iterator`, this arg represent current read iteration (should start from 1)
+    ///   - snapshot: Snapshot read (i.e. whether this read create a conflict range or not)
+    ///   - reverse: If `true`, key-value pairs will be returned in reverse lexicographical order
+    ///   - commit: Whether to commit this transaction after action or not
+    ///
+    /// - returns: `(FDB.KeyValuesResult, AnyFDBTransaction)`
+    func get(
+        range: FDB.RangeKey,
+        beginEqual: Bool,
+        beginOffset: Int32,
+        endEqual: Bool,
+        endOffset: Int32,
+        limit: Int32,
+        targetBytes: Int32,
+        mode: FDB.StreamingMode,
+        iteration: Int32,
+        snapshot: Bool,
+        reverse: Bool,
+        commit: Bool
+    ) async throws -> FDB.KeyValuesResult
+
+    /// Clears given key in FDB cluster
+    ///
+    /// This function will block current thread during execution
+    ///
+    /// - parameters:
+    ///   - key: FDB key
+    ///   - commit: Whether to commit this transaction after action or not
+    func clear(key: AnyFDBKey, commit: Bool) async throws
+
+    /// Clears keys in given range in FDB cluster
+    ///
+    /// This function will block current thread during execution
+    ///
+    /// - parameters:
+    ///   - begin: Begin key
+    ///   - end: End key
+    ///   - commit: Whether to commit this transaction after action or not
+    func clear(begin: AnyFDBKey, end: AnyFDBKey, commit: Bool) async throws
+
+    /// Clears keys in given range in FDB cluster
+    ///
+    /// This function will block current thread during execution
+    ///
+    /// - parameters:
+    ///   - range: Range key
+    ///   - commit: Whether to commit this transaction after action or not
+    func clear(range: FDB.RangeKey, commit: Bool) async throws
+
+    /// Peforms an atomic operation in FDB cluster on given key with given value bytes
+    ///
+    /// This function will block current thread during execution
+    ///
+    /// - parameters:
+    ///   - _: Atomic operation
+    ///   - key: FDB key
+    ///   - value: Value bytes
+    ///   - commit: Whether to commit this transaction after action or not
+    func atomic(_ op: FDB.MutationType, key: AnyFDBKey, value: Bytes, commit: Bool) async throws
+
+    /// Peforms an atomic operation in FDB cluster on given key with given generic value
+    ///
+    /// This function will block current thread during execution
+    ///
+    /// - parameters:
+    ///   - _: Atomic operation
+    ///   - key: FDB key
+    ///   - value: Value bytes
+    ///   - commit: Whether to commit this transaction after action or not
+    func atomic<T>(_ op: FDB.MutationType, key: AnyFDBKey, value: T, commit: Bool) async throws
+
+    /// Returns transaction snapshot read version
+    ///
+    /// This function will block current thread during execution
+    ///
+    /// - returns: Read version as Int64
+    func getReadVersion() async throws -> Int64
+
+    /// Commits transaction and returns versionstamp which was used by any versionstamp operations
+    /// in this transaction. Note that this method must commit the transaction in order to wait for the
+    /// versionstamp to become available.
+    ///
+    /// This function will block current thread during execution
+    ///
+    /// - returns: Version stamp as FDB.Versionstamp
+    func getVersionstamp() async throws -> FDB.Versionstamp
+
+    // MARK: - NIO methods
 
     /// Commits current transaction
     ///
@@ -304,200 +485,21 @@ public protocol AnyFDBTransaction {
     ///
     /// - returns: EventLoopFuture with future FDB.Versionstamp value
     func getVersionstamp(commit shouldCommit: Bool) -> EventLoopFuture<FDB.Versionstamp>
-
-    /// Sync methods
-
-    /// Commits current transaction
-    ///
-    /// This function will block current thread during execution
-    func commitSync() throws
-
-    /// Sets bytes to given key in FDB cluster
-    ///
-    /// This function will block current thread during execution
-    ///
-    /// - parameters:
-    ///   - key: FDB key
-    ///   - value: Bytes value
-    ///   - commit: Whether to commit this transaction after action or not
-    func set(key: AnyFDBKey, value: Bytes, commit: Bool) throws
-
-    /// Sets bytes to given versionstamped key in FDB cluster. If versionstampedKey does not contain
-    /// an incomplete version stamp, this method will throw an error. The actual version stamp used
-    /// may be retrieved by calling `getVersionstamp()` on the transaction.
-    ///
-    /// This function will block current thread during execution
-    ///
-    /// - parameters:
-    ///   - versionstampedKey: FDB key containing an incomplete Versionstamp
-    ///   - value: Bytes value
-    ///   - commit: Whether to commit this transaction after action or not
-    ///
-    /// - Throws: Throws FDB.Error.missingIncompleteVersionstamp if a version stamp cannot be found
-    func set(versionstampedKey: AnyFDBKey, value: Bytes, commit: Bool) throws
-
-    /// Returns bytes value for given key (or `nil` if no key)
-    ///
-    /// This function will block current thread during execution
-    ///
-    /// - parameters:
-    ///   - key: FDB key
-    ///   - snapshot: Snapshot read (i.e. whether this read create a conflict range or not)
-    ///   - commit: Whether to commit this transaction after action or not
-    ///
-    /// - returns: Bytes result or `nil` if no key
-    func get(key: AnyFDBKey, snapshot: Bool, commit: Bool) throws -> Bytes?
-
-    /// Returns a range of keys and their respective values in given key range
-    ///
-    /// This function will block current thread during execution
-    ///
-    /// - parameters:
-    ///   - begin: Begin key
-    ///   - end: End key
-    ///   - beginEqual: Should begin key also include exact key value
-    ///   - beginOffset: Begin key offset
-    ///   - endEqual: Should end key also include exact key value
-    ///   - endOffset: End key offset
-    ///   - limit: Limit returned key-value pairs (only relevant when `mode` is `.exact`)
-    ///   - targetBytes: If non-zero, indicates a soft cap on the combined number of bytes of keys and values to return
-    ///   - mode: The manner in which rows are returned (see `FDB.StreamingMode` docs)
-    ///   - iteration: If `mode` is `.iterator`, this arg represent current read iteration (should start from 1)
-    ///   - snapshot: Snapshot read (i.e. whether this read create a conflict range or not)
-    ///   - reverse: If `true`, key-value pairs will be returned in reverse lexicographical order
-    ///   - commit: Whether to commit this transaction after action or not
-    ///
-    /// - returns: `(FDB.KeyValuesResult, AnyFDBTransaction)`
-    func get(
-        begin: AnyFDBKey,
-        end: AnyFDBKey,
-        beginEqual: Bool,
-        beginOffset: Int32,
-        endEqual: Bool,
-        endOffset: Int32,
-        limit: Int32,
-        targetBytes: Int32,
-        mode: FDB.StreamingMode,
-        iteration: Int32,
-        snapshot: Bool,
-        reverse: Bool,
-        commit: Bool
-    ) throws -> FDB.KeyValuesResult
-
-    /// Returns a range of keys and their respective values in given key range
-    ///
-    /// This function will block current thread during execution
-    ///
-    /// - parameters:
-    ///   - range: Range key
-    ///   - beginEqual: Should begin key also include exact key value
-    ///   - beginOffset: Begin key offset
-    ///   - endEqual: Should end key also include exact key value
-    ///   - endOffset: End key offset
-    ///   - limit: Limit returned key-value pairs (only relevant when `mode` is `.exact`)
-    ///   - targetBytes: If non-zero, indicates a soft cap on the combined number of bytes of keys and values to return
-    ///   - mode: The manner in which rows are returned (see `FDB.StreamingMode` docs)
-    ///   - iteration: If `mode` is `.iterator`, this arg represent current read iteration (should start from 1)
-    ///   - snapshot: Snapshot read (i.e. whether this read create a conflict range or not)
-    ///   - reverse: If `true`, key-value pairs will be returned in reverse lexicographical order
-    ///   - commit: Whether to commit this transaction after action or not
-    ///
-    /// - returns: `(FDB.KeyValuesResult, AnyFDBTransaction)`
-    func get(
-        range: FDB.RangeKey,
-        beginEqual: Bool,
-        beginOffset: Int32,
-        endEqual: Bool,
-        endOffset: Int32,
-        limit: Int32,
-        targetBytes: Int32,
-        mode: FDB.StreamingMode,
-        iteration: Int32,
-        snapshot: Bool,
-        reverse: Bool,
-        commit: Bool
-    ) throws -> FDB.KeyValuesResult
-
-    /// Clears given key in FDB cluster
-    ///
-    /// This function will block current thread during execution
-    ///
-    /// - parameters:
-    ///   - key: FDB key
-    ///   - commit: Whether to commit this transaction after action or not
-    func clear(key: AnyFDBKey, commit: Bool) throws
-
-    /// Clears keys in given range in FDB cluster
-    ///
-    /// This function will block current thread during execution
-    ///
-    /// - parameters:
-    ///   - begin: Begin key
-    ///   - end: End key
-    ///   - commit: Whether to commit this transaction after action or not
-    func clear(begin: AnyFDBKey, end: AnyFDBKey, commit: Bool) throws
-
-    /// Clears keys in given range in FDB cluster
-    ///
-    /// This function will block current thread during execution
-    ///
-    /// - parameters:
-    ///   - range: Range key
-    ///   - commit: Whether to commit this transaction after action or not
-    func clear(range: FDB.RangeKey, commit: Bool) throws
-
-    /// Peforms an atomic operation in FDB cluster on given key with given value bytes
-    ///
-    /// This function will block current thread during execution
-    ///
-    /// - parameters:
-    ///   - _: Atomic operation
-    ///   - key: FDB key
-    ///   - value: Value bytes
-    ///   - commit: Whether to commit this transaction after action or not
-    func atomic(_ op: FDB.MutationType, key: AnyFDBKey, value: Bytes, commit: Bool) throws
-
-    /// Peforms an atomic operation in FDB cluster on given key with given generic value
-    ///
-    /// This function will block current thread during execution
-    ///
-    /// - parameters:
-    ///   - _: Atomic operation
-    ///   - key: FDB key
-    ///   - value: Value bytes
-    ///   - commit: Whether to commit this transaction after action or not
-    func atomic<T>(_ op: FDB.MutationType, key: AnyFDBKey, value: T, commit: Bool) throws
-
-    /// Returns transaction snapshot read version
-    ///
-    /// This function will block current thread during execution
-    ///
-    /// - returns: Read version as Int64
-    func getReadVersion() throws -> Int64
-
-    /// Commits transaction and returns versionstamp which was used by any versionstamp operations
-    /// in this transaction. Note that this method must commit the transaction in order to wait for the
-    /// versionstamp to become available.
-    ///
-    /// This function will block current thread during execution
-    ///
-    /// - returns: Version stamp as FDB.Versionstamp
-    func getVersionstamp() throws -> FDB.Versionstamp
 }
 
 /// Sync methods
 public extension AnyFDBTransaction {
-    /// Sets bytes to given key in FDB cluster
-    ///
-    /// This function will block current thread during execution
-    ///
-    /// - parameters:
-    ///   - key: FDB key
-    ///   - value: Bytes value
-    ///   - commit: Whether to commit this transaction after action or not
-    func set(key: AnyFDBKey, value: Bytes, commit: Bool = false) throws {
-        try self.set(key: key, value: value, commit: commit) as Void
-    }
+//    /// Sets bytes to given key in FDB cluster
+//    ///
+//    /// This function will block current thread during execution
+//    ///
+//    /// - parameters:
+//    ///   - key: FDB key
+//    ///   - value: Bytes value
+//    ///   - commit: Whether to commit this transaction after action or not
+//    func set(key: AnyFDBKey, value: Bytes, commit: Bool = false) async throws {
+//        await try self.set(key: key, value: value, commit: commit) as Void
+//    }
 
     /// Sets bytes to given versionstamped key in FDB cluster. If versionstampedKey does not contain
     /// an incomplete version stamp, this method will throw an error. The actual version stamp used
@@ -511,8 +513,8 @@ public extension AnyFDBTransaction {
     ///   - commit: Whether to commit this transaction after action or not
     ///
     /// - Throws: Throws FDB.Error.missingIncompleteVersionstamp if a version stamp cannot be found
-    func set(versionstampedKey: AnyFDBKey, value: Bytes, commit: Bool = false) throws {
-        try self.set(versionstampedKey: versionstampedKey, value: value, commit: commit) as Void
+    func set(versionstampedKey: AnyFDBKey, value: Bytes, commit: Bool = false) async throws {
+        await try self.set(versionstampedKey: versionstampedKey, value: value, commit: commit) as Void
     }
 
     /// Returns bytes value for given key (or `nil` if no key)
@@ -525,8 +527,8 @@ public extension AnyFDBTransaction {
     ///   - commit: Whether to commit this transaction after action or not
     ///
     /// - returns: Bytes result or `nil` if no key
-    func get(key: AnyFDBKey, snapshot: Bool = false, commit: Bool = false) throws -> Bytes? {
-        return try self.get(key: key, snapshot: snapshot, commit: commit)
+    func get(key: AnyFDBKey, snapshot: Bool = false, commit: Bool = false) async throws -> Bytes? {
+        return await try self.get(key: key, snapshot: snapshot, commit: commit)
     }
 
     /// Returns a range of keys and their respective values in given key range
@@ -563,8 +565,8 @@ public extension AnyFDBTransaction {
         snapshot: Bool = false,
         reverse: Bool = false,
         commit: Bool = false
-    ) throws -> FDB.KeyValuesResult {
-        return try self.get(
+    ) async throws -> FDB.KeyValuesResult {
+        return await try self.get(
             begin: begin,
             end: end,
             beginEqual: beginEqual,
@@ -613,8 +615,8 @@ public extension AnyFDBTransaction {
         snapshot: Bool = false,
         reverse: Bool = false,
         commit: Bool = false
-    ) throws -> FDB.KeyValuesResult {
-        return try self.get(
+    ) async throws -> FDB.KeyValuesResult {
+        return await try self.get(
             range: range,
             beginEqual: beginEqual,
             beginOffset: beginOffset,
@@ -630,64 +632,65 @@ public extension AnyFDBTransaction {
         )
     }
 
-    /// Clears given key in FDB cluster
-    ///
-    /// This function will block current thread during execution
-    ///
-    /// - parameters:
-    ///   - key: FDB key
-    ///   - commit: Whether to commit this transaction after action or not
-    func clear(key: AnyFDBKey, commit: Bool = false) throws {
-        try self.clear(key: key, commit: commit) as Void
-    }
+//    /// Clears given key in FDB cluster
+//    ///
+//    /// This function will block current thread during execution
+//    ///
+//    /// - parameters:
+//    ///   - key: FDB key
+//    ///   - commit: Whether to commit this transaction after action or not
+//    func clear(key: AnyFDBKey, commit: Bool = false) async throws {
+//        await try self.clear(key: key, commit: commit) as Void
+//    }
+//
+//    /// Clears keys in given range in FDB cluster
+//    ///
+//    /// This function will block current thread during execution
+//    ///
+//    /// - parameters:
+//    ///   - begin: Begin key
+//    ///   - end: End key
+//    ///   - commit: Whether to commit this transaction after action or not
+//    func clear(begin: AnyFDBKey, end: AnyFDBKey, commit: Bool = false) async throws {
+//        await try self.clear(begin: begin, end: end, commit: commit) as Void
+//    }
+//
+//    /// Clears keys in given range in FDB cluster
+//    ///
+//    /// This function will block current thread during execution
+//    ///
+//    /// - parameters:
+//    ///   - range: Range key
+//    ///   - commit: Whether to commit this transaction after action or not
+//    func clear(range: FDB.RangeKey, commit: Bool = false) async throws {
+//        await try self.clear(range: range, commit: commit) as Void
+//    }
 
-    /// Clears keys in given range in FDB cluster
-    ///
-    /// This function will block current thread during execution
-    ///
-    /// - parameters:
-    ///   - begin: Begin key
-    ///   - end: End key
-    ///   - commit: Whether to commit this transaction after action or not
-    func clear(begin: AnyFDBKey, end: AnyFDBKey, commit: Bool = false) throws {
-        try self.clear(begin: begin, end: end, commit: commit) as Void
-    }
-
-    /// Clears keys in given range in FDB cluster
-    ///
-    /// This function will block current thread during execution
-    ///
-    /// - parameters:
-    ///   - range: Range key
-    ///   - commit: Whether to commit this transaction after action or not
-    func clear(range: FDB.RangeKey, commit: Bool = false) throws {
-        try self.clear(range: range, commit: commit) as Void
-    }
-
-    /// Peforms an atomic operation in FDB cluster on given key with given value bytes
-    ///
-    /// This function will block current thread during execution
-    ///
-    /// - parameters:
-    ///   - _: Atomic operation
-    ///   - key: FDB key
-    ///   - value: Value bytes
-    ///   - commit: Whether to commit this transaction after action or not
-    func atomic(_ op: FDB.MutationType, key: AnyFDBKey, value: Bytes, commit: Bool = false) throws {
-        try self.atomic(op, key: key, value: value, commit: commit) as Void
-    }
-    /// Peforms an atomic operation in FDB cluster on given key with given generic value
-    ///
-    /// This function will block current thread during execution
-    ///
-    /// - parameters:
-    ///   - _: Atomic operation
-    ///   - key: FDB key
-    ///   - value: Value bytes
-    ///   - commit: Whether to commit this transaction after action or not
-    func atomic<T>(_ op: FDB.MutationType, key: AnyFDBKey, value: T, commit: Bool = false) throws {
-        try self.atomic(op, key: key, value: value, commit: commit) as Void
-    }
+//    /// Peforms an atomic operation in FDB cluster on given key with given value bytes
+//    ///
+//    /// This function will block current thread during execution
+//    ///
+//    /// - parameters:
+//    ///   - _: Atomic operation
+//    ///   - key: FDB key
+//    ///   - value: Value bytes
+//    ///   - commit: Whether to commit this transaction after action or not
+//    func atomic(_ op: FDB.MutationType, key: AnyFDBKey, value: Bytes, commit: Bool = false) async throws {
+//        await try self.atomic(op, key: key, value: value, commit: commit) as Void
+//    }
+//
+//    /// Peforms an atomic operation in FDB cluster on given key with given generic value
+//    ///
+//    /// This function will block current thread during execution
+//    ///
+//    /// - parameters:
+//    ///   - _: Atomic operation
+//    ///   - key: FDB key
+//    ///   - value: Value bytes
+//    ///   - commit: Whether to commit this transaction after action or not
+//    func atomic<T>(_ op: FDB.MutationType, key: AnyFDBKey, value: T, commit: Bool = false) async throws {
+//        await try self.atomic(op, key: key, value: value, commit: commit) as Void
+//    }
 
     /// Sets bytes to given key in FDB cluster
     ///

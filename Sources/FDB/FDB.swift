@@ -2,6 +2,7 @@ import Foundation
 import Logging
 import CFDB
 import NIO
+import _Concurrency
 
 public final class FDB: AnyFDB {
     internal typealias Cluster = OpaquePointer
@@ -132,7 +133,14 @@ public final class FDB: AnyFDB {
     /// Performs all sanity checks after connection established and ensures that client and remote FDB server
     /// are healthy and ready to use
     private func checkIsAlive() throws -> FDB {
-        guard let statusBytes = try self.get(key: [0xFF, 0xFF] + "/status/json".bytes) else {
+        let tr = try self.begin()
+
+        guard let tr = tr as? FDB.Transaction else {
+            Self.logger.debug("Transaction in \(#function) is not \(FDB.Transaction.self), assuming that DB is alive")
+            return self
+        }
+
+        guard let statusBytes: Bytes = try tr.get(key: [0xFF, 0xFF] + "/status/json".bytes).wait() else {
             FDB.logger.critical("Could not get system status key")
             throw FDB.Error.connectionError
         }
