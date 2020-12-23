@@ -5,22 +5,25 @@ internal extension FDB {
     ///
     /// Currently supports only four value types: `Bytes`, `FDB.KeyValuesResult` and `Void`.
     class Future {
-        typealias Callback = (Future) -> Void
+        enum State {
+            case Awaiting
+            case Resolved
+            case Error(FDB.Errno)
+        }
 
         class Box {
             let future: Future
-            let callback: (Future) -> Void
+            let continuation: UnsafeContinuation<Void, Swift.Error>
 
-            init(_ future: Future, _ callback: @escaping Callback) {
+            init(_ future: Future, _ continuation: UnsafeContinuation<Void, Swift.Error>) {
                 self.future = future
-                self.callback = callback
+                self.continuation = continuation
             }
         }
 
         let pointer: OpaquePointer
         let ref: Any?
-
-        private var failClosure: ((Swift.Error) -> Void)?
+        var state: State = .Awaiting
 
         init(_ pointer: OpaquePointer, _ ref: Any? = nil) {
             self.pointer = pointer
@@ -56,43 +59,27 @@ internal extension FDB {
             return try self.wait().checkError()
         }
 
-        /// Performs routine assocated with error state
-        func fail(with error: Swift.Error, _ file: StaticString = #file, _ line: Int = #line) {
-            debugOnly {
-                guard let _ = self.failClosure else {
-                    FDB.logger.error("No fail closure, caught error \(error) at \(file):\(line)")
-                    return
+        func resolved() async throws {
+            try await withUnsafeThrowingContinuation { (continuation: UnsafeContinuation<Void, Swift.Error>) -> Void in
+                do {
+                    try fdb_future_set_callback(
+                        self.pointer,
+                        { futurePtr, boxPtr in
+                            let box = Unmanaged<Box>.fromOpaque(boxPtr!).takeRetainedValue()
+                            let errno = fdb_future_get_error(futurePtr)
+                            if errno != 0 {
+                                FDB.logger.debug("Failing future with errno \(errno)")
+                                box.future.state = .Error(errno)
+                            } else {
+                                box.future.state = .Resolved
+                            }
+                            box.continuation.resume()
+                        },
+                        Unmanaged.passRetained(Box(self, continuation)).toOpaque()
+                    ).orThrow()
+                } catch {
+                    continuation.resume(throwing: error)
                 }
-            }
-
-            self.failClosure?(error)
-        }
-
-        /// Sets a closure to be executed when (if) current future is in failed state
-        func whenError(_ closure: @escaping (Swift.Error) -> Void) {
-            self.failClosure = closure
-        }
-
-        /// Sets a closure to be executed when current future is resolved
-        func whenReady(_ callback: @escaping Callback) {
-            do {
-                try fdb_future_set_callback(
-                    self.pointer,
-                    { futurePtr, boxPtr in
-                        let unwrappedBox = Unmanaged<Box>.fromOpaque(boxPtr!).takeRetainedValue()
-                        let errno = fdb_future_get_error(futurePtr)
-                        if errno != 0 {
-                            let error = FDB.Error.from(errno: errno)
-                            FDB.logger.debug("Failing future with error '\(error)' (\(errno)): '\(error.getDescription())'")
-                            unwrappedBox.future.fail(with: error)
-                        } else {
-                            unwrappedBox.callback(unwrappedBox.future)
-                        }
-                    },
-                    Unmanaged.passRetained(Box(self, callback)).toOpaque()
-                ).orThrow()
-            } catch {
-                self.fail(with: error)
             }
         }
     }

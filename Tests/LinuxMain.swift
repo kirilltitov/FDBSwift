@@ -1,6 +1,10 @@
-import FDBTests
 import XCTest
+import FDBTests
 
-var tests = [XCTestCaseEntry]()
-tests += FDBTests.allTests()
-XCTMain(tests)
+@main public struct Main {
+    public static func main() {
+        var tests = [XCTestCaseEntry]()
+        tests += FDBTests.__allTests()
+        XCTMain(tests)
+    }
+}

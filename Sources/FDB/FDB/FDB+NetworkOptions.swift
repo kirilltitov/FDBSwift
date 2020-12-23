@@ -192,6 +192,7 @@ public extension FDB {
     /// - parameters:
     ///   - option: Network option
     /// - returns: current FDB instance (`self`)
+    @discardableResult
     func setOption(_ option: FDB.NetworkOption) throws -> FDB {
         try option.setOption()
 

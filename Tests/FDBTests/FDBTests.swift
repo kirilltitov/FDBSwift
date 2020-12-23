@@ -1,17 +1,74 @@
 @testable import FDB
-import NIO
 import XCTest
 import Logging
 
-class FDBTests: XCTestCase {
+// A temporary polyfill for macOS dev
+// Taken from Linux impl https://github.com/apple/swift-corelibs-xctest/commit/38f9fa131e1b2823f3b3bfd97a1ac1fe69473d51
+// I expect this to be available in macOS in the nearest patch version of the language.
+// Actually, this is the only reason this RC isn't a release yet.
+// #if os(macOS)
+
+public func asyncTest<T: XCTestCase>(
+    _ testClosureGenerator: @escaping (T) -> () async throws -> Void
+) -> (T) -> () throws -> Void {
+    return { (testType: T) in
+        let testClosure = testClosureGenerator(testType)
+        return {
+            try awaitUsingExpectation(testClosure)
+        }
+    }
+}
+
+func awaitUsingExpectation(
+    _ closure: @escaping () async throws -> Void
+) throws -> Void {
+    let expectation = XCTestExpectation(description: "async test completion")
+    let thrownErrorWrapper = ThrownErrorWrapper()
+
+    Task {
+        defer { expectation.fulfill() }
+
+        do {
+            try await closure()
+        } catch {
+            thrownErrorWrapper.error = error
+        }
+    }
+
+    _ = XCTWaiter.wait(for: [expectation], timeout: asyncTestTimeout)
+
+    if let error = thrownErrorWrapper.error {
+        throw error
+    }
+}
+
+private final class ThrownErrorWrapper: @unchecked Sendable {
+
+    private var _error: Error?
+
+    var error: Error? {
+        get {
+            FDBTest.subsystemQueue.sync { _error }
+        }
+        set {
+            FDBTest.subsystemQueue.sync { _error = newValue }
+        }
+    }
+}
+
+
+// This time interval is set to a very large value due to their being no real native timeout functionality within corelibs-xctest.
+// With the introduction of async/await support, the framework now relies on XCTestExpectations internally to coordinate the addition async portions of setup and tear down.
+// This time interval is the timeout corelibs-xctest uses with XCTestExpectations.
+private let asyncTestTimeout: TimeInterval = 60 * 60 * 24 * 30
+
+// #endif
+
+class FDBTest: XCTestCase {
     static var fdb: FDB!
     static var subspace: FDB.Subspace!
 
-    let eventLoop = EmbeddedEventLoop()
-
-    var semaphore: DispatchSemaphore {
-        return DispatchSemaphore(value: 0)
-    }
+    internal static let subsystemQueue = DispatchQueue(label: "org.swift.XCTest.XCTWaiter.TEMPORARY")
 
     override class func setUp() {
         super.setUp()
@@ -24,11 +81,11 @@ class FDBTests: XCTestCase {
 
     override class func tearDown() {
         super.tearDown()
-        do {
-            try self.fdb.clear(subspace: self.subspace)
-        } catch {
-            XCTFail("Could not tearDown: \(error)")
-        }
+//        do {
+//            try await self.fdb.clear(subspace: self.subspace)
+//        } catch {
+//            XCTFail("Could not tearDown: \(error)")
+//        }
         self.fdb.disconnect()
         self.fdb = nil
     }
@@ -42,76 +99,90 @@ class FDBTests: XCTestCase {
     }
 
     func testConnect() throws {
-        XCTAssertNoThrow(try FDBTests.fdb.connect())
+        XCTAssertNoThrow(try Self.fdb.connect())
     }
 
-    func testEmptyValue() throws {
-        XCTAssertNil(try FDBTests.fdb.get(key: FDBTests.subspace[FDB.Null()]), "Non-nil value returned")
+    func testEmptyValue() async throws {
+        let result = try await Self.fdb.get(key: Self.subspace[FDB.Null()])
+        XCTAssertNil(result, "Non-nil value returned")
     }
 
-    func testSetGetBytes() throws {
-        let key = FDBTests.subspace["set"]
+    func testSetGetBytes() async throws {
+        let key = Self.subspace["set"]
         let value = self.getRandomBytes()
-        try FDBTests.fdb.set(key: key, value: value)
-        XCTAssertEqual(try FDBTests.fdb.get(key: key), value)
+        try await Self.fdb.set(key: key, value: value)
+        let actual = try await Self.fdb.get(key: key)
+        XCTAssertEqual(actual, value)
     }
 
-    func testTransaction() throws {
-        let key = FDBTests.subspace["transaction"]
-        let value = self.getRandomBytes()
-        let transaction = try FDBTests.fdb.begin() as! FDB.Transaction
-        transaction.set(key: key, value: value)
-        XCTAssertEqual(try transaction.get(key: key), value)
-        XCTAssertNoThrow(try transaction.commit().waitAndCheck())
+    func testTransaction() async throws {
+        let key = Self.subspace["transaction"]
+        let expected = self.getRandomBytes()
+        let transaction = try Self.fdb.begin() as! FDB.Transaction
+        transaction.set(key: key, value: expected)
+        let actual = try await transaction.get(key: key)
+        XCTAssertEqual(actual, expected)
+        try await transaction.commit()
         // transaction is already closed
-        XCTAssertThrowsError(try transaction.commit().waitAndCheck())
+        do {
+            try await transaction.commit()
+            XCTFail("Should have thrown")
+        } catch {}
     }
 
-    func testGetRange() throws {
+    func testGetRange() async throws {
         let limit = 2
-        let subspace = FDBTests.subspace["range"]
+        let subspace = Self.subspace["range"]
         var values: [FDB.KeyValue] = []
         for i in 0 ..< limit {
             let key = subspace["sub \(i)"].asFDBKey()
             let value = self.getRandomBytes()
             values.append(FDB.KeyValue(key: key, value: value))
-            try FDBTests.fdb.set(key: key, value: value)
+            try await Self.fdb.set(key: key, value: value)
         }
         let expected = FDB.KeyValuesResult(records: values, hasMore: false)
-        XCTAssertEqual(try FDBTests.fdb.get(subspace: subspace), expected)
-        XCTAssertEqual(try FDBTests.fdb.get(range: subspace.range), expected)
-        XCTAssertEqual(try FDBTests.fdb.get(begin: subspace.range.begin, end: subspace.range.end), expected)
+        let actual1 = try await Self.fdb.get(subspace: subspace)
+        XCTAssertEqual(actual1, expected)
+        let actual2 = try await Self.fdb.get(range: subspace.range)
+        XCTAssertEqual(actual2, expected)
+        let actual3 = try await Self.fdb.get(begin: subspace.range.begin, end: subspace.range.end)
+        XCTAssertEqual(actual3, expected)
     }
 
-    func testAtomicAdd() throws {
-        let fdb = FDBTests.fdb!
-        let key = FDBTests.subspace.subspace("atomic_incr")
+    func testAtomicAdd() async throws {
+        let fdb = Self.fdb!
+        let key = Self.subspace.subspace("atomic_incr")
         let step: Int64 = 1
         let expected = step + 1
         for _ in 0 ..< expected - 1 {
-            XCTAssertNoThrow(try fdb.atomic(.add, key: key, value: step))
+            try await fdb.atomic(.add, key: key, value: step)
         }
-        XCTAssertNoThrow(try fdb.increment(key: key))
-        let result = try fdb.get(key: key)
+        let actual1 = try await fdb.increment(key: key)
+        XCTAssertNoThrow(actual1)
+        let result = try await fdb.get(key: key)
         XCTAssertNotNil(result)
         try XCTAssertEqual(result!.cast() as Int64, expected)
         XCTAssertEqual(result, getBytes(expected))
-        XCTAssertEqual(try fdb.increment(key: key), expected + 1)
-        XCTAssertEqual(try fdb.increment(key: key, value: -1), expected)
-        XCTAssertEqual(try fdb.decrement(key: key), expected - 1)
-        XCTAssertEqual(try fdb.decrement(key: key), 0)
+        let actual2 = try await fdb.increment(key: key)
+        XCTAssertEqual(actual2, expected + 1)
+        let actual3 = try await fdb.increment(key: key, value: -1)
+        XCTAssertEqual(actual3, expected)
+        let actual4 = try await fdb.decrement(key: key)
+        XCTAssertEqual(actual4, expected - 1)
+        let actual5 = try await fdb.decrement(key: key)
+        XCTAssertEqual(actual5, 0)
     }
 
-    func testSetVersionstampedKey() throws {
-        let fdb = FDBTests.fdb!
-        let subspace = FDBTests.subspace.subspace("atomic_versionstamp")
-        
-        do { // Test synchronous variations
+    func testSetVersionstampedKey() async throws {
+        let fdb = Self.fdb!
+        let subspace = Self.subspace.subspace("atomic_versionstamp")
+
+        do {
             FDB.logger.info("Testing synchronous variations")
             let value: String = "basic sync value"
             let nonVersionstampedKey = subspace[FDB.Versionstamp(transactionCommitVersion: 1, batchNumber: 2)]["aSyncKey"]
-            
-            let versionStamp: FDB.Versionstamp = try fdb.withTransaction { transaction in
+
+            let versionStamp: FDB.Versionstamp = try await fdb.withTransaction { transaction in
                 XCTAssertNoThrow(try transaction.set(versionstampedKey: subspace[FDB.Versionstamp()]["aSyncKey"], value: Bytes(value.utf8)) as Void)
                 XCTAssertThrowsError(try transaction.set(versionstampedKey: nonVersionstampedKey, value: getBytes(value.utf8)) as Void) { error in
                     switch error {
@@ -119,142 +190,61 @@ class FDBTests: XCTestCase {
                     default: XCTFail("Invalid error returned: \(error)")
                     }
                 }
-                
-                return try transaction.getVersionstamp()
+
+                return try await transaction.getVersionstamp()
             }
-            
+
             XCTAssertNil(versionStamp.userData)
-            
-            let result = try fdb.get(key: subspace[versionStamp]["aSyncKey"])
+
+            let result = try await fdb.get(key: subspace[versionStamp]["aSyncKey"])
             XCTAssertEqual(String(bytes: result ?? [], encoding: .utf8), value)
             FDB.logger.info("Finished testing synchronous variations")
         }
-        
-        do { // Test synchronous variations, with userData and multiple writes
+
+        do {
             FDB.logger.info("Testing synchronous variations, with userData and multiple writes")
             let valueA: String = "advanced sync value A"
             let valueB: String = "advanced sync value B"
-            
-            var versionStamp: FDB.Versionstamp = try fdb.withTransaction { transaction in
+
+            var versionStamp: FDB.Versionstamp = try await fdb.withTransaction { transaction in
                 try transaction.set(versionstampedKey: subspace[FDB.Versionstamp(userData: 1)]["aSyncKey"], value: Bytes(valueA.utf8)) as Void
                 try transaction.set(versionstampedKey: subspace[FDB.Versionstamp(userData: 2)]["aSyncKey"], value: Bytes(valueB.utf8)) as Void
-                return try transaction.getVersionstamp()
+                return try await transaction.getVersionstamp()
             }
-            
+
             XCTAssertNil(versionStamp.userData)
-            
+
             versionStamp.userData = 1
-            let resultA = try fdb.get(key: subspace[versionStamp]["aSyncKey"])
+            let resultA = try await fdb.get(key: subspace[versionStamp]["aSyncKey"])
             XCTAssertEqual(String(bytes: resultA ?? [], encoding: .utf8), valueA)
-            
+
             versionStamp.userData = 2
-            let resultB = try fdb.get(key: subspace[versionStamp]["aSyncKey"])
+            let resultB = try await fdb.get(key: subspace[versionStamp]["aSyncKey"])
             XCTAssertEqual(String(bytes: resultB ?? [], encoding: .utf8), valueB)
             FDB.logger.info("Finished testing synchronous variations, with userData and multiple writes")
         }
-        
-        do { // Test asynchronous variations
-            FDB.logger.info("Testing asynchronous variations")
-            let value: String = "basic async value"
-            
-            let result: String? = try fdb.withTransaction(on: self.eventLoop) { transaction in
-                transaction
-                    .set(versionstampedKey: subspace[FDB.Versionstamp()]["anAsyncKey"], value: Bytes(value.utf8))
-                    .flatMap { _ -> EventLoopFuture<FDB.Versionstamp> in
-                        let versionstamp = transaction.getVersionstamp() as EventLoopFuture<FDB.Versionstamp>
-                        return transaction.commit().flatMap { versionstamp }
-                    }
-            }.flatMap { versionstamp in
-                XCTAssertNil(versionstamp.userData)
-                
-                return fdb.withTransaction(on: self.eventLoop) { transaction in
-                    transaction
-                        .get(key: subspace[versionstamp]["anAsyncKey"], commit: true)
-                        .map { bytes, _ in
-                            return String(bytes: bytes ?? [], encoding: .utf8)
-                        }
-                }
-            }.wait()
-            
-            XCTAssertEqual(result, value)
-            FDB.logger.info("Finished testing asynchronous variations")
-        }
-        
-        do { // Test asynchronous variations with invalid versionstamp
-            FDB.logger.info("Testing asynchronous variations with invalid versionstamp")
-            let value: String = "invalid async value"
-            let nonVersionstampedKey = subspace[FDB.Versionstamp(transactionCommitVersion: 1, batchNumber: 2)]["anAsyncKey"]
-            
-            let result: EventLoopFuture<Void> = fdb.withTransaction(on: self.eventLoop) { transaction in
-                transaction
-                    .set(versionstampedKey: nonVersionstampedKey, value: Bytes(value.utf8))
-                    .flatMap { _ -> EventLoopFuture<FDB.Versionstamp> in
-                        XCTFail("We should never get to this point")
-                        let versionstamp = transaction.getVersionstamp() as EventLoopFuture<FDB.Versionstamp>
-                        return transaction.commit().flatMap { versionstamp }
-                    }
-            }.flatMap { _ in
-                XCTFail("We should never get to this point")
-                
-                return self.eventLoop.makeSucceededFuture(())
-            }
-        
-            XCTAssertThrowsError(try result.wait()) { error in
-                switch error {
-                case FDB.Error.missingIncompleteVersionstamp: break
-                default: XCTFail("Invalid error returned: \(error)")
-                }
-            }
-            FDB.logger.info("Finished testing asynchronous variations with invalid versionstamp")
-        }
-        
-        do { // Test asynchronous variations, with userData and committing inline
-            FDB.logger.info("Testing asynchronous variations, with userData and committing inline")
-            let value: String = "advanced async value"
-            
-            let result: String? = try fdb.withTransaction(on: self.eventLoop) { transaction in
-                transaction
-                    .set(versionstampedKey: subspace[FDB.Versionstamp(userData: 42)]["anAsyncKey"], value: Bytes(value.utf8))
-                    .flatMap { _ in
-                        return transaction.getVersionstamp(commit: true)
-                    }
-            }.flatMap { versionstamp in
-                var versionstamp = versionstamp
-                XCTAssertNil(versionstamp.userData)
-                versionstamp.userData = 42
-                
-                return fdb.withTransaction(on: self.eventLoop) { transaction in
-                    transaction
-                        .get(key: subspace[versionstamp]["anAsyncKey"], commit: true)
-                        .map { bytes, _ in
-                            return String(bytes: bytes ?? [], encoding: .utf8)
-                        }
-                }
-            }.wait()
-            
-            XCTAssertEqual(result, value)
-            FDB.logger.info("Finished testing asynchronous variations, with userData and committing inline")
-        }
     }
 
-    func testClear() throws {
-        XCTAssertNoThrow(try FDBTests.fdb.clear(key: FDBTests.subspace["empty"]))
+    func testClear() async throws {
+        try await Self.fdb.clear(key: Self.subspace["empty"])
     }
 
-    func testStringKeys() throws {
-        let fdb = FDBTests.fdb!
+    func testStringKeys() async throws {
+        let fdb = Self.fdb!
         let key = "foo"
-        let value: Bytes = [0, 1, 2]
-        XCTAssertNoThrow(try fdb.set(key: FDBTests.subspace[key], value: value))
-        XCTAssertEqual(try fdb.get(key: FDBTests.subspace[key]), value)
+        let expected: Bytes = [0, 1, 2]
+        try await fdb.set(key: Self.subspace[key], value: expected)
+        let actual = try await fdb.get(key: Self.subspace[key])
+        XCTAssertEqual(actual, expected)
     }
 
-    func testStaticStringKeys() throws {
-        let fdb = FDBTests.fdb!
+    func testStaticStringKeys() async throws {
+        let fdb = Self.fdb!
         let key: StaticString = "foo"
-        let value: Bytes = [0, 1, 2]
-        XCTAssertNoThrow(try fdb.set(key: FDBTests.subspace[key], value: value))
-        XCTAssertEqual(try fdb.get(key: FDBTests.subspace[key]), value)
+        let expected: Bytes = [0, 1, 2]
+        try await fdb.set(key: Self.subspace[key], value: expected)
+        let actual = try await fdb.get(key: Self.subspace[key])
+        XCTAssertEqual(actual, expected)
     }
 
     func testErrorDescription() {
@@ -264,291 +254,87 @@ class FDBTests: XCTestCase {
         XCTAssertEqual(E.unexpectedError("FOo bar").getDescription(), "Error is unexpected, it shouldn't really happen")
     }
 
-    func begin() throws -> EventLoopFuture<AnyFDBTransaction> {
-        return FDBTests.fdb.begin(on: self.eventLoop)
-    }
-
-    func genericTestCommit() throws -> AnyFDBTransaction {
-        FDB.logger.info("Starting transaction")
-        let tr = try self.begin().wait()
-        let _ = try tr.set(key: FDBTests.subspace["testcommit"], value: Bytes([1,2,3])).wait()
-        FDB.logger.info("Started transaction")
-        var ran = false
-        let semaphore = self.semaphore
-        tr.commit().whenSuccess {
-            FDB.logger.info("Transaction committed")
-            ran = true
-            semaphore.signal()
-        }
-        FDB.logger.info("Waiting for semaphore")
-        let _ = semaphore.wait(for: 10)
-        FDB.logger.info("Semaphore done")
-        XCTAssertTrue(ran)
-        return tr
-    }
-
-    func testNIOCommit() throws {
-        _ = try self.genericTestCommit()
-    }
-
-    func testNIOFailingCommit() throws {
-        let tr = try self.genericTestCommit()
-        let semaphore = self.semaphore
-        var counter: Int = 0
-        tr.commit().whenFailure { error in
-            counter += 1
+    func testFailingCommit() async throws {
+        let tr = try Self.fdb.begin()
+        try await tr.commit()
+        do {
+            try await tr.commit()
+        } catch {
             guard case FDB.Error.usedDuringCommit = error else {
                 XCTFail("Error must be UsedDuringCommit")
-                semaphore.signal()
                 return
             }
-            semaphore.signal()
         }
-        XCTAssertEqual(counter, 0)
-        let _ = semaphore.wait(for: 10)
-        XCTAssertEqual(counter, 1)
     }
 
-    func testNIOSetGet() throws {
-        let semaphore = self.semaphore
-        let tr = try self.begin().wait()
-        let key = FDBTests.subspace["set"]
-        let value = self.getRandomBytes()
-        let _: EventLoopFuture<Void> = tr
-            .set(key: key, value: value)
-            .flatMap { $0.get(key: key) }
-            .map { (bytes, _) in
-                XCTAssertEqual(bytes, value)
-                semaphore.signal()
-                return
-            }
-        let _ = semaphore.wait(for: 10)
+    func testTransactionOptions() async throws {
+        let tr = try Self.fdb.begin() as! FDB.Transaction
+        let key = Self.subspace["troptions"]
+        try tr.setOption(.debugRetryLogging(transactionName: "testtransactionname"))
+        try tr.setOption(.transactionLoggingEnable(identifier: "identifier"))
+        try tr.setOption(.timeout(milliseconds: 1000))
+        try tr.setOption(.retryLimit(retries: 4))
+        try tr.setOption(.maxRetryDelay(milliseconds: 5000))
+        tr.set(key: key, value: Bytes([1,2,3]))
+        let actual = try await tr.get(key: key)
+        XCTAssertEqual(Bytes([1,2,3]), actual)
+        try await tr.commit()
     }
 
-    func testNIOGetRange() throws {
-        let semaphore = self.semaphore
-        let tr = try self.begin().wait()
-        let limit = 2
-        let subspace = FDBTests.subspace["range"]
-        var values: [FDB.KeyValue] = []
-        for i in 0 ..< limit {
-            let key = subspace["sub \(i)"].asFDBKey()
-            let value = self.getRandomBytes()
-            values.append(FDB.KeyValue(key: key, value: value))
-            _ = try tr.set(key: key, value: value).wait()
+    func testNetworkOptions() async throws {
+//        XCTAssertThrowsError(try FDBTests.fdb.setOption(.TLSCertPath(path: "/tmp/invalidname")))
+//        XCTAssertThrowsError(try FDBTests.fdb.setOption(.TLSCABytes(bytes: Bytes([1,2,3]))))
+        try Self.fdb.setOption(.TLSVerifyPeers(string: "Check.Valid=0"))
+        try Self.fdb.setOption(.TLSPassword(password: "some secret password"))
+        try Self.fdb.setOption(.buggifyDisable)
+        try Self.fdb.setOption(.buggifySectionActivatedProbability(probability: 0))
+    }
+
+    func testWrappedTransactions() async throws {
+        class Res: @unchecked Sendable {
+            var arr = [Int64]()
         }
-        let _: Void = try tr.commit().wait()
-        let tr2 = try self.begin().wait()
-        let expected = FDB.KeyValuesResult(records: values, hasMore: false)
-        XCTAssertEqual(try tr2.get(range: subspace.range).wait(), expected)
-        _ = tr2
-            .get(begin: subspace.range.begin, end: subspace.range.end)
-            .map { (values, _) -> Void in
-                XCTAssertEqual(values, expected)
-                semaphore.signal()
-                return
-            }
-        let _ = semaphore.wait(for: 10)
-    }
 
-    func testNIOAtomicAdd() throws {
-        let tr = try self.begin().wait()
-        let semaphore = self.semaphore
-        let key = FDBTests.subspace.subspace("atomic_incr")
-        let step: Int64 = 1
-        let expected = step + 1
-        for _ in 0 ..< expected - 1 {
-            _ = try tr.atomic(.add, key: key, value: step).wait()
-        }
-//      TODO:
-//      XCTAssertNoThrow(try tr.increment(key: key))
-        tr.atomic(.add, key: key, value: step).whenComplete { _ in
-            semaphore.signal()
-        }
-        let _ = semaphore.wait(for: 10)
-        let result: Bytes? = try tr.get(key: key).wait()
-        XCTAssertNotNil(result)
-        try XCTAssertEqual(result!.cast() as Int64, expected)
-        XCTAssertEqual(result, getBytes(expected))
-//      TODO:
-//      XCTAssertEqual(try fdb.increment(key: key), expected + 1)
-//      XCTAssertEqual(try fdb.increment(key: key, value: -1), expected)
-//      XCTAssertEqual(try fdb.decrement(key: key), expected - 1)
-//      XCTAssertEqual(try fdb.decrement(key: key), 0)
-    }
+        let sample: [Int64] = (1...100).map { $0 }
+        let res = Res()
+        let semaphore = DispatchSemaphore(value: 0)
+        let keySync = Self.subspace["increment_sync"]
 
-    func testNIOClear() throws {
-        let tr = try self.begin().wait()
-        let semaphore = self.semaphore
-        let future = tr
-            .clear(key: FDBTests.subspace["empty"])
-            .flatMap { $0.commit() }
-        future.whenFailure { error in
-            XCTFail("Error: \(error)")
-        }
-        future.whenComplete { _ in
-            semaphore.signal()
-        }
-        let _ = semaphore.wait(for: 10)
-    }
+        try await Self.fdb.clear(key: keySync)
 
-    func testTransactionOptions() throws {
-        let tr = try self.begin().wait()
-        let key = FDBTests.subspace["troptions"]
-        XCTAssertNoThrow(try tr.setOption(.debugRetryLogging(transactionName: "testtransactionname")).wait())
-        XCTAssertNoThrow(try tr.setOption(.transactionLoggingEnable(identifier: "identifier")).wait())
-        XCTAssertNoThrow(try tr.setOption(.timeout(milliseconds: 1000)).wait())
-        XCTAssertNoThrow(try tr.setOption(.retryLimit(retries: 4)).wait())
-        XCTAssertNoThrow(try tr.setOption(.maxRetryDelay(milliseconds: 5000)).wait())
-        XCTAssertNoThrow(try tr.set(key: key, value: Bytes([1,2,3])).wait())
-        XCTAssertEqual(Bytes([1,2,3]), try tr.get(key: key).wait())
-        let _: Void = try tr.commit().wait()
-    }
-    
-    func testNetworkOptions() throws {
-        //XCTAssertThrowsError(try FDBTests.fdb.setOption(.TLSCertPath(path: "/tmp/invalidname")))
-        //XCTAssertThrowsError(try FDBTests.fdb.setOption(.TLSCABytes(bytes: Bytes([1,2,3]))))
-        XCTAssertNoThrow(try FDBTests.fdb.setOption(.TLSVerifyPeers(string: "Check.Valid=0")))
-        XCTAssertNoThrow(try FDBTests.fdb.setOption(.TLSPassword(password: "some secret password")))
-        XCTAssertNoThrow(try FDBTests.fdb.setOption(.buggifyDisable))
-        XCTAssertNoThrow(try FDBTests.fdb.setOption(.buggifySectionActivatedProbability(probability: 0)))
-    }
-
-    func testWrappedTransactions() throws {
-        let etalon: [Int64] = (1...100).map { $0 }
-        var resultSync = Array<Int64>()
-        resultSync.reserveCapacity(etalon.count)
-        var resultAsync = Array<Int64>()
-        resultAsync.reserveCapacity(etalon.count)
-
-        let group = MultiThreadedEventLoopGroup(numberOfThreads: System.coreCount)
-        defer { try! group.syncShutdownGracefully() }
-
-        let semaphoreSync = DispatchSemaphore(value: 0)
-        let semaphoreAsync = DispatchSemaphore(value: 0)
-
-        let keySync = FDBTests.subspace["increment_sync"]
-        let keyAsync = FDBTests.subspace["increment_async"]
-
-        try FDBTests.fdb.clear(key: keySync)
-        try FDBTests.fdb.clear(key: keyAsync)
-
-        let queue = DispatchQueue(label: "wrapped_test_queue", qos: .userInitiated, attributes: .concurrent)
-
-        for _ in etalon {
-            queue.async {
-                let resultValue: Bytes? = try! FDBTests.fdb.withTransaction { transaction in
-                    let _: Void = try transaction.atomic(.add, key: keySync, value: Int64(1))
-                    let value: Bytes? = try transaction.get(key: keySync)
-                    try transaction.commitSync()
+        for _ in sample {
+            Task {
+                let resultValue: Bytes? = try! await Self.fdb.withTransaction { transaction in
+                    transaction.atomic(.add, key: keySync, value: Int64(1))
+                    let value: Bytes? = try await transaction.get(key: keySync)
+                    try await transaction.commit()
                     return value
                 }
-                try! resultSync.append(resultValue!.cast())
-                if resultSync.count == etalon.count {
-                    semaphoreSync.signal()
+                try! res.arr.append(resultValue!.cast())
+                if res.arr.count == sample.count {
+                    semaphore.signal()
                 }
             }
-            let _: EventLoopFuture<Void> = FDBTests.fdb
-                .withTransaction(on: group.next()) { transaction in
-                    return transaction
-                        .atomic(.add, key: keyAsync, value: Int64(1))
-                        .flatMap { (transaction: AnyFDBTransaction) in
-                            return transaction.get(key: keyAsync, commit: true)
-                        }
-                        .map { (bytes: Bytes?, transaction: AnyFDBTransaction) -> Void in
-                            let value: Int64 = try! bytes!.cast()
-                            resultAsync.append(value)
-                            if resultAsync.count == etalon.count {
-                                semaphoreAsync.signal()
-                            }
-                            return
-                        }
-                }
         }
 
-        let _ = semaphoreSync.wait(for: 10)
-        XCTAssertEqual(resultSync.sorted(), etalon)
-
-        let _ = semaphoreAsync.wait(for: 10)
-        XCTAssertEqual(resultAsync.sorted(), etalon)
+        let _ = semaphore.wait(for: 10)
+        XCTAssertEqual(res.arr.sorted(), sample)
     }
 
-    func testGetSetReadVersionSync() throws {
-        let key = FDBTests.subspace["getSetVersionSync"]
-        let etalon = Bytes([1,2,3])
+    func testGetSetReadVersionSync() async throws {
+        let key = Self.subspace["getSetVersionSync"]
+        let sample = Bytes([1,2,3])
 
-        try FDBTests.fdb.set(key: key, value: etalon)
+        try await Self.fdb.set(key: key, value: sample)
 
-        let version: Int64 = try FDBTests.fdb!.withTransaction { transaction in
-            let _: Bytes? = try transaction.get(key: key)
-            return try transaction.getReadVersion()
+        let version: Int64 = try await Self.fdb.withTransaction { transaction in
+            let _: Bytes? = try await transaction.get(key: key)
+            return try await transaction.getReadVersion()
         }
 
-        let _ = try FDBTests.fdb.withTransaction { transaction in
-            XCTAssertNoThrow(transaction.setReadVersion(version: version))
-            XCTAssertNoThrow(try transaction.get(key: key) as Bytes?)
-        }
-    }
-
-    func testGetSetReadVersionNIO() throws {
-        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
-        defer { try! group.syncShutdownGracefully() }
-
-        let key = FDBTests.subspace["getSetReadVersionNIO"]
-        let etalon = Bytes([1,2,3])
-
-        try FDBTests.fdb.set(key: key, value: etalon)
-
-        let version: Int64 = try FDBTests.fdb.withTransaction(on: group.next()) { transaction in
-            transaction
-                .get(key: key)
-                .flatMap { (_: Bytes?) in transaction.getReadVersion() }
-        }.wait()
-
-        let _: Bytes? = try FDBTests.fdb!.withTransaction(on: group.next()) { transaction in
+        _ = try await Self.fdb.withTransaction { transaction in
             transaction.setReadVersion(version: version)
-            return transaction.get(key: key)
-        }.wait()
+            _ = try await transaction.get(key: key)
+        }
     }
-
-    func testBugTransactionCancelled() throws {
-        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
-        defer { try! group.syncShutdownGracefully() }
-
-        // This problem appeared when there are no externals refs to FDB.Transaction instance.
-        // Quite rare case tbh, but extremely confusing.
-        // Fixed by implicit FDB.Transaction ref capturing in FDB.Future
-
-        XCTAssertNoThrow(
-            try FDBTests.fdb.begin(on: group.next())
-                .flatMap { transaction in transaction.set(key: FDBTests.subspace["trcancelled"], value: Bytes([1,2,3])) }
-                .flatMap { transaction in transaction.commit() }
-                .wait()
-        )
-    }
-
-    static var allTests = [
-        ("testEmptyValue", testEmptyValue),
-        ("testSetGetBytes", testSetGetBytes),
-        ("testTransaction", testTransaction),
-        ("testGetRange", testGetRange),
-        ("testAtomicAdd", testAtomicAdd),
-        ("testSetVersionstampedKey", testSetVersionstampedKey),
-        ("testClear", testClear),
-        ("testStringKeys", testStringKeys),
-        ("testStaticStringKeys", testStaticStringKeys),
-        ("testErrorDescription", testErrorDescription),
-        ("testNIOCommit", testNIOCommit),
-        ("testNIOFailingCommit", testNIOFailingCommit),
-        ("testNIOSetGet", testNIOSetGet),
-        ("testNIOGetRange", testNIOGetRange),
-        ("testNIOAtomicAdd", testNIOAtomicAdd),
-        ("testNIOClear", testNIOClear),
-        ("testTransactionOptions", testTransactionOptions),
-        ("testNetworkOptions", testNetworkOptions),
-        ("testWrappedTransactions", testWrappedTransactions),
-        ("testGetSetReadVersionSync", testGetSetReadVersionSync),
-        ("testGetSetReadVersionNIO", testGetSetReadVersionNIO),
-        ("testBugTransactionCancelled", testBugTransactionCancelled),
-    ]
 }

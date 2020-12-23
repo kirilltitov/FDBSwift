@@ -296,21 +296,4 @@ class TupleTests: XCTestCase {
             }
         }
     }
-
-    static var allTests = [
-        ("testPackUnicodeString", testPackUnicodeString),
-        ("testPackBinaryString", testPackBinaryString),
-        ("testPackNestedTuple", testPackNestedTuple),
-        ("testPackInts", testPackInts),
-        ("testUnofficialCases", testUnofficialCases),
-        ("testUnpack", testUnpack),
-        ("testNullEscapes", testNullEscapes),
-        ("testUnpackSanity", testUnpackSanity),
-        ("testFloat", testFloat),
-        ("testDouble", testDouble),
-        ("testBool", testBool),
-        ("testUUID", testUUID),
-        ("testVersionstamp", testVersionstamp),
-        ("testIncompleteVersionstampDetection", testIncompleteVersionstampDetection)
-    ]
 }
