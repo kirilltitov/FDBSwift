@@ -199,7 +199,7 @@ public extension AnyFDB {
         snapshot: Bool = false,
         reverse: Bool = false
     ) async throws -> FDB.KeyValuesResult {
-        await try self.get(
+        try await self.get(
             begin: begin,
             end: end,
             beginEqual: beginEqual,
@@ -242,7 +242,7 @@ public extension AnyFDB {
         snapshot: Bool = false,
         reverse: Bool = false
     ) async throws -> FDB.KeyValuesResult {
-        await try self.get(
+        try await self.get(
             range: range,
             beginEqual: beginEqual,
             beginOffset: beginOffset,
@@ -263,7 +263,7 @@ public extension AnyFDB {
     ///   - key: FDB key
     ///   - snapshot: Snapshot read (i.e. whether this read create a conflict range or not)
     func get(key: AnyFDBKey, snapshot: Bool = false) async throws -> Bytes? {
-        return await try self.get(key: key, snapshot: snapshot)
+        return try await self.get(key: key, snapshot: snapshot)
     }
 
     /// Returns a range of keys and their respective values under given subspace
@@ -272,7 +272,7 @@ public extension AnyFDB {
     ///   - subspace: Subspace
     ///   - snapshot: Snapshot read (i.e. whether this read create a conflict range or not)
     func get(subspace: FDB.Subspace, snapshot: Bool = false) async throws -> FDB.KeyValuesResult {
-        return await try self.get(subspace: subspace, snapshot: snapshot)
+        return try await self.get(subspace: subspace, snapshot: snapshot)
     }
 
     /// Peforms a quasi-atomic increment operation in FDB cluster on given key with given integer
@@ -287,7 +287,7 @@ public extension AnyFDB {
     ///   - value: Integer
     @discardableResult
     func increment(key: AnyFDBKey, value: Int64 = 1) async throws -> Int64 {
-        await try self.increment(key: key, value: value)
+        try await self.increment(key: key, value: value)
     }
 
     /// Peforms a quasi-atomic decrement operation in FDB cluster on given key with given integer
@@ -297,6 +297,6 @@ public extension AnyFDB {
     ///   - value: Integer
     @discardableResult
     func decrement(key: AnyFDBKey, value: Int64 = 1) async throws -> Int64 {
-        await try self.decrement(key: key, value: value)
+        try await self.decrement(key: key, value: value)
     }
 }

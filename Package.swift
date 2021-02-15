@@ -6,7 +6,6 @@ let package = Package(
     name: "FDBSwift",
     products: [
         .library(name: "FDB", targets: ["FDB"]),
-        .executable(name: "FDBTestDrive", targets: ["FDBTestDrive"]),
     ],
     dependencies: [
         .package(url: "https://github.com/apple/swift-log.git", .upToNextMajor(from: "1.0.0")),
@@ -15,18 +14,7 @@ let package = Package(
         .systemLibrary(name: "CFDB", pkgConfig: "libfdb"),
         .target(
             name: "FDB",
-            dependencies: ["CFDB", "Logging"],
-            swiftSettings: [.unsafeFlags(["-Xfrontend", "-enable-experimental-concurrency"])]
+            dependencies: ["CFDB", "Logging"]
         ),
-        .target(
-            name: "FDBTestDrive",
-            dependencies: ["FDB"],
-            swiftSettings: [.unsafeFlags(["-Xfrontend", "-enable-experimental-concurrency"])]
-        ),
-//        .testTarget(
-//            name: "FDBTests",
-//            dependencies: ["FDB"],
-//            swiftSettings: [.unsafeFlags(["-Xfrontend", "-enable-experimental-concurrency"])]
-//        ),
     ]
 )

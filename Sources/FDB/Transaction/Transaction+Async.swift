@@ -2,10 +2,10 @@ import CFDB
 
 public extension FDB.Transaction {
     func commit() async throws {
-        let future: FDB.Future = await try self.commit().ready()
+        let future: FDB.Future = try await self.commit().ready()
         let commitError = fdb_future_get_error(future.pointer)
         guard commitError == 0 else {
-            let retryFuture: FDB.Future = await try fdb_transaction_on_error(self.pointer, commitError).futureReady()
+            let retryFuture: FDB.Future = try await fdb_transaction_on_error(self.pointer, commitError).futureReady()
             try fdb_future_get_error(retryFuture.pointer).orThrow()
             throw FDB.Error.transactionRetry(transaction: self)
         }
@@ -20,15 +20,15 @@ public extension FDB.Transaction {
     }
 
     func get(key: AnyFDBKey, snapshot: Bool) async throws -> Bytes? {
-        await try self.get(key: key, snapshot: snapshot).bytes()
+        try await self.get(key: key, snapshot: snapshot).bytes()
     }
 
     func get(key: AnyFDBKey) async throws -> Bytes? {
-        await try self.get(key: key, snapshot: false)
+        try await self.get(key: key, snapshot: false)
     }
 
     func get(range: FDB.RangeKey, snapshot: Bool) async throws -> FDB.KeyValuesResult {
-        await try self.get(
+        try await self.get(
             range: range,
             beginEqual: true,
             beginOffset: 0,
@@ -57,7 +57,7 @@ public extension FDB.Transaction {
         snapshot: Bool,
         reverse: Bool
     ) async throws -> FDB.KeyValuesResult {
-        await try self.get(
+        try await self.get(
             begin: begin,
             end: end,
             beginEqual: beginEqual,
@@ -86,7 +86,7 @@ public extension FDB.Transaction {
         snapshot: Bool,
         reverse: Bool
     ) async throws -> FDB.KeyValuesResult {
-        await try self.get(
+        try await self.get(
             begin: range.begin,
             end: range.end,
             beginEqual: beginEqual,
@@ -107,15 +107,15 @@ public extension FDB.Transaction {
     }
 
     func getReadVersion() async throws -> Int64 {
-        await try self.getReadVersion().int64()
+        try await self.getReadVersion().int64()
     }
 
     func getVersionstamp() async throws -> FDB.Versionstamp {
         let future: FDB.Future = self.getVersionstamp()
 
-        await try self.commit()
+        try await self.commit()
 
-        let bytes = await try future.keyBytes()
+        let bytes = try await future.keyBytes()
 
         guard bytes.count == 10 else {
             self.log("[getVersionstamp] Bytes that do not represent a versionstamp were returned: \(String(describing: bytes))", level: .error)

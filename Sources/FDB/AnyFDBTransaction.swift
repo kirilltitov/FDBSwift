@@ -185,7 +185,7 @@ public extension AnyFDBTransaction {
     ///
     /// - returns: Bytes result or `nil` if no key
     func get(key: AnyFDBKey, snapshot: Bool = false) async throws -> Bytes? {
-        await try self.get(key: key, snapshot: snapshot)
+        try await self.get(key: key, snapshot: snapshot)
     }
 
     /// Returns a range of keys and their respective values in given key range
@@ -219,7 +219,7 @@ public extension AnyFDBTransaction {
         snapshot: Bool = false,
         reverse: Bool = false
     ) async throws -> FDB.KeyValuesResult {
-        await try self.get(
+        try await self.get(
             begin: begin,
             end: end,
             beginEqual: beginEqual,
@@ -264,7 +264,7 @@ public extension AnyFDBTransaction {
         snapshot: Bool = false,
         reverse: Bool = false
     ) async throws -> FDB.KeyValuesResult {
-        await try self.get(
+        try await self.get(
             range: range,
             beginEqual: beginEqual,
             beginOffset: beginOffset,

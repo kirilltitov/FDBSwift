@@ -11,13 +11,13 @@ public extension FDB {
     func withTransaction<T>(_ block: @escaping (AnyFDBTransaction) async throws -> T) async throws -> T {
         func transactionRoutine(_ transaction: AnyFDBTransaction) async throws -> T {
             do {
-                return await try block(transaction)
+                return try await block(transaction)
             } catch let FDB.Error.transactionRetry(transaction) {
                 (transaction as? FDB.Transaction)?.incrementRetries()
-                return await try transactionRoutine(transaction)
+                return try await transactionRoutine(transaction)
             }
         }
 
-        return await try transactionRoutine(self.begin())
+        return try await transactionRoutine(self.begin())
     }
 }
