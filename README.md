@@ -76,8 +76,6 @@ Since you would probably like to have some kind of namespacing in your applicati
 // dump subspace if you would like to see how it looks from the inside
 let rootSubspace = FDB.Subspace("root")
 // also check Subspace.swift for more details and usecases
-let childSubspace = rootSubspace.subspace("child", "subspace")
-// OR
 let childSubspace = rootSubspace["child"]["subspace"]
 // OR
 let childSubspace = rootSubspace["child", "subspace"]
@@ -114,7 +112,7 @@ try fdb.set(key: Bytes([0, 1, 2, 3]), value: someBytes)
 // OR
 try fdb.set(key: FDB.Tuple("foo", FDB.Null(), "bar", FDB.Tuple("baz", "sas"), "lul"), value: someBytes)
 // OR
-try fdb.set(key: Subspace("foo").subspace("bar"), value: someBytes)
+try fdb.set(key: Subspace("foo", "bar"), value: someBytes)
 ```
 
 ### Getting values
@@ -174,8 +172,6 @@ result.records.forEach {
 
 Clearing (removing, deleting, you name it) records is simple as well.
 ```swift
-try fdb.clear(key: childSubspace.subspace("concrete_record"))
-// OR
 try fdb.clear(key: childSubspace["concrete_record"])
 // OR
 try fdb.clear(key: rootSubspace["child"]["subspace"]["concrete_record"])
