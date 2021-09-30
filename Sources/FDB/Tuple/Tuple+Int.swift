@@ -1,4 +1,4 @@
-extension Collection where Index: Comparable {
+extension Collection {
     internal subscript(from i: Int) -> SubSequence {
         let _from = self.index(self.endIndex, offsetBy: i)
         let _to = self.endIndex

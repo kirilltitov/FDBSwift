@@ -1,6 +1,5 @@
 import CFDB
 import Dispatch
-import NIO
 
 public typealias Byte = UInt8
 public typealias Bytes = [Byte]

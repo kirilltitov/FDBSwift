@@ -1,31 +1,9 @@
 import CFDB
 
 extension FDB.Future {
-    /// Sets a closure to be executed when current future is resolved, returning bytes for the value
-    func whenBytesReady(_ callback: @escaping (Bytes?) -> Void) throws {
-        self.whenReady { future in
-            do {
-                try callback(future.parseBytes())
-            } catch {
-                future.fail(with: error)
-            }
-        }
-    }
-    
-    /// Sets a closure to be executed when current future is resolved, returning bytes for the key
-    func whenKeyBytesReady(_ callback: @escaping (Bytes) -> Void) throws {
-        self.whenReady { future in
-            do {
-                try callback(future.parseKeyBytes())
-            } catch {
-                future.fail(with: error)
-            }
-        }
-    }
-
     /// Blocks current thread until future is resolved
     internal func wait() throws -> Bytes? {
-        return try self.waitAndCheck().parseBytes()
+        try self.waitAndCheck().parseBytes()
     }
 
     /// Parses value bytes result from current future

@@ -1,28 +1,18 @@
 import CFDB
-import NIO
 import Logging
 
 public extension FDB {
-    class Transaction: AnyFDBTransaction {
+    final class Transaction: AnyFDBTransaction, @unchecked Sendable {
         internal typealias Pointer = OpaquePointer
 
         internal let pointer: Pointer
-        internal let eventLoop: EventLoop?
         internal private(set) var retries: Int = 0
 
         /// Creates a new instance of a previously started FDB transaction
-        internal init(_ pointer: Pointer, _ eventLoop: EventLoop? = nil) {
+        internal init(_ pointer: Pointer) {
             self.pointer = pointer
-            self.eventLoop = eventLoop
 
-            let debugInfoSuffix: String
-            if let el = eventLoop {
-                debugInfoSuffix = "on \(Swift.type(of: el))"
-            } else {
-                debugInfoSuffix = "without event loop"
-            }
-
-            self.log("Started transaction \(debugInfoSuffix)")
+            self.log("Started transaction")
         }
 
         deinit {
@@ -53,12 +43,25 @@ public extension FDB {
         }
 
         /// Begins a new FDB transactionon on given FDB database pointer and optional event loop
-        internal class func begin(_ db: FDB.Database, _ eventLoop: EventLoop? = nil) throws -> AnyFDBTransaction {
+        internal class func begin(_ db: FDB.Database) throws -> AnyFDBTransaction {
             var pointer: Pointer!
 
             try fdb_database_create_transaction(db, &pointer).orThrow()
 
-            return FDB.Transaction(pointer, eventLoop)
+            return FDB.Transaction(pointer)
+        }
+
+        /// Sets bytes to given key in FDB cluster
+        ///
+        /// - parameters:
+        ///   - key: FDB key
+        ///   - value: bytes value
+        public func set(key: AnyFDBKey, value: Bytes) {
+            let keyBytes = key.asFDBKey()
+
+            self.log("Setting \(value.count) bytes to key '\(keyBytes.string.safe)'")
+
+            fdb_transaction_set(self.pointer, keyBytes, keyBytes.length, value, value.length)
         }
 
         public func cancel() {
