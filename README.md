@@ -440,6 +440,14 @@ FDB.logger.logLevel = .debug
 
 You haven't properly installed `pkg-config` for FoundationDB, see [Installation section](#installation).
 
+### Package does compile in macOS, but in runtime I'm getting error `The bundle “FDBTests” couldn’t be loaded because it is damaged or missing necessary resources. Try reinstalling the bundle`. What do?
+
+Execute this magic command in console:
+`install_name_tool -id /usr/local/lib/libfdb_c.dylib /usr/local/lib/libfdb_c.dylib`.
+
+Shoutout to [@dimitribouniol](https://github.com/dimitribouniol) and his
+[marvelous investigation](https://github.com/kirilltitov/FDBSwift/issues/70#issuecomment-726421104).
+
 ### I'm getting strange error on second operation: `API version already set`. Should I rethink my life?
 
 (Rethinking hence analyzing things is always good) You tried to create more than one instance of FDB class, which is
