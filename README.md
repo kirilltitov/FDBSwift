@@ -445,8 +445,8 @@ You haven't properly installed `pkg-config` for FoundationDB, see [Installation 
 Execute this magic command in console:
 `install_name_tool -id /usr/local/lib/libfdb_c.dylib /usr/local/lib/libfdb_c.dylib`.
 
-Shoutout to @dimitribouniol and his
-[https://github.com/kirilltitov/FDBSwift/issues/70#issuecomment-726421104](marvelous investigation).
+Shoutout to [@dimitribouniol](https://github.com/dimitribouniol) and his
+[marvelous investigation](https://github.com/kirilltitov/FDBSwift/issues/70#issuecomment-726421104).
 
 ### I'm getting strange error on second operation: `API version already set`. Should I rethink my life?
 
