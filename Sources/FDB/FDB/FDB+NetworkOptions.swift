@@ -1,4 +1,5 @@
 import CFDB
+import LGNLog
 
 public extension FDB {
     enum NetworkOption {
@@ -173,16 +174,16 @@ public extension FDB {
                 internalOption = FDB_NET_OPTION_ENABLE_SLOW_TASK_PROFILING
             }
 
-            FDB.logger.debug("Trying to set network option \(logSelf ?? self)")
+            Logger.current.debug("Trying to set network option \(logSelf ?? self)")
 
             if case let .failure(error) = fdb_network_set_option(internalOption, value, value.length).toResult() {
-                FDB.logger.error(
+                Logger.current.error(
                     "Network option '\(logSelf ?? self)' setting failed: [\(error.errno)] \(error.getDescription())"
                 )
                 throw error
             }
 
-            FDB.logger.debug("Network option '\(logSelf ?? self)' successfully set")
+            Logger.current.debug("Network option '\(logSelf ?? self)' successfully set")
         }
     }
 

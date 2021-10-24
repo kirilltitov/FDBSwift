@@ -1,9 +1,17 @@
 @testable import FDB
 import XCTest
+import LGNLog
 
 class TupleTests: XCTestCase {
-    override func setUp() {
-        FDB.logger.logLevel = .critical
+    override class func setUp() {
+        LoggingSystem.bootstrap(LGNLogger.init)
+        LGNLogger.logLevel = .critical
+        LGNLogger.hideTimezone = true
+        LGNLogger.hideLabel = true
+    }
+
+    override class func tearDown() {
+        LGNLogger.logLevel = .trace
     }
 
     func testPackUnicodeString() {

@@ -1,6 +1,6 @@
 @testable import FDB
 import XCTest
-import Logging
+import LGNLog
 
 // A temporary polyfill for macOS dev
 // Taken from Linux impl https://github.com/apple/swift-corelibs-xctest/commit/38f9fa131e1b2823f3b3bfd97a1ac1fe69473d51
@@ -72,9 +72,11 @@ class FDBTest: XCTestCase {
 
     override class func setUp() {
         super.setUp()
-        var logger = Logger(label: "testlogger")
-        logger.logLevel = .debug
-        FDB.logger = logger
+        LoggingSystem.bootstrap(LGNLogger.init)
+        LGNLogger.logLevel = .debug
+        LGNLogger.hideTimezone = true
+        LGNLogger.hideLabel = true
+        LGNLogger.requestIDKey = "trid"
         self.fdb = FDB()
         self.subspace = FDB.Subspace("test \(Int.random(in: 0 ..< Int.max))")
     }
@@ -178,7 +180,7 @@ class FDBTest: XCTestCase {
         let subspace = Self.subspace.subspace("atomic_versionstamp")
 
         do {
-            FDB.logger.info("Testing synchronous variations")
+            Logger.current.info("Testing synchronous variations")
             let value: String = "basic sync value"
             let nonVersionstampedKey = subspace[FDB.Versionstamp(transactionCommitVersion: 1, batchNumber: 2)]["aSyncKey"]
 
@@ -198,11 +200,11 @@ class FDBTest: XCTestCase {
 
             let result = try await fdb.get(key: subspace[versionStamp]["aSyncKey"])
             XCTAssertEqual(String(bytes: result ?? [], encoding: .utf8), value)
-            FDB.logger.info("Finished testing synchronous variations")
+            Logger.current.info("Finished testing synchronous variations")
         }
 
         do {
-            FDB.logger.info("Testing synchronous variations, with userData and multiple writes")
+            Logger.current.info("Testing synchronous variations, with userData and multiple writes")
             let valueA: String = "advanced sync value A"
             let valueB: String = "advanced sync value B"
 
@@ -221,7 +223,7 @@ class FDBTest: XCTestCase {
             versionStamp.userData = 2
             let resultB = try await fdb.get(key: subspace[versionStamp]["aSyncKey"])
             XCTAssertEqual(String(bytes: resultB ?? [], encoding: .utf8), valueB)
-            FDB.logger.info("Finished testing synchronous variations, with userData and multiple writes")
+            Logger.current.info("Finished testing synchronous variations, with userData and multiple writes")
         }
     }
 

@@ -24,4 +24,4 @@ jobs:
         sudo service foundationdb start
         chmod +x scripts/install_pkgconfig.sh
         sudo ./scripts/install_pkgconfig.sh
-        swift test
+        swift test --parallel

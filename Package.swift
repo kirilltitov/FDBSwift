@@ -9,7 +9,7 @@ let package = Package(
         .library(name: "FDB", targets: ["FDB"]),
     ],
     dependencies: [
-        .package(url: "https://github.com/apple/swift-log.git", .upToNextMajor(from: "1.0.0")),
+        .package(url: "https://github.com/1711-Games/LGN-Log.git", .upToNextMinor(from: "0.2.0")),
     ],
     targets: [
         .systemLibrary(name: "CFDB", pkgConfig: "libfdb"),
@@ -17,7 +17,7 @@ let package = Package(
             name: "FDB",
             dependencies: [
                 "CFDB",
-                .product(name: "Logging", package: "swift-log"),
+                .product(name: "LGNLog", package: "LGN-Log"),
             ]
         ),
         .testTarget(

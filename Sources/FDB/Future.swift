@@ -1,4 +1,5 @@
 import CFDB
+import LGNLog
 
 internal extension FDB {
     /// An internal class representing FDB future value.
@@ -68,7 +69,7 @@ internal extension FDB {
                             let box = Unmanaged<Box>.fromOpaque(boxPtr!).takeRetainedValue()
                             let errno = fdb_future_get_error(futurePtr)
                             if errno != 0 {
-                                FDB.logger.debug("Failing future with errno \(errno)")
+                                Logger.current.debug("Failing future with errno \(errno)")
                                 box.future.state = .Error(errno)
                             } else {
                                 box.future.state = .Resolved
