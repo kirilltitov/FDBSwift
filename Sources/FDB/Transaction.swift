@@ -1,5 +1,5 @@
 import CFDB
-import Logging
+import LGNLog
 
 public extension FDB {
     final class Transaction: AnyFDBTransaction, @unchecked Sendable {
@@ -33,7 +33,7 @@ public extension FDB {
         /// Logs message to Logger (if `FDB.verbose` is `true`)
         @inlinable
         internal func log(_ message: String, level: Logger.Level = .debug) {
-            var logger = FDB.logger
+            var logger = Logger.current
             logger[metadataKey: "trid"] = "\(ObjectIdentifier(self).hashValue)"
 
             logger.log(

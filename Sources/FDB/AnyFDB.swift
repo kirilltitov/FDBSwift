@@ -1,6 +1,7 @@
-import Logging
+import LGNLog
 
 public protocol AnyFDB {
+    @available(*, deprecated, message: "Use Logger.current instead")
     static var logger: Logger { get set }
 
     /// Creates a new instance of FDB client with optional cluster file path and network stop timeout

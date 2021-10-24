@@ -1,5 +1,5 @@
 import Foundation
-import Logging
+import LGNLog
 import CFDB
 
 public final class FDB: AnyFDB {
@@ -16,10 +16,9 @@ public final class FDB: AnyFDB {
 
     private var isConnected = false
 
+    @available(*, deprecated, message: "Use Logger.current instead")
     public static var logger: Logger = {
-        var logger = Logger(label: "fdbswift.default")
-        logger.logLevel = .info
-        return logger
+        Logger.current
     }()
 
     private let semaphore = DispatchSemaphore(value: 0)
@@ -36,14 +35,14 @@ public final class FDB: AnyFDB {
         }
         self.networkStopTimeout = networkStopTimeout
 
-        FDB.logger.debug("Using cluster file '\(self.clusterFile)'")
-        FDB.logger.debug("Network stop timeout is \(self.networkStopTimeout) seconds")
+        Logger.current.debug("Using cluster file '\(self.clusterFile)'")
+        Logger.current.debug("Network stop timeout is \(self.networkStopTimeout) seconds")
 
         self.selectAPIVersion()
     }
 
     deinit {
-        FDB.logger.debug("Deinit started")
+        Logger.current.debug("Deinit started")
         if self.isConnected {
             self.disconnect()
         }
@@ -51,17 +50,17 @@ public final class FDB: AnyFDB {
 
     public func disconnect() {
         if !self.isConnected {
-            FDB.logger.error("Trying to disconnect from FDB while not connected")
+            Logger.current.error("Trying to disconnect from FDB while not connected")
             return
         }
         fdb_stop_network().orDie()
         if self.semaphore.wait(for: self.networkStopTimeout) == .timedOut {
-            FDB.logger.critical("Stop network timeout (\(self.networkStopTimeout) seconds)")
+            Logger.current.critical("Stop network timeout (\(self.networkStopTimeout) seconds)")
             exit(1)
         }
-        FDB.logger.debug("Network stopped")
+        Logger.current.debug("Network stopped")
         fdb_database_destroy(self.db)
-        FDB.logger.debug("Cluster and database destroyed")
+        Logger.current.debug("Cluster and database destroyed")
         self.isConnected = false
     }
 
@@ -72,7 +71,7 @@ public final class FDB: AnyFDB {
     /// Warning 2: must be called before any other call.
     private func selectAPIVersion() {
         fdb_select_api_version_impl(self.version, FDB_API_VERSION).orDie()
-        FDB.logger.debug("API version is \(self.version)")
+        Logger.current.debug("API version is \(self.version)")
     }
 
     /// Inits network and creates a dedicated phtread thread to run inner CFDB client routines
@@ -86,7 +85,7 @@ public final class FDB: AnyFDB {
         }
 
         try fdb_setup_network().orThrow()
-        FDB.logger.debug("Network ready")
+        Logger.current.debug("Network ready")
 
         let ptr = Unmanaged.passRetained(Box(self)).toOpaque()
 
@@ -112,7 +111,7 @@ public final class FDB: AnyFDB {
             ptr
         )
 
-        FDB.logger.debug("Thread started")
+        Logger.current.debug("Thread started")
 
         return self
     }
@@ -121,7 +120,7 @@ public final class FDB: AnyFDB {
     private func initDB() throws -> FDB {
         try fdb_create_database(self.clusterFile, &self.db).orThrow()
 
-        FDB.logger.debug("Database ready")
+        Logger.current.debug("Database ready")
 
         return self
     }
@@ -135,16 +134,16 @@ public final class FDB: AnyFDB {
         let tr = try self.begin()
 
         guard let tr = tr as? FDB.Transaction else {
-            Self.logger.debug("Transaction in \(#function) is not \(FDB.Transaction.self), assuming that DB is alive")
+            Logger.current.debug("Transaction in \(#function) is not \(FDB.Transaction.self), assuming that DB is alive")
             return self
         }
 
         guard let statusBytes: Bytes = try tr.get(key: [0xFF, 0xFF] + "/status/json".bytes).wait() else {
-            FDB.logger.critical("Could not get system status key")
+            Logger.current.critical("Could not get system status key")
             throw FDB.Error.connectionError
         }
         guard let json = try JSONSerialization.jsonObject(with: Data(statusBytes)) as? [String: Any] else {
-            FDB.logger.critical("Could not parse JSON from system status: \(statusBytes)")
+            Logger.current.critical("Could not parse JSON from system status: \(statusBytes)")
             throw FDB.Error.connectionError
         }
         guard
@@ -153,11 +152,11 @@ public final class FDB: AnyFDB {
             let available = dbStatus["available"],
             available == true
         else {
-            FDB.logger.critical("DB is not available according to system status info: \(json)")
+            Logger.current.critical("DB is not available according to system status info: \(json)")
             throw FDB.Error.connectionError
         }
 
-        FDB.logger.debug("Client is healthy")
+        Logger.current.debug("Client is healthy")
 
         return self
     }
@@ -174,13 +173,13 @@ public final class FDB: AnyFDB {
             .checkIsAlive()
         self.isConnected = true
 
-        FDB.logger.debug("Successfully connected to FoundationDB, DB is healthy")
+        Logger.current.debug("Successfully connected to FoundationDB, DB is healthy")
 
         return try self.getDB()
     }
 
     public func connect() throws {
         _ = try self.getDB()
-        FDB.logger.debug("Connected")
+        Logger.current.debug("Connected")
     }
 }

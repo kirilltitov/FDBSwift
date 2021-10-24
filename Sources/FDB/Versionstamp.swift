@@ -1,3 +1,5 @@
+import LGNLog
+
 public extension FDB {
     
     /// Versionstamp type, as implemented by the Python, Java, and Go bindings
@@ -80,7 +82,7 @@ extension FDB.Tuple {
             pos += res.1
         }
         
-        FDB.logger.error("An incomplete version stamp was not found while parsing \(bytes)")
+        Logger.current.error("An incomplete version stamp was not found while parsing \(bytes)")
         throw FDB.Error.missingIncompleteVersionstamp
     }
 }

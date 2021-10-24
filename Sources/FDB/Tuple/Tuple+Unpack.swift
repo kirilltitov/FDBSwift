@@ -1,4 +1,5 @@
 import Foundation
+import LGNLog
 
 fileprivate func findTerminator(input: Bytes, pos: Int) -> Int {
     let length = input.count
@@ -56,11 +57,11 @@ extension FDB.Tuple {
     internal static func _unpack(_ input: Bytes, _ pos: Int = 0) throws -> (FDBTuplePackable, Int) {
         func sanityCheck(begin: Int, end: Int) throws {
             guard begin >= input.startIndex else {
-                FDB.logger.error("Invalid begin boundary \(begin) (actual: \(input.startIndex)) while parsing \(input)")
+                Logger.current.error("Invalid begin boundary \(begin) (actual: \(input.startIndex)) while parsing \(input)")
                 throw FDB.Error.unpackInvalidBoundaries
             }
             guard end <= input.endIndex else {
-                FDB.logger.error("Invalid end boundary \(end) (actual: \(input.endIndex)) while parsing \(input)")
+                Logger.current.error("Invalid end boundary \(end) (actual: \(input.endIndex)) while parsing \(input)")
                 throw FDB.Error.unpackInvalidBoundaries
             }
         }
@@ -82,7 +83,7 @@ extension FDB.Tuple {
             try sanityCheck(begin: pos + 1, end: end)
             let bytes = input[(pos + 1) ..< end].replaceEscapes()
             guard let string = String(bytes: bytes, encoding: .utf8) else {
-                FDB.logger.error("Could not convert bytes \(bytes) to string (ascii form: '\(String(bytes: bytes, encoding: .ascii)!)')")
+                Logger.current.error("Could not convert bytes \(bytes) to string (ascii form: '\(String(bytes: bytes, encoding: .ascii)!)')")
                 throw FDB.Error.unpackInvalidString
             }
             return (string, end + 1)
@@ -187,7 +188,7 @@ extension FDB.Tuple {
             )
         }
 
-        FDB.logger.error("Unknown tuple code '\(code)' while parsing \(input)")
+        Logger.current.error("Unknown tuple code '\(code)' while parsing \(input)")
         throw FDB.Error.unpackUnknownCode
     }
 }

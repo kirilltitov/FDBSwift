@@ -413,26 +413,10 @@ print("My string is '\(resultString)'")
 
 ### Debugging/logging
 
-FDBSwift supports official community [Swift-Log](https://github.com/apple/swift-log) library, therefore you might plug
-your custom logger into `FDB` class:
-
-```swift
-FDB.logger = myCustomLogger
-
-// or project-wise
-
-LoggingSystem.bootstrap(MyLogHandler.init)
-```
-
-See Swift-Log [docs](https://github.com/apple/swift-log#on-the-implementation-of-a-logging-backend-a-loghandler) for
-more details on custom loggers.
-
-By default FDBSwift uses very basic factory `stdout` logger with `.info` default log level (shouldn't be flooded).
-If something goes wrong and/or you're not sure what's happening, you just change log level to `.debug`, just like that:
-
-```swift
-FDB.logger.logLevel = .debug
-```
+FDBSwift supports official community [Swift-Log](https://github.com/apple/swift-log) library with a custom backend
+[LGNLog](https://github.com/1711-Games/LGN-Log), therefore FDBSwift will use `Logger.current` logger (which may be bound
+to a TaskLocal logger via `Logger.$current.withValue(contextLogger) { ... }`) and obey log level and other LGNLogger
+config entries, see respective docs. 
 
 ## Troubleshooting
 

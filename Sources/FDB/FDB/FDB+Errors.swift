@@ -1,4 +1,5 @@
 import CFDB
+import LGNLog
 
 public extension FDB {
     /// Internal FDB error type (`fdb_error_t` aka `Int32`)
@@ -189,7 +190,7 @@ public extension FDB {
             case 9800: result = .missingIncompleteVersionstamp
             case 9801: result = .invalidVersionstamp
             default:
-            FDB.logger.error("Unknown errno \(errno)")
+            Logger.current.error("Unknown errno \(errno)")
             result = .unknownError
             }
 
