@@ -4,12 +4,12 @@ import PackageDescription
 
 let package = Package(
     name: "FDBSwift",
-    platforms: [.macOS(.v10_15)],
+    platforms: [.macOS(.v12)],
     products: [
         .library(name: "FDB", targets: ["FDB"]),
     ],
     dependencies: [
-        .package(url: "https://github.com/1711-Games/LGN-Log.git", .upToNextMinor(from: "0.2.0")),
+        .package(url: "https://github.com/1711-Games/LGN-Log.git", .upToNextMinor(from: "0.3.0")),
     ],
     targets: [
         .systemLibrary(name: "CFDB", pkgConfig: "libfdb"),
