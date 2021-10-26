@@ -9,7 +9,7 @@ let package = Package(
         .library(name: "FDB", targets: ["FDB"]),
     ],
     dependencies: [
-        .package(url: "https://github.com/1711-Games/LGN-Log.git", .upToNextMinor(from: "0.3.0")),
+        .package(url: "https://github.com/1711-Games/LGN-Log.git", .upToNextMinor(from: "0.4.0")),
     ],
     targets: [
         .systemLibrary(name: "CFDB", pkgConfig: "libfdb"),
