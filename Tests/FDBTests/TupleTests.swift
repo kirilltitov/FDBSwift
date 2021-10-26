@@ -4,7 +4,7 @@ import LGNLog
 
 class TupleTests: XCTestCase {
     override class func setUp() {
-        LoggingSystem.bootstrap(LGNLogger.init)
+        //LoggingSystem.bootstrap(LGNLogger.init)
         LGNLogger.logLevel = .critical
         LGNLogger.hideTimezone = true
         LGNLogger.hideLabel = true
