@@ -111,29 +111,7 @@ internal extension UnsafeRawPointer {
 }
 
 internal extension DispatchSemaphore {
-    /// Blocks current thread until semaphore is released or timeout of given seconds is exceed
-    ///
-    /// - Parameters:
-    ///   - for: Seconds to wait before unblocking
-    /// - Returns: Wait result. Can be `.success` if semaphore succesfully released or `.timedOut` if else
-    @usableFromInline
     func wait(for seconds: Int) -> DispatchTimeoutResult {
-        return self.wait(timeout: .secondsFromNow(seconds))
-    }
-}
-
-internal extension DispatchTime {
-    @usableFromInline
-    static func seconds(_ seconds: Int) -> DispatchTime {
-        return self.init(uptimeNanoseconds: UInt64(seconds) * 1_000_000_000)
-    }
-
-    @usableFromInline
-    static func secondsFromNow(_ seconds: Int) -> DispatchTime {
-        return self.init(secondsFromNow: seconds)
-    }
-
-    init(secondsFromNow seconds: Int) {
-        self.init(uptimeNanoseconds: DispatchTime.now().rawValue + DispatchTime.seconds(seconds).rawValue)
+        self.wait(timeout: .now() + .seconds(seconds))
     }
 }

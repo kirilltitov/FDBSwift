@@ -99,11 +99,13 @@ public final class FDB: AnyFDB {
             &thread,
             nil,
             { ptr in
+                Logger.current.debug("Starting network")
                 fdb_run_network().orDie()
+                Logger.current.debug("Stopping network")
                 #if os(OSX)
-                    let _ptr = ptr
+                let _ptr = ptr
                 #else
-                    let _ptr = ptr!
+                let _ptr = ptr!
                 #endif
                 Unmanaged<Box<FDB>>.fromOpaque(_ptr).takeRetainedValue().value.semaphore.signal()
                 return nil
