@@ -17,15 +17,21 @@ fi
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 FILE=libfdb.pc
 PKGCONFIG="${DIR}/${FILE}"
-DEST_DIR="lib/pkgconfig/${FILE}"
+SUFFIX_DIR="lib/pkgconfig"
+SUFFIX_FILE="${SUFFIX_DIR}/${FILE}"
 
 if [ "$(uname)" == "Darwin" ]; then
-    _PATH="/usr/local"
-    TARGET="${_PATH}/${DEST_DIR}"
-    mkdir -p $TARGET
-    cp "${PKGCONFIG}.mac" $TARGET
-    LIBPATH="${_PATH}/lib/libfdb_c.dylib"
+    PREFIX="/usr/local"
+    TARGET_DIR="${PREFIX}/${SUFFIX_DIR}"
+    TARGET_FILE="${PREFIX}/${SUFFIX_FILE}"
+    echo "Creating directory ${TARGET_DIR} if not exists"
+    mkdir -p $TARGET_DIR
+    echo "Creating pkgconfig ${TARGET_FILE}"
+    cp "${PKGCONFIG}.mac" $TARGET_FILE
+    LIBPATH="${PREFIX}/lib/libfdb_c.dylib"
     install_name_tool -id $LIBPATH $LIBPATH
 elif [ "$(expr substr $(uname -s) 1 5)" == "Linux" ]; then
-    cp "${PKGCONFIG}.linux" "/usr/${DEST_DIR}"
+    TARGET_FILE="/usr/${SUFFIX_FILE}"
+    echo "Creating pkgconfig ${TARGET_FILE}"
+    cp "${PKGCONFIG}.linux" $TARGET_FILE
 fi
