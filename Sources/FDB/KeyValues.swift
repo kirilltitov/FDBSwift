@@ -17,12 +17,12 @@ public extension FDB {
 
 extension FDB.KeyValue: Equatable {
     public static func == (lhs: FDB.KeyValue, rhs: FDB.KeyValue) -> Bool {
-        return lhs.key == rhs.key && lhs.value == rhs.value
+        lhs.key == rhs.key && lhs.value == rhs.value
     }
 }
 
 extension FDB.KeyValuesResult: Equatable {
     public static func == (lhs: FDB.KeyValuesResult, rhs: FDB.KeyValuesResult) -> Bool {
-        return lhs.records == rhs.records && lhs.hasMore == rhs.hasMore
+        lhs.records == rhs.records && lhs.hasMore == rhs.hasMore
     }
 }

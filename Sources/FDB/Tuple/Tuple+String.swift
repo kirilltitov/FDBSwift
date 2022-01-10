@@ -1,9 +1,9 @@
 extension String: FDBTuplePackable {
-    public func pack() -> Bytes {
-        let bytes = Bytes(self.utf8)
+    public func getPackedFDBTupleValue() -> Bytes {
         var result = Bytes()
+
         result.append(FDB.Tuple.Prefix.UTF_STRING)
-        bytes.forEach {
+        Bytes(self.utf8).forEach {
             if $0 == FDB.Tuple.NULL {
                 result.append(contentsOf: FDB.Tuple.NULL_ESCAPE_SEQUENCE)
             } else {
@@ -11,6 +11,7 @@ extension String: FDBTuplePackable {
             }
         }
         result.append(FDB.Tuple.NULL)
+
         return result
     }
 }

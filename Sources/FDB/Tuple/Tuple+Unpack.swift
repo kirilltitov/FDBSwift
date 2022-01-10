@@ -1,7 +1,8 @@
 import Foundation
 import LGNLog
 
-fileprivate func findTerminator(input: Bytes, pos: Int) -> Int {
+@inlinable
+internal func findTerminator(input: Bytes, pos: Int) -> Int {
     let length = input.count
     var _pos = pos
     while true {

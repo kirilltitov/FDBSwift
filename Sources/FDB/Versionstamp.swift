@@ -6,8 +6,10 @@ public extension FDB {
     struct Versionstamp: Equatable {
         /// 8-bytes: A big-endian, unsigned version corresponding to the commit version of a transaction, immutable.
         public let transactionCommitVersion: UInt64
+
         /// 2-bytes: A big-endian, unsigned batch number ordering transactions that are committed at the same version, immutable.
         public let batchNumber: UInt16
+
         /// Optional 2-byes: Extra ordering information to order writes within a single transaction, thereby providing a global order for all versions.
         public var userData: UInt16?
         
@@ -35,8 +37,9 @@ public extension FDB {
 }
 
 extension FDB.Versionstamp: FDBTuplePackable {
-    public func pack() -> Bytes {
+    public func getPackedFDBTupleValue() -> Bytes {
         var result = Bytes()
+
         if userData == nil {
             result.append(FDB.Tuple.Prefix.VERSIONSTAMP_80BIT)
         } else {

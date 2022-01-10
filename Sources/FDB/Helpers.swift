@@ -7,12 +7,14 @@ public typealias Bytes = [Byte]
 internal extension String {
     @usableFromInline
     var bytes: Bytes {
-        return Bytes(self.utf8)
+        Bytes(self.utf8)
     }
 
     @usableFromInline
     var safe: String {
-        return self.unicodeScalars.lazy
+        self
+            .unicodeScalars
+            .lazy
             .map { scalar in
                 scalar == "\n"
                     ? "\n"
@@ -25,11 +27,11 @@ internal extension String {
 internal extension Bool {
     @usableFromInline
     var int: fdb_bool_t {
-        return self ? 1 : 0
+        self ? 1 : 0
     }
 }
 
-internal extension Array where Element == Byte {
+internal extension Bytes {
     @usableFromInline
     func cast<R>() throws -> R {
         guard MemoryLayout<R>.size == self.count else {
@@ -47,31 +49,31 @@ internal extension Array where Element == Byte {
 
     @usableFromInline
     var length: Int32 {
-        return numericCast(self.count)
+        numericCast(self.count)
     }
 
     @usableFromInline
     var string: String {
-        return String(bytes: self, encoding: .ascii)!
+        String(bytes: self, encoding: .ascii)!
     }
 }
 
 /// Returns little-endian binary representation of arbitrary value
 @usableFromInline
 internal func getBytes<Input>(_ input: Input) -> Bytes {
-    return withUnsafeBytes(of: input) { Bytes($0) }
+    withUnsafeBytes(of: input) { Bytes($0) }
 }
 
 /// Returns big-endian IEEE binary representation of a floating point number
 @usableFromInline
 internal func getBytes(_ input: Float32) -> Bytes {
-    return getBytes(input.bitPattern.bigEndian)
+    getBytes(input.bitPattern.bigEndian)
 }
 
 /// Returns big-endian IEEE binary representation of a double number
 @usableFromInline
 internal func getBytes(_ input: Double) -> Bytes {
-    return getBytes(input.bitPattern.bigEndian)
+    getBytes(input.bitPattern.bigEndian)
 }
 
 // taken from Swift-NIO
@@ -106,7 +108,7 @@ internal extension UnsafeRawPointer {
     // Boy this is unsafe :D
     @usableFromInline
     func getBytes(count: Int32) -> Bytes {
-        return self.assumingMemoryBound(to: Byte.self).getBytes(count: count)
+        self.assumingMemoryBound(to: Byte.self).getBytes(count: count)
     }
 }
 

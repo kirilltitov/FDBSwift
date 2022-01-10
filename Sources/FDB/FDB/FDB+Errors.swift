@@ -299,7 +299,7 @@ public extension FDB {
 
         /// Returns FDB error description from error number
         public static func getErrorInfo(for errno: fdb_error_t) -> String {
-            return String(cString: fdb_get_error(errno))
+            String(cString: fdb_get_error(errno))
         }
     }
 }

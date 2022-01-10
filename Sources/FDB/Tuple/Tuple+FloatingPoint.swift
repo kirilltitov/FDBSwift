@@ -13,20 +13,24 @@ internal func transformFloatingPoint(bytes: inout Bytes, start: Int, encode: Boo
     }
 }
 
+@inlinable
+internal func getGenericFloatFDBTupleValue(input: Bytes, prefix: Byte) -> Bytes {
+    var result = Bytes([prefix])
+
+    result.append(contentsOf: input)
+    transformFloatingPoint(bytes: &result, start: 1, encode: true)
+
+    return result
+}
+
 extension Float32: FDBTuplePackable {
-    public func pack() -> Bytes {
-        var result = Bytes([FDB.Tuple.Prefix.FLOAT])
-        result.append(contentsOf: getBytes(self))
-        transformFloatingPoint(bytes: &result, start: 1, encode: true)
-        return result
+    public func getPackedFDBTupleValue() -> Bytes {
+        getGenericFloatFDBTupleValue(input: getBytes(self), prefix: FDB.Tuple.Prefix.FLOAT)
     }
 }
 
 extension Double: FDBTuplePackable {
-    public func pack() -> Bytes {
-        var result = Bytes([FDB.Tuple.Prefix.DOUBLE])
-        result.append(contentsOf: getBytes(self))
-        transformFloatingPoint(bytes: &result, start: 1, encode: true)
-        return result
+    public func getPackedFDBTupleValue() -> Bytes {
+        getGenericFloatFDBTupleValue(input: getBytes(self), prefix: FDB.Tuple.Prefix.DOUBLE)
     }
 }

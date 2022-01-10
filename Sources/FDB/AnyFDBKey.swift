@@ -10,25 +10,25 @@ public protocol AnyFDBKey: FDBTuplePackable {
 }
 
 public extension AnyFDBKey {
-    func pack() -> Bytes {
-        return self.asFDBKey().pack()
+    func getPackedFDBTupleValue() -> Bytes {
+        self.asFDBKey().getPackedFDBTupleValue()
     }
 }
 
 extension String: AnyFDBKey {
     public func asFDBKey() -> Bytes {
-        return Bytes(self.utf8)
+        Bytes(self.utf8)
     }
 }
 
 extension StaticString: AnyFDBKey {
     public func asFDBKey() -> Bytes {
-        return self.utf8Start.getBytes(count: Int32(self.utf8CodeUnitCount))
+        self.utf8Start.getBytes(count: Int32(self.utf8CodeUnitCount))
     }
 }
 
-extension Array: AnyFDBKey where Element == Byte {
+extension Bytes: AnyFDBKey {
     public func asFDBKey() -> Bytes {
-        return self
+        self
     }
 }
