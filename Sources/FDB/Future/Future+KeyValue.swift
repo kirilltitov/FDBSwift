@@ -4,6 +4,7 @@ extension FDB.Future {
     /// Parses key values result from current future
     ///
     /// Warning: this should be only called if future is in resolved state
+    @inlinable
     internal func parseKeyValues() throws -> FDB.KeyValuesResult {
         var outRawValues: UnsafePointer<FDBKeyValue>!
         var outCount: Int32 = 0

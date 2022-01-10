@@ -1,38 +1,38 @@
 /// A type-erased Tuple packable protocol
 ///
 /// You may adopt this protocol with any of your custom types.
-/// You should only implement pack() method, not _pack().
+/// You should only implement `getPackedFDBTupleValue()` method, not `_getPackedFDBTupleValue()`.
 /// Obviously, in most cases you would like to treat your
 /// class/struct as binary string, this is why simply returning
 /// bytes of your internal value representation is incorrect,
 /// because noone would know that your returned byte array
 /// should actually be treated as a binary string.
 /// It must be wrapped with control characters first.
-/// This is why you should additionally call .pack() from your
+/// This is why you should additionally call .getPackedFDBTupleValue() from your
 /// resulting byte array (see Tuple+Array.swift). Otherwise packing
 /// will be incorrect and will fail with an error.
-/// Example of custom pack() implementation:
+/// Example of custom getPackedFDBTupleValue() implementation:
 /// ```
 /// extension MyValue: FDBTuplePackable {
-///     func pack() -> Bytes {
+///     func getPackedFDBTupleValue() -> Bytes {
 ///         self
 ///             .getBytesSomehow() // your method returns [UInt8]
-///             .pack()            // this will wrap your bytes
-///                                // with tuple binary string magic :)
+///             .getPackedFDBTupleValue() // this will wrap your bytes
+///                                       // with tuple binary string magic :)
 ///     }
 /// }
 /// ```
 public protocol FDBTuplePackable {
     /// Returns self bytes representation wrapped with control bytes.
-    func pack() -> Bytes
+    func getPackedFDBTupleValue() -> Bytes
 
-    /// Internal method extending `pack` method with more complicated logic, you ought not implement it.
-    func _pack() -> Bytes
+    /// Internal method extending `getPackedFDBTupleValue` method with more complicated logic, you ought not implement it.
+    func _getPackedFDBTupleValue() -> Bytes
 }
 
 public extension FDBTuplePackable {
-    func _pack() -> Bytes {
-        return self.pack()
+    func _getPackedFDBTupleValue() -> Bytes {
+        self.getPackedFDBTupleValue()
     }
 }
 
@@ -72,22 +72,22 @@ public extension FDB {
             self.init(input)
         }
 
-        public func pack() -> Bytes {
+        public func getPackedFDBTupleValue() -> Bytes {
             var result = Bytes()
             self.tuple.forEach {
-                result.append(contentsOf: $0._pack())
+                result.append(contentsOf: $0._getPackedFDBTupleValue())
             }
             return result
         }
 
-        public func _pack() -> Bytes {
+        public func _getPackedFDBTupleValue() -> Bytes {
             var result = Bytes()
             result.append(Prefix.NESTED_TUPLE)
             self.tuple.forEach {
                 if $0 is Null {
                     result.append(contentsOf: Tuple.NULL_ESCAPE_SEQUENCE)
                 } else {
-                    result.append(contentsOf: $0._pack())
+                    result.append(contentsOf: $0._getPackedFDBTupleValue())
                 }
             }
             result.append(Tuple.NULL)
@@ -97,25 +97,25 @@ public extension FDB {
 
     /// Represents `NULL` Tuple value.
     struct Null: FDBTuplePackable {
-        public func pack() -> Bytes {
-            return [Tuple.NULL]
+        public func getPackedFDBTupleValue() -> Bytes {
+            [Tuple.NULL]
         }
     }
 }
 
 extension FDB.Tuple: AnyFDBKey {
     public func asFDBKey() -> Bytes {
-        return self.pack()
+        self.getPackedFDBTupleValue()
     }
 }
 
 // I DON'T LIKE IT SO MUCH
 extension FDB.Tuple: Hashable {
     public static func == (lhs: FDB.Tuple, rhs: FDB.Tuple) -> Bool {
-        return lhs.pack() == rhs.pack()
+        lhs.getPackedFDBTupleValue() == rhs.getPackedFDBTupleValue()
     }
 
     public func hash(into hasher: inout Hasher) {
-        hasher.combine(self.pack())
+        hasher.combine(self.getPackedFDBTupleValue())
     }
 }

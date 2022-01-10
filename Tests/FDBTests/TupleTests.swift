@@ -25,7 +25,7 @@ class TupleTests: XCTestCase {
         expected.append(0xFF)
         expected.append(contentsOf: "bar".bytes)
         expected.append(0x00)
-        XCTAssertEqual("F\u{00d4}O\u{0000}bar".pack(), expected)
+        XCTAssertEqual("F\u{00d4}O\u{0000}bar".getPackedFDBTupleValue(), expected)
     }
 
     func testPackBinaryString() {
@@ -36,7 +36,7 @@ class TupleTests: XCTestCase {
         expected.append(0xFF)
         expected.append(contentsOf: "bar".bytes)
         expected.append(0x00)
-        XCTAssertEqual("foo\u{00}bar".bytes.pack(), expected)
+        XCTAssertEqual("foo\u{00}bar".bytes.getPackedFDBTupleValue(), expected)
     }
 
     func testPackNestedTuple() {
@@ -60,7 +60,7 @@ class TupleTests: XCTestCase {
         expected.append(0x05)
         expected.append(0x00)
         expected.append(0x00)
-        XCTAssertEqual(tuple.pack(), expected)
+        XCTAssertEqual(tuple.getPackedFDBTupleValue(), expected)
     }
 
     func testPackInts() {
@@ -111,7 +111,7 @@ class TupleTests: XCTestCase {
             // 100000000000000000322: [29, 9, 5, 107, 199, 94, 45, 99, 16, 1, 66],
         ]
         for (input, expected) in cases {
-            XCTAssertEqual(input.pack(), expected)
+            XCTAssertEqual(input.getPackedFDBTupleValue(), expected)
         }
     }
 
@@ -120,7 +120,7 @@ class TupleTests: XCTestCase {
         expected.append(contentsOf: [0x13, 0xFE, 0x14, 0x15, 0x05, 0x05, 0x02])
         expected.append(contentsOf: "foo".bytes)
         expected.append(contentsOf: [0x00, 0x00, 0x00])
-        XCTAssertEqual(FDB.Tuple(-1, 0, 5, FDB.Tuple("foo"), FDB.Null()).pack(), expected)
+        XCTAssertEqual(FDB.Tuple(-1, 0, 5, FDB.Tuple("foo"), FDB.Null()).getPackedFDBTupleValue(), expected)
     }
 
     func testUnpack() throws {
@@ -143,15 +143,15 @@ class TupleTests: XCTestCase {
             FDB.Versionstamp(userData: 73),
         ]
         let etalonTuple = FDB.Tuple(input)
-        let packed = etalonTuple.pack()
-        let repacked = try FDB.Tuple(from: packed).pack()
+        let packed = etalonTuple.getPackedFDBTupleValue()
+        let repacked = try FDB.Tuple(from: packed).getPackedFDBTupleValue()
         XCTAssertEqual(packed, repacked)
     }
 
     // Fixes https://github.com/kirilltitov/FDBSwift/issues/10
     func testNullEscapes() throws {
-        let packed = Bytes([0, 0, 0,]).pack()
-        let repacked = try FDB.Tuple(from: packed).pack()
+        let packed = Bytes([0, 0, 0,]).getPackedFDBTupleValue()
+        let repacked = try FDB.Tuple(from: packed).getPackedFDBTupleValue()
         XCTAssertEqual(packed, repacked)
     }
 
@@ -168,10 +168,10 @@ class TupleTests: XCTestCase {
     func testFloat() throws {
         for _ in 0...1000 {
             let random = Float32.random(in: -1000...1000)
-            let packed = random.pack()
+            let packed = random.getPackedFDBTupleValue()
             let unpacked = try FDB.Tuple(from: packed)
             XCTAssertEqual(random, unpacked.tuple[0] as! Float)
-            let repacked = unpacked.pack()
+            let repacked = unpacked.getPackedFDBTupleValue()
             XCTAssertEqual(packed, repacked)
         }
 
@@ -191,17 +191,17 @@ class TupleTests: XCTestCase {
         ]
 
         for (inputFloat, expectedBytes) in cases {
-            XCTAssertEqual(expectedBytes, inputFloat.pack())
+            XCTAssertEqual(expectedBytes, inputFloat.getPackedFDBTupleValue())
         }
     }
 
     func testDouble() throws {
         for _ in 0...1000 {
             let random = Double.random(in: -1000...1000)
-            let packed = random.pack()
+            let packed = random.getPackedFDBTupleValue()
             let unpacked = try FDB.Tuple(from: packed)
             XCTAssertEqual(random, unpacked.tuple[0] as! Double)
-            let repacked = unpacked.pack()
+            let repacked = unpacked.getPackedFDBTupleValue()
             XCTAssertEqual(packed, repacked)
         }
 
@@ -222,19 +222,19 @@ class TupleTests: XCTestCase {
         ]
 
         for (inputFloat, expectedBytes) in cases {
-            XCTAssertEqual(expectedBytes, inputFloat.pack())
+            XCTAssertEqual(expectedBytes, inputFloat.getPackedFDBTupleValue())
         }
     }
 
     func testBool() throws {
-        XCTAssertEqual([0x26], false.pack())
-        XCTAssertEqual([0x27], true.pack())
+        XCTAssertEqual([0x26], false.getPackedFDBTupleValue())
+        XCTAssertEqual([0x27], true.getPackedFDBTupleValue())
 
         for bool in [true, false] {
-            let packed = bool.pack()
+            let packed = bool.getPackedFDBTupleValue()
             let unpacked = try FDB.Tuple(from: packed)
             XCTAssertEqual(bool, unpacked.tuple[0] as! Bool)
-            let repacked = unpacked.pack()
+            let repacked = unpacked.getPackedFDBTupleValue()
             XCTAssertEqual(packed, repacked)
         }
     }
@@ -242,11 +242,11 @@ class TupleTests: XCTestCase {
     func testUUID() throws {
         let etalon: uuid_t = (136,167,235,150,108,115,69,118,164,45,145,99,222,237,56,59)
         let uuid = UUID(uuid: etalon)
-        let packed = uuid.pack()
+        let packed = uuid.getPackedFDBTupleValue()
         XCTAssertEqual([0x30] + getBytes(etalon), packed)
         let unpacked = try FDB.Tuple(from: packed)
         XCTAssertEqual(uuid, unpacked.tuple[0] as! UUID)
-        XCTAssertEqual(packed, unpacked.pack())
+        XCTAssertEqual(packed, unpacked.getPackedFDBTupleValue())
     }
     
     func testVersionstamp() throws {
@@ -262,7 +262,7 @@ class TupleTests: XCTestCase {
         ]
 
         for (input, expectedBytes) in cases {
-            XCTAssertEqual(expectedBytes, input.pack())
+            XCTAssertEqual(expectedBytes, input.getPackedFDBTupleValue())
             let unpacked = try FDB.Tuple(from: expectedBytes)
             XCTAssertEqual(input, unpacked.tuple[0] as! FDB.Versionstamp)
         }
@@ -270,16 +270,16 @@ class TupleTests: XCTestCase {
     
     func testIncompleteVersionstampDetection() throws {
         let cases: [(Bytes, UInt32)] = [
-            (FDB.Tuple(FDB.Versionstamp()).pack(), 1),
-            (FDB.Tuple(FDB.Versionstamp(userData: 0)).pack(), 1),
-            (FDB.Tuple("foo", FDB.Versionstamp()).pack(), 6),
-            (FDB.Tuple("foo", FDB.Versionstamp(userData: 0)).pack(), 6),
-            (FDB.Tuple("foo", FDB.Versionstamp(), FDB.Versionstamp()).pack(), 6),
-            (FDB.Tuple("foo", FDB.Versionstamp(transactionCommitVersion: 12, batchNumber: 0), FDB.Versionstamp(), FDB.Versionstamp()).pack(), 17),
-            (FDB.Tuple("foo", FDB.Versionstamp(transactionCommitVersion: 0, batchNumber: 12), FDB.Versionstamp(), FDB.Versionstamp()).pack(), 17),
-            (FDB.Tuple("foo", FDB.Tuple(FDB.Versionstamp())).pack(), 7),
-            (FDB.Tuple("foo", FDB.Tuple(FDB.Versionstamp()), FDB.Versionstamp()).pack(), 7),
-            (FDB.Tuple("foo", FDB.Tuple("bar", FDB.Versionstamp()), FDB.Versionstamp()).pack(), 12),
+            (FDB.Tuple(FDB.Versionstamp()).getPackedFDBTupleValue(), 1),
+            (FDB.Tuple(FDB.Versionstamp(userData: 0)).getPackedFDBTupleValue(), 1),
+            (FDB.Tuple("foo", FDB.Versionstamp()).getPackedFDBTupleValue(), 6),
+            (FDB.Tuple("foo", FDB.Versionstamp(userData: 0)).getPackedFDBTupleValue(), 6),
+            (FDB.Tuple("foo", FDB.Versionstamp(), FDB.Versionstamp()).getPackedFDBTupleValue(), 6),
+            (FDB.Tuple("foo", FDB.Versionstamp(transactionCommitVersion: 12, batchNumber: 0), FDB.Versionstamp(), FDB.Versionstamp()).getPackedFDBTupleValue(), 17),
+            (FDB.Tuple("foo", FDB.Versionstamp(transactionCommitVersion: 0, batchNumber: 12), FDB.Versionstamp(), FDB.Versionstamp()).getPackedFDBTupleValue(), 17),
+            (FDB.Tuple("foo", FDB.Tuple(FDB.Versionstamp())).getPackedFDBTupleValue(), 7),
+            (FDB.Tuple("foo", FDB.Tuple(FDB.Versionstamp()), FDB.Versionstamp()).getPackedFDBTupleValue(), 7),
+            (FDB.Tuple("foo", FDB.Tuple("bar", FDB.Versionstamp()), FDB.Versionstamp()).getPackedFDBTupleValue(), 12),
         ]
 
         for (packedInput, offset) in cases {
@@ -288,14 +288,14 @@ class TupleTests: XCTestCase {
         }
         
         let invalidCases: [Bytes] = [
-            FDB.Tuple().pack(),
-            FDB.Tuple(42, "foo").pack(),
-            FDB.Tuple(FDB.Versionstamp(transactionCommitVersion: 42, batchNumber: 0)).pack(),
-            FDB.Tuple(FDB.Versionstamp(transactionCommitVersion: 0, batchNumber: 12)).pack(),
-            FDB.Tuple(FDB.Versionstamp(transactionCommitVersion: 42, batchNumber: 12, userData: 0)).pack(),
-            FDB.Tuple(42, "foo", FDB.Versionstamp(transactionCommitVersion: 42, batchNumber: 0)).pack(),
-            FDB.Tuple(42, "foo", FDB.Versionstamp(transactionCommitVersion: 0, batchNumber: 12)).pack(),
-            FDB.Tuple(42, "foo", FDB.Versionstamp(transactionCommitVersion: 42, batchNumber: 12, userData: 0)).pack(),
+            FDB.Tuple().getPackedFDBTupleValue(),
+            FDB.Tuple(42, "foo").getPackedFDBTupleValue(),
+            FDB.Tuple(FDB.Versionstamp(transactionCommitVersion: 42, batchNumber: 0)).getPackedFDBTupleValue(),
+            FDB.Tuple(FDB.Versionstamp(transactionCommitVersion: 0, batchNumber: 12)).getPackedFDBTupleValue(),
+            FDB.Tuple(FDB.Versionstamp(transactionCommitVersion: 42, batchNumber: 12, userData: 0)).getPackedFDBTupleValue(),
+            FDB.Tuple(42, "foo", FDB.Versionstamp(transactionCommitVersion: 42, batchNumber: 0)).getPackedFDBTupleValue(),
+            FDB.Tuple(42, "foo", FDB.Versionstamp(transactionCommitVersion: 0, batchNumber: 12)).getPackedFDBTupleValue(),
+            FDB.Tuple(42, "foo", FDB.Versionstamp(transactionCommitVersion: 42, batchNumber: 12, userData: 0)).getPackedFDBTupleValue(),
         ]
 
         for packedInput in invalidCases {
