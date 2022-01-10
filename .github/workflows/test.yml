@@ -18,9 +18,9 @@ jobs:
       run: |
         eval "$(curl -sL https://swiftenv.fuller.li/install.sh)"
         sudo apt-get install -y wget
-        wget https://www.foundationdb.org/downloads/6.3.18/ubuntu/installers/foundationdb-clients_6.3.18-1_amd64.deb
-        wget https://www.foundationdb.org/downloads/6.3.18/ubuntu/installers/foundationdb-server_6.3.18-1_amd64.deb
-        sudo dpkg -i foundationdb-clients_6.3.18-1_amd64.deb foundationdb-server_6.3.18-1_amd64.deb
+        wget https://github.com/apple/foundationdb/releases/download/6.3.23/foundationdb-clients_6.3.23-1_amd64.deb
+        wget https://github.com/apple/foundationdb/releases/download/6.3.23/foundationdb-server_6.3.23-1_amd64.deb
+        sudo dpkg -i foundationdb-clients_6.3.23-1_amd64.deb foundationdb-server_6.3.23-1_amd64.deb
         sudo service foundationdb start
         chmod +x scripts/install_pkgconfig.sh
         sudo ./scripts/install_pkgconfig.sh
