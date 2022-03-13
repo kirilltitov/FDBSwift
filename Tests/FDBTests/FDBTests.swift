@@ -2,68 +2,6 @@
 import XCTest
 import LGNLog
 
-// A temporary polyfill for macOS dev
-// Taken from Linux impl https://github.com/apple/swift-corelibs-xctest/commit/38f9fa131e1b2823f3b3bfd97a1ac1fe69473d51
-// I expect this to be available in macOS in the nearest patch version of the language.
-// Actually, this is the only reason this RC isn't a release yet.
-// #if os(macOS)
-
-public func asyncTest<T: XCTestCase>(
-    _ testClosureGenerator: @escaping (T) -> () async throws -> Void
-) -> (T) -> () throws -> Void {
-    return { (testType: T) in
-        let testClosure = testClosureGenerator(testType)
-        return {
-            try awaitUsingExpectation(testClosure)
-        }
-    }
-}
-
-func awaitUsingExpectation(
-    _ closure: @escaping () async throws -> Void
-) throws -> Void {
-    let expectation = XCTestExpectation(description: "async test completion")
-    let thrownErrorWrapper = ThrownErrorWrapper()
-
-    Task {
-        defer { expectation.fulfill() }
-
-        do {
-            try await closure()
-        } catch {
-            thrownErrorWrapper.error = error
-        }
-    }
-
-    _ = XCTWaiter.wait(for: [expectation], timeout: asyncTestTimeout)
-
-    if let error = thrownErrorWrapper.error {
-        throw error
-    }
-}
-
-private final class ThrownErrorWrapper: @unchecked Sendable {
-
-    private var _error: Error?
-
-    var error: Error? {
-        get {
-            FDBTest.subsystemQueue.sync { _error }
-        }
-        set {
-            FDBTest.subsystemQueue.sync { _error = newValue }
-        }
-    }
-}
-
-
-// This time interval is set to a very large value due to their being no real native timeout functionality within corelibs-xctest.
-// With the introduction of async/await support, the framework now relies on XCTestExpectations internally to coordinate the addition async portions of setup and tear down.
-// This time interval is the timeout corelibs-xctest uses with XCTestExpectations.
-private let asyncTestTimeout: TimeInterval = 60 * 60 * 24 * 30
-
-// #endif
-
 class FDBTest: XCTestCase {
     static var fdb: FDB!
     static var subspace: FDB.Subspace!
