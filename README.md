@@ -4,8 +4,6 @@
 This is FoundationDB client for Swift. It's quite low-level, (almost) `Foundation`less and can into `async`/`await`
 (Swift-NIO not included and not required).
 
-## ⚠️ **WARNING**: This is a release candidate which depends on upcoming Swift 5.5.1 (or so), macOS Monterey and God knows what else. For stable version, go to [v4 branch](https://github.com/kirilltitov/FDBSwift/tree/v4.2).
-
 ## Installation
 
 Obviously, you need to install `FoundationDB` first. Download it from
