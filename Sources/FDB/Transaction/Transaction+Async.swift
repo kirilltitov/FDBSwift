@@ -21,7 +21,7 @@ public extension FDB.Transaction {
         try await self.resolvedWithRetryableErrorCheck(future: future)
     }
 
-    func set(versionstampedKey: AnyFDBKey, value: Bytes) throws {
+    func set(versionstampedKey: any FDBKey, value: Bytes) throws {
         var serializedKey = versionstampedKey.asFDBKey()
         let offset = try FDB.Tuple.offsetOfFirstIncompleteVersionstamp(from: serializedKey)
         serializedKey.append(contentsOf: getBytes(offset.littleEndian))
@@ -29,7 +29,7 @@ public extension FDB.Transaction {
         self.atomic(.setVersionstampedKey, key: serializedKey, value: value)
     }
 
-    func get(key: AnyFDBKey, snapshot: Bool) async throws -> Bytes? {
+    func get(key: any FDBKey, snapshot: Bool) async throws -> Bytes? {
         let future: FDB.Future = self.get(key: key, snapshot: snapshot)
 
         try await self.resolvedWithRetryableErrorCheck(future: future)
@@ -37,7 +37,7 @@ public extension FDB.Transaction {
         return try await future.bytes()
     }
 
-    func get(key: AnyFDBKey) async throws -> Bytes? {
+    func get(key: any FDBKey) async throws -> Bytes? {
         try await self.get(key: key, snapshot: false)
     }
 
@@ -58,8 +58,8 @@ public extension FDB.Transaction {
     }
 
     func get(
-        begin: AnyFDBKey,
-        end: AnyFDBKey,
+        begin: any FDBKey,
+        end: any FDBKey,
         beginEqual: Bool,
         beginOffset: Int32,
         endEqual: Bool,
@@ -124,7 +124,7 @@ public extension FDB.Transaction {
         return try await future.keyValues()
     }
 
-    func atomic<T>(_ op: FDB.MutationType, key: AnyFDBKey, value: T) {
+    func atomic<T>(_ op: FDB.MutationType, key: any FDBKey, value: T) {
         self.atomic(op, key: key, value: getBytes(value))
     }
 

@@ -3,7 +3,7 @@ import XCTest
 import LGNLog
 
 class FDBTest: XCTestCase {
-    static var fdb: FDB!
+    static var fdb: FDB.Connector! = nil
     static var subspace: FDB.Subspace!
 
     internal static let subsystemQueue = DispatchQueue(label: "org.swift.XCTest.XCTWaiter.TEMPORARY")
@@ -15,17 +15,23 @@ class FDBTest: XCTestCase {
         LGNLogger.hideTimezone = true
         LGNLogger.hideLabel = true
         LGNLogger.requestIDKey = "trid"
-        self.fdb = FDB()
+        self.fdb = FDB.Connector()
         self.subspace = FDB.Subspace("test \(Int.random(in: 0 ..< Int.max))")
+    }
+
+    override func tearDown() async throws {
+        try await super.tearDown()
+
+        do {
+            try await Self.fdb.clear(subspace: Self.subspace)
+        } catch {
+            XCTFail("Could not tearDown: \(error)")
+        }
     }
 
     override class func tearDown() {
         super.tearDown()
-//        do {
-//            try await self.fdb.clear(subspace: self.subspace)
-//        } catch {
-//            XCTFail("Could not tearDown: \(error)")
-//        }
+
         self.fdb.disconnect()
         self.fdb = nil
     }

@@ -13,7 +13,7 @@ internal extension FDB.Transaction {
     /// - parameters:
     ///   - key: FDB key
     ///   - snapshot: Snapshot read (i.e. whether this read create a conflict range or not)
-    func get(key: AnyFDBKey, snapshot: Bool = false) -> FDB.Future {
+    func get(key: any FDBKey, snapshot: Bool = false) -> FDB.Future {
         let keyBytes = key.asFDBKey()
 
         self.log("Getting key '\(keyBytes.string.safe)'")
@@ -37,8 +37,8 @@ internal extension FDB.Transaction {
     ///   - snapshot: Snapshot read (i.e. whether this read create a conflict range or not)
     ///   - reverse: If `true`, key-value pairs will be returned in reverse lexicographical order
     func get(
-        begin: AnyFDBKey,
-        end: AnyFDBKey,
+        begin: any FDBKey,
+        end: any FDBKey,
         beginEqual: Bool = false,
         beginOffset: Int32 = 1,
         endEqual: Bool = false,

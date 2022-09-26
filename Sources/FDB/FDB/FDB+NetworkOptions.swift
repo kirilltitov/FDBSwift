@@ -1,7 +1,7 @@
 import CFDB
 import LGNLog
 
-public extension FDB {
+public extension FDB.Connector {
     enum NetworkOption {
         /// Enables trace output to a file in a directory of the clients choosing
         case traceEnable(directory: String)
@@ -96,7 +96,7 @@ public extension FDB {
         /// Set the verify peers string for the certificate
         @available(*, deprecated, renamed: "TLSVerifyPeers(string:)")
         public static func TLSVerifyPeers(bytes: Bytes) -> Self {
-            return self.TLSVerifyPeers(string: bytes.string)
+            self.TLSVerifyPeers(string: bytes.string)
         }
 
         @inlinable
@@ -194,7 +194,7 @@ public extension FDB {
     ///   - option: Network option
     /// - returns: current FDB instance (`self`)
     @discardableResult
-    func setOption(_ option: FDB.NetworkOption) throws -> FDB {
+    func setOption(_ option: NetworkOption) throws -> Self {
         try option.setOption()
 
         return self

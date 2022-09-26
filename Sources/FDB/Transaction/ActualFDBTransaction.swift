@@ -2,7 +2,7 @@ import CFDB
 import LGNLog
 
 public extension FDB {
-    final class Transaction: AnyFDBTransaction, @unchecked Sendable {
+    final class Transaction: FDBTransaction, @unchecked Sendable {
         internal typealias Pointer = OpaquePointer
 
         internal let pointer: Pointer
@@ -42,8 +42,8 @@ public extension FDB {
             )
         }
 
-        /// Begins a new FDB transactionon on given FDB database pointer and optional event loop
-        internal class func begin(_ db: FDB.Database) throws -> AnyFDBTransaction {
+        /// Begins a new FDB transactionon on given FDB database pointer
+        internal class func begin(_ db: FDB.Connector.Database) throws -> any FDBTransaction {
             var pointer: Pointer!
 
             try fdb_database_create_transaction(db, &pointer).orThrow()
@@ -56,7 +56,7 @@ public extension FDB {
         /// - parameters:
         ///   - key: FDB key
         ///   - value: bytes value
-        public func set(key: AnyFDBKey, value: Bytes) {
+        public func set(key: any FDBKey, value: Bytes) {
             let keyBytes = key.asFDBKey()
 
             self.log("Setting \(value.count) bytes to key '\(keyBytes.string.safe)'")
@@ -76,7 +76,7 @@ public extension FDB {
             fdb_transaction_reset(self.pointer)
         }
 
-        public func clear(key: AnyFDBKey) {
+        public func clear(key: any FDBKey) {
             let keyBytes = key.asFDBKey()
 
             self.log("Clearing key '\(keyBytes.string.safe)'")
@@ -84,7 +84,7 @@ public extension FDB {
             fdb_transaction_clear(self.pointer, keyBytes, keyBytes.length)
         }
 
-        public func clear(begin: AnyFDBKey, end: AnyFDBKey) {
+        public func clear(begin: any FDBKey, end: any FDBKey) {
             let beginBytes = begin.asFDBKey()
             let endBytes = end.asFDBKey()
 
@@ -97,7 +97,7 @@ public extension FDB {
             self.clear(begin: range.begin, end: range.end)
         }
 
-        public func atomic(_ op: FDB.MutationType, key: AnyFDBKey, value: Bytes) {
+        public func atomic(_ op: FDB.MutationType, key: any FDBKey, value: Bytes) {
             let keyBytes = key.asFDBKey()
 
             self.log("[Atomic] [\(op)] Setting '\(value.string.safe)' to key '\(keyBytes.string.safe)'")

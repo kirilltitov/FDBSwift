@@ -1,4 +1,4 @@
-public protocol AnyFDBTransaction: Sendable {
+public protocol FDBTransaction: Sendable {
     // MARK: - Sync methods
 
     /// Destroys current transaction. It becomes unusable after this.
@@ -16,14 +16,14 @@ public protocol AnyFDBTransaction: Sendable {
     ///
     /// - parameters:
     ///   - key: FDB key
-    func clear(key: AnyFDBKey)
+    func clear(key: any FDBKey)
 
     /// Clears keys in given range in FDB cluster
     ///
     /// - parameters:
     ///   - begin: Begin key
     ///   - end: End key
-    func clear(begin: AnyFDBKey, end: AnyFDBKey)
+    func clear(begin: any FDBKey, end: any FDBKey)
 
     /// Clears keys in given range in FDB cluster
     ///
@@ -37,7 +37,7 @@ public protocol AnyFDBTransaction: Sendable {
     ///   - _: Atomic operation
     ///   - key: FDB key
     ///   - value: Value bytes
-    func atomic(_ op: FDB.MutationType, key: AnyFDBKey, value: Bytes)
+    func atomic(_ op: FDB.MutationType, key: any FDBKey, value: Bytes)
 
     /// Peforms an atomic operation in FDB cluster on given key with given generic value
     ///
@@ -45,7 +45,7 @@ public protocol AnyFDBTransaction: Sendable {
     ///   - _: Atomic operation
     ///   - key: FDB key
     ///   - value: Value bytes
-    func atomic<T>(_ op: FDB.MutationType, key: AnyFDBKey, value: T)
+    func atomic<T>(_ op: FDB.MutationType, key: any FDBKey, value: T)
 
     /// Sets the snapshot read version used by a transaction
     ///
@@ -65,7 +65,7 @@ public protocol AnyFDBTransaction: Sendable {
     /// - parameters:
     ///   - key: FDB key
     ///   - value: Bytes value
-    func set(key: AnyFDBKey, value: Bytes)
+    func set(key: any FDBKey, value: Bytes)
 
     /// Sets bytes to given versionstamped key in FDB cluster. If versionstampedKey does not contain
     /// an incomplete version stamp, this method will throw an error. The actual version stamp used
@@ -76,7 +76,7 @@ public protocol AnyFDBTransaction: Sendable {
     ///   - value: Bytes value
     ///
     /// - Throws: Throws FDB.Error.missingIncompleteVersionstamp if a version stamp cannot be found
-    func set(versionstampedKey: AnyFDBKey, value: Bytes) throws
+    func set(versionstampedKey: any FDBKey, value: Bytes) throws
 
     /// Returns bytes value for given key (or `nil` if no key)
     ///
@@ -85,7 +85,7 @@ public protocol AnyFDBTransaction: Sendable {
     ///   - snapshot: Snapshot read (i.e. whether this read create a conflict range or not)
     ///
     /// - returns: Bytes result or `nil` if no key
-    func get(key: AnyFDBKey, snapshot: Bool) async throws -> Bytes?
+    func get(key: any FDBKey, snapshot: Bool) async throws -> Bytes?
 
     /// Returns a range of keys and their respective values in given key range
     ///
@@ -105,8 +105,8 @@ public protocol AnyFDBTransaction: Sendable {
     ///
     /// - returns: `(FDB.KeyValuesResult, AnyFDBTransaction)`
     func get(
-        begin: AnyFDBKey,
-        end: AnyFDBKey,
+        begin: any FDBKey,
+        end: any FDBKey,
         beginEqual: Bool,
         beginOffset: Int32,
         endEqual: Bool,
@@ -163,7 +163,7 @@ public protocol AnyFDBTransaction: Sendable {
 }
 
 /// Sync methods
-public extension AnyFDBTransaction {
+public extension FDBTransaction {
     /// Sets bytes to given versionstamped key in FDB cluster. If versionstampedKey does not contain
     /// an incomplete version stamp, this method will throw an error. The actual version stamp used
     /// may be retrieved by calling `getVersionstamp()` on the transaction.
@@ -173,7 +173,7 @@ public extension AnyFDBTransaction {
     ///   - value: Bytes value
     ///
     /// - Throws: Throws FDB.Error.missingIncompleteVersionstamp if a version stamp cannot be found
-    func set(versionstampedKey: AnyFDBKey, value: Bytes) throws {
+    func set(versionstampedKey: any FDBKey, value: Bytes) throws {
         try self.set(versionstampedKey: versionstampedKey, value: value)
     }
 
@@ -184,7 +184,7 @@ public extension AnyFDBTransaction {
     ///   - snapshot: Snapshot read (i.e. whether this read create a conflict range or not)
     ///
     /// - returns: Bytes result or `nil` if no key
-    func get(key: AnyFDBKey, snapshot: Bool = false) async throws -> Bytes? {
+    func get(key: any FDBKey, snapshot: Bool = false) async throws -> Bytes? {
         try await self.get(key: key, snapshot: snapshot)
     }
 
@@ -206,8 +206,8 @@ public extension AnyFDBTransaction {
     ///
     /// - returns: `(FDB.KeyValuesResult, AnyFDBTransaction)`
     func get(
-        begin: AnyFDBKey,
-        end: AnyFDBKey,
+        begin: any FDBKey,
+        end: any FDBKey,
         beginEqual: Bool = false,
         beginOffset: Int32 = 1,
         endEqual: Bool = false,

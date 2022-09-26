@@ -1,6 +1,6 @@
 import LGNLog
 
-public protocol AnyFDB {
+public protocol FDBConnector {
     @available(*, deprecated, message: "Use Logger.current instead")
     static var logger: Logger { get set }
 
@@ -18,34 +18,34 @@ public protocol AnyFDB {
     func disconnect()
 
     /// Begins a new FDB transaction
-    func begin() throws -> AnyFDBTransaction
+    func begin() throws -> any FDBTransaction
 
     /// Executes given transactional closure with appropriate retry logic
     ///
     /// Retry logic kicks in if `notCommitted` (1020) error was thrown during commit event. You must commit
     /// the transaction yourself. Additionally, this transactional closure should be idempotent in order to exclude
     /// unexpected behaviour.
-    func withTransaction<T>(_ block: @escaping (AnyFDBTransaction) async throws -> T) async throws -> T
+    func withTransaction<T>(_ block: @escaping (any FDBTransaction) async throws -> T) async throws -> T
 
     /// Sets bytes to given key in FDB cluster
     ///
     /// - parameters:
     ///   - key: FDB key
     ///   - value: bytes value
-    func set(key: AnyFDBKey, value: Bytes) async throws
+    func set(key: any FDBKey, value: Bytes) async throws
 
     /// Clears given key in FDB cluster
     ///
     /// - parameters:
     ///   - key: FDB key
-    func clear(key: AnyFDBKey) async throws
+    func clear(key: any FDBKey) async throws
 
     /// Clears keys in given range in FDB cluster
     ///
     /// - parameters:
     ///   - begin: Begin key
     ///   - end: End key
-    func clear(begin: AnyFDBKey, end: AnyFDBKey) async throws
+    func clear(begin: any FDBKey, end: any FDBKey) async throws
 
     /// Clears keys in given range in FDB cluster
     ///
@@ -64,7 +64,7 @@ public protocol AnyFDB {
     /// - parameters:
     ///   - key: FDB key
     ///   - snapshot: Snapshot read (i.e. whether this read create a conflict range or not)
-    func get(key: AnyFDBKey, snapshot: Bool) async throws -> Bytes?
+    func get(key: any FDBKey, snapshot: Bool) async throws -> Bytes?
 
     /// Returns a range of keys and their respective values under given subspace
     ///
@@ -89,8 +89,8 @@ public protocol AnyFDB {
     ///   - snapshot: Snapshot read (i.e. whether this read create a conflict range or not)
     ///   - reverse: If `true`, key-value pairs will be returned in reverse lexicographical order
     func get(
-        begin: AnyFDBKey,
-        end: AnyFDBKey,
+        begin: any FDBKey,
+        end: any FDBKey,
         beginEqual: Bool,
         beginOffset: Int32,
         endEqual: Bool,
@@ -137,7 +137,7 @@ public protocol AnyFDB {
     ///   - op: Atomic operation
     ///   - key: FDB key
     ///   - value: Value bytes
-    func atomic(_ op: FDB.MutationType, key: AnyFDBKey, value: Bytes) async throws
+    func atomic(_ op: FDB.MutationType, key: any FDBKey, value: Bytes) async throws
 
     /// Peforms an atomic operation in FDB cluster on given key with given signed integer value
     ///
@@ -145,7 +145,7 @@ public protocol AnyFDB {
     ///   - op: Atomic operation
     ///   - key: FDB key
     ///   - value: Integer
-    func atomic<T: SignedInteger>(_ op: FDB.MutationType, key: AnyFDBKey, value: T) async throws
+    func atomic<T: SignedInteger>(_ op: FDB.MutationType, key: any FDBKey, value: T) async throws
 
     /// Peforms a quasi-atomic increment operation in FDB cluster on given key with given integer
     ///
@@ -158,7 +158,7 @@ public protocol AnyFDB {
     ///   - key: FDB key
     ///   - value: Integer
     @discardableResult
-    func increment(key: AnyFDBKey, value: Int64) async throws -> Int64
+    func increment(key: any FDBKey, value: Int64) async throws -> Int64
 
     /// Peforms a quasi-atomic decrement operation in FDB cluster on given key with given integer
     ///
@@ -166,10 +166,10 @@ public protocol AnyFDB {
     ///   - key: FDB key
     ///   - value: Integer
     @discardableResult
-    func decrement(key: AnyFDBKey, value: Int64) async throws -> Int64
+    func decrement(key: any FDBKey, value: Int64) async throws -> Int64
 }
 
-public extension AnyFDB {
+public extension FDBConnector {
     /// Returns a range of keys and their respective values in given key range
     ///
     /// - parameters:
@@ -186,8 +186,8 @@ public extension AnyFDB {
     ///   - snapshot: Snapshot read (i.e. whether this read create a conflict range or not)
     ///   - reverse: If `true`, key-value pairs will be returned in reverse lexicographical order
     func get(
-        begin: AnyFDBKey,
-        end: AnyFDBKey,
+        begin: any FDBKey,
+        end: any FDBKey,
         beginEqual: Bool = false,
         beginOffset: Int32 = 1,
         endEqual: Bool = false,
@@ -262,7 +262,7 @@ public extension AnyFDB {
     /// - parameters:
     ///   - key: FDB key
     ///   - snapshot: Snapshot read (i.e. whether this read create a conflict range or not)
-    func get(key: AnyFDBKey, snapshot: Bool = false) async throws -> Bytes? {
+    func get(key: any FDBKey, snapshot: Bool = false) async throws -> Bytes? {
         return try await self.get(key: key, snapshot: snapshot)
     }
 
@@ -286,7 +286,7 @@ public extension AnyFDB {
     ///   - key: FDB key
     ///   - value: Integer
     @discardableResult
-    func increment(key: AnyFDBKey, value: Int64 = 1) async throws -> Int64 {
+    func increment(key: any FDBKey, value: Int64 = 1) async throws -> Int64 {
         try await self.increment(key: key, value: value)
     }
 
@@ -296,7 +296,7 @@ public extension AnyFDB {
     ///   - key: FDB key
     ///   - value: Integer
     @discardableResult
-    func decrement(key: AnyFDBKey, value: Int64 = 1) async throws -> Int64 {
+    func decrement(key: any FDBKey, value: Int64 = 1) async throws -> Int64 {
         try await self.decrement(key: key, value: value)
     }
 }

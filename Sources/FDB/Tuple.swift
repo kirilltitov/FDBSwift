@@ -103,7 +103,7 @@ public extension FDB {
     }
 }
 
-extension FDB.Tuple: AnyFDBKey {
+extension FDB.Tuple: FDBKey {
     public func asFDBKey() -> Bytes {
         self.getPackedFDBTupleValue()
     }

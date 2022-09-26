@@ -1,13 +1,13 @@
 import Foundation
 import CFDB
 
-public extension FDB {
-    func begin() throws -> AnyFDBTransaction {
+public extension FDB.Connector {
+    func begin() throws -> any FDBTransaction {
         try FDB.Transaction.begin(try self.getDB())
     }
 
-    func withTransaction<T>(_ block: @escaping (AnyFDBTransaction) async throws -> T) async throws -> T {
-        func transactionRoutine(_ transaction: AnyFDBTransaction) async throws -> T {
+    func withTransaction<T>(_ block: @escaping (any FDBTransaction) async throws -> T) async throws -> T {
+        func transactionRoutine(_ transaction: any FDBTransaction) async throws -> T {
             do {
                 return try await block(transaction)
             } catch FDB.Error.transactionRetry {
