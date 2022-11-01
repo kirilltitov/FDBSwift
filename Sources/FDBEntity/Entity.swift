@@ -25,7 +25,7 @@ public protocol FDBEntity: Codable {
     static var format: FDB.Entity.Format { get }
 
     /// Storage
-    static var storage: any FDBConnector { get set }
+    static var storage: any FDBConnector { get }
 
     /// Root application FDB Subspace — `/[root_subspace]`
     static var subspace: FDB.Subspace { get }
