@@ -82,6 +82,14 @@ public protocol FDBTransaction: Sendable {
     ///
     /// - parameters:
     ///   - key: FDB key
+    ///
+    /// - returns: Bytes result or `nil` if no key
+    func get(key: any FDBKey) async throws -> Bytes?
+
+    /// Returns bytes value for given key (or `nil` if no key)
+    ///
+    /// - parameters:
+    ///   - key: FDB key
     ///   - snapshot: Snapshot read (i.e. whether this read create a conflict range or not)
     ///
     /// - returns: Bytes result or `nil` if no key
@@ -181,11 +189,10 @@ public extension FDBTransaction {
     ///
     /// - parameters:
     ///   - key: FDB key
-    ///   - snapshot: Snapshot read (i.e. whether this read create a conflict range or not)
     ///
     /// - returns: Bytes result or `nil` if no key
-    func get(key: any FDBKey, snapshot: Bool = false) async throws -> Bytes? {
-        try await self.get(key: key, snapshot: snapshot)
+    func get(key: any FDBKey) async throws -> Bytes? {
+        try await self.get(key: key, snapshot: false)
     }
 
     /// Returns a range of keys and their respective values in given key range

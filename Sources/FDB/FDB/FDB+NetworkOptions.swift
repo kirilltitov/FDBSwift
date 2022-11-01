@@ -1,5 +1,6 @@
 import CFDB
 import LGNLog
+import Helpers
 
 public extension FDB.Connector {
     enum NetworkOption {

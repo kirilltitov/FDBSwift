@@ -1,5 +1,6 @@
 import Foundation
 import LGNLog
+import Helpers
 
 @inlinable
 internal func findTerminator(input: Bytes, pos: Int) -> Int {
@@ -94,7 +95,7 @@ extension FDB.Tuple {
             let end = begin + n
             try sanityCheck(begin: begin, end: end)
             return try (
-                (Array<Byte>(repeating: 0x00, count: 8 - n) + input[begin ..< end]).reversed().cast() as Int,
+                (Array<Byte>(repeating: 0x00, count: 8 - n) + input[begin ..< end]).reversed().cast(error: FDB.Error.unexpectedError) as Int,
                 end
             )
         } else if code > FDB.Tuple.Prefix.NEG_INT_START && code < FDB.Tuple.Prefix.INT_ZERO_CODE {
@@ -113,7 +114,7 @@ extension FDB.Tuple {
                             count: 8 - n
                         )
                             + input[begin ..< end]
-                    ).reversed().cast() as Int
+                    ).reversed().cast(error: FDB.Error.unexpectedError) as Int
                 ) - sizeLimits[n],
                 end
             )
@@ -141,7 +142,7 @@ extension FDB.Tuple {
             var bytes = Bytes(input[(pos + 1) ..< end])
             transformFloatingPoint(bytes: &bytes, start: 0, encode: false)
             return try (
-                Float32(bitPattern: (bytes.cast() as UInt32).bigEndian),
+                Float32(bitPattern: (bytes.cast(error: FDB.Error.unexpectedError) as UInt32).bigEndian),
                 end
             )
         } else if code == FDB.Tuple.Prefix.DOUBLE {
@@ -150,7 +151,7 @@ extension FDB.Tuple {
             var bytes = Bytes(input[(pos + 1) ..< end])
             transformFloatingPoint(bytes: &bytes, start: 0, encode: false)
             return try (
-                Double(bitPattern: (bytes.cast() as UInt64).bigEndian),
+                Double(bitPattern: (bytes.cast(error: FDB.Error.unexpectedError) as UInt64).bigEndian),
                 end
             )
         } else if code == FDB.Tuple.Prefix.BOOL_TRUE || code == FDB.Tuple.Prefix.BOOL_FALSE {
@@ -162,26 +163,26 @@ extension FDB.Tuple {
             let end = pos + 1 + MemoryLayout<uuid_t>.size
             try sanityCheck(begin: pos + 1, end: end)
             return try (
-                UUID(uuid: Bytes(input[(pos + 1) ..< end]).cast()),
+                UUID(uuid: Bytes(input[(pos + 1) ..< end]).cast(error: FDB.Error.unexpectedError)),
                 end
             )
         } else if code == FDB.Tuple.Prefix.VERSIONSTAMP_80BIT || code == FDB.Tuple.Prefix.VERSIONSTAMP_96BIT {
             var pos = pos
             var end = pos + 1 + MemoryLayout<UInt64>.size
             try sanityCheck(begin: pos + 1, end: end)
-            let transactionCommitVersion = try UInt64(bigEndian: Bytes(input[(pos + 1) ..< end]).cast())
+            let transactionCommitVersion = try UInt64(bigEndian: Bytes(input[(pos + 1) ..< end]).cast(error: FDB.Error.unexpectedError))
             
             pos = end
             end = pos + MemoryLayout<UInt16>.size
             try sanityCheck(begin: pos, end: end)
-            let batchNumber = try UInt16(bigEndian: Bytes(input[pos ..< end]).cast())
+            let batchNumber = try UInt16(bigEndian: Bytes(input[pos ..< end]).cast(error: FDB.Error.unexpectedError))
             
             var userData: UInt16? = nil
             if code == FDB.Tuple.Prefix.VERSIONSTAMP_96BIT {
                 pos = end
                 end = pos + MemoryLayout<UInt16>.size
                 try sanityCheck(begin: pos, end: end)
-                userData = try UInt16(bigEndian: Bytes(input[pos ..< end]).cast())
+                userData = try UInt16(bigEndian: Bytes(input[pos ..< end]).cast(error: FDB.Error.unexpectedError))
             }
             return (
                 FDB.Versionstamp(transactionCommitVersion: transactionCommitVersion, batchNumber: batchNumber, userData: userData),
@@ -189,7 +190,7 @@ extension FDB.Tuple {
             )
         }
 
-        Logger.current.error("Unknown tuple code '\(code)' while parsing \(input)")
+        Logger.current.error("Unknown tuple code '\(code)' while parsing \(input) (\(input.string))")
         throw FDB.Error.unpackUnknownCode
     }
 }

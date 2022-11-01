@@ -1,4 +1,5 @@
 import CFDB
+import Helpers
 
 public extension FDB.Transaction {
     internal func resolvedWithRetryableErrorCheck(future: FDB.Future) async throws {
@@ -35,10 +36,6 @@ public extension FDB.Transaction {
         try await self.resolvedWithRetryableErrorCheck(future: future)
 
         return try await future.bytes()
-    }
-
-    func get(key: any FDBKey) async throws -> Bytes? {
-        try await self.get(key: key, snapshot: false)
     }
 
     func get(range: FDB.RangeKey, snapshot: Bool) async throws -> FDB.KeyValuesResult {
@@ -148,8 +145,8 @@ public extension FDB.Transaction {
             throw FDB.Error.invalidVersionstamp
         }
 
-        let transactionCommitVersion = try! UInt64(bigEndian: Bytes(bytes[0..<8]).cast())
-        let batchNumber = try! UInt16(bigEndian: Bytes(bytes[8..<10]).cast())
+        let transactionCommitVersion = try! UInt64(bigEndian: Bytes(bytes[0..<8]).cast(error: FDB.Error.unexpectedError))
+        let batchNumber = try! UInt16(bigEndian: Bytes(bytes[8..<10]).cast(error: FDB.Error.unexpectedError))
 
         return FDB.Versionstamp(transactionCommitVersion: transactionCommitVersion, batchNumber: batchNumber)
     }

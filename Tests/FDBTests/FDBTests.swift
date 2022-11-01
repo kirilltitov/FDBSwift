@@ -1,6 +1,7 @@
 @testable import FDB
 import XCTest
 import LGNLog
+import Helpers
 
 class FDBTest: XCTestCase {
     static var fdb: FDB.Connector! = nil
@@ -107,7 +108,7 @@ class FDBTest: XCTestCase {
         XCTAssertNoThrow(actual1)
         let result = try await fdb.get(key: key)
         XCTAssertNotNil(result)
-        try XCTAssertEqual(result!.cast() as Int64, expected)
+        try XCTAssertEqual(result!.cast(error: FDB.Error.unexpectedError) as Int64, expected)
         XCTAssertEqual(result, getBytes(expected))
         let actual2 = try await fdb.increment(key: key)
         XCTAssertEqual(actual2, expected + 1)
@@ -257,7 +258,7 @@ class FDBTest: XCTestCase {
                     try await transaction.commit()
                     return value
                 }
-                try! res.arr.append(resultValue!.cast())
+                try! res.arr.append(resultValue!.cast(error: FDB.Error.unexpectedError))
                 if res.arr.count == sample.count {
                     semaphore.signal()
                 }

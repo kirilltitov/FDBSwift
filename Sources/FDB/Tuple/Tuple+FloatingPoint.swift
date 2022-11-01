@@ -1,3 +1,5 @@
+import Helpers
+
 @inlinable
 internal func transformFloatingPoint(bytes: inout Bytes, start: Int, encode: Bool) {
     if encode && (bytes[start] & 0x80) != 0x00 {

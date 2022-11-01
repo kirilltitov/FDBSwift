@@ -1,4 +1,5 @@
 import Foundation
+import Helpers
 
 extension UUID: FDBTuplePackable {
     public func getPackedFDBTupleValue() -> Bytes {

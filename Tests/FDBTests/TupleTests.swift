@@ -1,6 +1,7 @@
 @testable import FDB
 import XCTest
 import LGNLog
+import Helpers
 
 class TupleTests: XCTestCase {
     override class func setUp() {

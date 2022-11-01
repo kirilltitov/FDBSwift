@@ -1,3 +1,5 @@
+import Helpers
+
 public extension FDB.Connector {
     func set(key: any FDBKey, value: Bytes) async throws {
         try await self.withTransaction {
@@ -129,7 +131,7 @@ public extension FDB.Connector {
 
             try await transaction.commit()
 
-            return try bytes.cast()
+            return try bytes.cast(error: FDB.Error.unexpectedError)
         }
     }
 
