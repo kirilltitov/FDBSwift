@@ -1,3 +1,4 @@
+import Foundation
 import FDB
 
 public extension FDBEntity {

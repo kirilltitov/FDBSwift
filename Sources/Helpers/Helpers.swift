@@ -82,17 +82,6 @@ public func debugOnly(_ body: () -> Void) {
     assert({ body(); return true }())
 }
 
-public extension UnsafePointer {
-    @inlinable
-    func unwrapPointee(count: Int32) -> [Pointee] {
-        let items = Int(count)
-        let buffer = self.withMemoryRebound(to: Pointee.self, capacity: items) {
-            UnsafeBufferPointer(start: $0, count: items)
-        }
-        return Array(buffer)
-    }
-}
-
 public extension UnsafePointer where Pointee == Byte {
     @inlinable
     func getBytes(count: Int32) -> Bytes {

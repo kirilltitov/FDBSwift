@@ -13,7 +13,7 @@ extension FDB.Future {
         try fdb_future_get_keyvalue_array(self.pointer, &outRawValues, &outCount, &outMore).orThrow()
 
         return FDB.KeyValuesResult(
-            records: outCount == 0 ? [] : outRawValues.unwrapPointee(count: outCount).map {
+            records: UnsafeBufferPointer<FDBKeyValue>(start: outRawValues, count: Int(outCount)).map {
                 FDB.KeyValue(
                     key: $0.key.getBytes(count: $0.key_length),
                     value: $0.value.getBytes(count: $0.value_length)
