@@ -8,10 +8,10 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    container: swift:6.1-noble
+    container: swift:6.4.0-noble
 
     env:
-      FDB_VERSION: 7.3.69
+      FDB_VERSION: 7.4.8
 
     steps:
     - uses: actions/checkout@v4
@@ -29,5 +29,9 @@ jobs:
           sleep 2
         done
         fdbcli --exec status --timeout 5
-    - name: Run tests
-      run: swift test --parallel
+    - name: Build
+      run: swift build --build-tests -Xswiftc -warnings-as-errors
+    - name: Test
+      run: swift test
+    - name: Test (Thread Sanitizer)
+      run: swift test --sanitize=thread
