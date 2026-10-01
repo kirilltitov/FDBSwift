@@ -16,7 +16,7 @@ internal extension FDB.Transaction {
     func get(key: AnyFDBKey, snapshot: Bool = false) -> FDB.Future {
         let keyBytes = key.asFDBKey()
 
-        self.log("Getting key '\(keyBytes.string.safe)'")
+        self.log("Getting key '\(keyBytes.printable)'")
 
         return fdb_transaction_get(self.pointer, keyBytes, keyBytes.length, snapshot.int).asFuture()
     }
@@ -53,7 +53,7 @@ internal extension FDB.Transaction {
         let beginBytes = begin.asFDBKey()
         let endBytes = end.asFDBKey()
 
-        self.log("Getting range from key '\(beginBytes.string.safe)' to '\(endBytes.string.safe)'")
+        self.log("Getting range from key '\(beginBytes.printable)' to '\(endBytes.printable)'")
 
         return fdb_transaction_get_range(
             self.pointer,

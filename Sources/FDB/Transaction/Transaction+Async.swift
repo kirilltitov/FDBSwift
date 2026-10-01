@@ -41,20 +41,44 @@ public extension FDB.Transaction {
         try await self.get(key: key, snapshot: false)
     }
 
+    /// Returns all key-value pairs in given range (`begin` inclusive, `end` exclusive).
+    ///
+    /// Unlike lower-level range getters, this method transparently fetches all batches until range is exhausted,
+    /// so `hasMore` of the result is always `false`.
     func get(range: FDB.RangeKey, snapshot: Bool) async throws -> FDB.KeyValuesResult {
-        try await self.get(
-            range: range,
-            beginEqual: true,
-            beginOffset: 0,
-            endEqual: true,
-            endOffset: 0,
-            limit: 0,
-            targetBytes: 0,
-            mode: .wantAll,
-            iteration: 0,
-            snapshot: snapshot,
-            reverse: false
-        )
+        var records: [FDB.KeyValue] = []
+        var begin: AnyFDBKey = range.begin
+        var beginEqual = false // firstGreaterOrEqual(range.begin)
+        var iteration: Int32 = 1
+
+        while true {
+            let batch: FDB.KeyValuesResult = try await self.get(
+                begin: begin,
+                end: range.end,
+                beginEqual: beginEqual,
+                beginOffset: 1,
+                endEqual: false, // firstGreaterOrEqual(range.end), i.e. exclusive end
+                endOffset: 1,
+                limit: 0,
+                targetBytes: 0,
+                mode: .wantAll,
+                iteration: iteration,
+                snapshot: snapshot,
+                reverse: false
+            )
+
+            records.append(contentsOf: batch.records)
+
+            guard batch.hasMore, let last = batch.records.last else {
+                break
+            }
+
+            begin = last.key
+            beginEqual = true // firstGreaterThan(last.key)
+            iteration += 1
+        }
+
+        return FDB.KeyValuesResult(records: records, hasMore: false)
     }
 
     func get(

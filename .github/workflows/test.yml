@@ -7,21 +7,27 @@ on:
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
-    strategy:
-      max-parallel: 4
+    container: swift:6.1-noble
+
+    env:
+      FDB_VERSION: 7.3.69
 
     steps:
-    - uses: actions/checkout@v1
-    - name: Run tests
+    - uses: actions/checkout@v4
+    - name: Install FoundationDB
       run: |
-        eval "$(curl -sL https://swiftenv.fuller.li/install.sh)"
-        sudo apt-get install -y wget
-        wget https://github.com/apple/foundationdb/releases/download/6.3.23/foundationdb-clients_6.3.23-1_amd64.deb
-        wget https://github.com/apple/foundationdb/releases/download/6.3.23/foundationdb-server_6.3.23-1_amd64.deb
-        sudo dpkg -i foundationdb-clients_6.3.23-1_amd64.deb foundationdb-server_6.3.23-1_amd64.deb
-        sudo service foundationdb start
-        chmod +x scripts/install_pkgconfig.sh
-        sudo ./scripts/install_pkgconfig.sh
-        swift test --parallel
+        apt-get update -qq
+        apt-get install -y -qq curl
+        curl -sSfLO https://github.com/apple/foundationdb/releases/download/${FDB_VERSION}/foundationdb-clients_${FDB_VERSION}-1_amd64.deb
+        curl -sSfLO https://github.com/apple/foundationdb/releases/download/${FDB_VERSION}/foundationdb-server_${FDB_VERSION}-1_amd64.deb
+        dpkg -i foundationdb-clients_${FDB_VERSION}-1_amd64.deb foundationdb-server_${FDB_VERSION}-1_amd64.deb
+        service foundationdb start
+        ./scripts/install_pkgconfig.sh
+        for i in $(seq 1 30); do
+          fdbcli --exec status --timeout 5 | grep -q "Healthy" && break
+          sleep 2
+        done
+        fdbcli --exec status --timeout 5
+    - name: Run tests
+      run: swift test --parallel

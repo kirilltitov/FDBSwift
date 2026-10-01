@@ -304,4 +304,13 @@ class TupleTests: XCTestCase {
             }
         }
     }
+
+    func testPrintableBytes() {
+        XCTAssertEqual(Bytes("abc".utf8).printable, "abc")
+        XCTAssertEqual(([0x00, 0x41, 0x5C, 0x7F, 0x80, 0xFF] as Bytes).printable, "\\x00A\\x5C\\x7F\\x80\\xFF")
+        for byte in Byte.min ... Byte.max {
+            _ = [byte].string
+            _ = [byte].printable
+        }
+    }
 }

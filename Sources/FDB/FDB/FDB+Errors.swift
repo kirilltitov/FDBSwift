@@ -100,6 +100,7 @@ public extension FDB {
         case internalError
 
         case transactionRetry
+        case transactionRetryLimitExceeded
         case unexpectedError(String)
         case noEventLoopProvided
         case connectionError
@@ -265,6 +266,7 @@ public extension FDB {
             case .unknownError:                           result = 4000
             case .internalError:                          result = 4100
             case .transactionRetry:                       result = 8000
+            case .transactionRetryLimitExceeded:          result = 8001
             case .unexpectedError:                        result = 9000
             case .noEventLoopProvided:                    result = 9500
             case .connectionError:                        result = 9600
@@ -290,6 +292,9 @@ public extension FDB {
         public func getDescription() -> String {
             if self.errno == 8000 {
                 return "You should replay this transaction"
+            }
+            if self.errno == 8001 {
+                return "Transaction retry limit exceeded"
             }
             if self.errno == 9000 {
                 return "Error is unexpected, it shouldn't really happen"

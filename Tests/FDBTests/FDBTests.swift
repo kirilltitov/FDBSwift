@@ -89,6 +89,75 @@ class FDBTest: XCTestCase {
         XCTAssertEqual(actual3, expected)
     }
 
+    func testGetRangeAllBatches() async throws {
+        let subspace = Self.subspace["range_batches"]
+        let count = 1000
+        let value = Bytes(repeating: 0x42, count: 1024)
+
+        // A subspace-like neighbour right before the range: must never leak into results
+        try await Self.fdb.set(key: Self.subspace["range_batche"].asFDBKey() + [0xFF], value: value)
+
+        try await Self.fdb.withTransaction { transaction in
+            for i in 0 ..< count {
+                transaction.set(key: subspace[i], value: value)
+            }
+            try await transaction.commit()
+        }
+
+        let result = try await Self.fdb.get(subspace: subspace)
+        XCTAssertEqual(result.records.count, count)
+        XCTAssertFalse(result.hasMore)
+        XCTAssertEqual(result.records.first?.key, subspace[0].asFDBKey())
+        XCTAssertEqual(result.records.last?.key, subspace[count - 1].asFDBKey())
+    }
+
+    func testNonASCIIKeysWithDebugLogging() async throws {
+        var logger = Logger(label: "test")
+        logger.logLevel = .trace
+
+        try await Logger.$current.withValue(logger) {
+            let key = Self.subspace["non-ascii", UUID(), -42, Float(3.14), "ключ"]
+            let expected: Bytes = [0x00, 0x7F, 0x80, 0xFF]
+            try await Self.fdb.set(key: key, value: expected)
+            try await Self.fdb.atomic(.bitOr, key: key, value: expected)
+            let actual = try await Self.fdb.get(key: key)
+            XCTAssertEqual(actual, expected)
+            _ = try await Self.fdb.get(subspace: Self.subspace["non-ascii"])
+        }
+    }
+
+    func testWithTransactionRetryLimit() async throws {
+        var attempts = 0
+        do {
+            let _: Void = try await Self.fdb.withTransaction(retryLimit: 3) { _ in
+                attempts += 1
+                throw FDB.Error.transactionRetry
+            }
+            XCTFail("Should have thrown")
+        } catch FDB.Error.transactionRetryLimitExceeded {
+            XCTAssertEqual(attempts, 4)
+        }
+    }
+
+    func testDoubleDestroy() throws {
+        let transaction = try Self.fdb.begin()
+        transaction.destroy()
+        transaction.destroy()
+    }
+
+    func testNetworkOptionRedaction() {
+        XCTAssertEqual(
+            FDB.NetworkOption.TLSKeyBytes(bytes: Bytes("SECRET".utf8)).redactedDescription,
+            "TLSKeyBytes(<private>)"
+        )
+        XCTAssertFalse(FDB.NetworkOption.TLSPassword(password: "SECRET").redactedDescription.contains("SECRET"))
+        XCTAssertEqual(FDB.NetworkOption.TLSCABytes(bytes: [1, 2, 3]).redactedDescription, "TLSCABytes(<3 bytes>)")
+        XCTAssertEqual(
+            FDB.NetworkOption.traceLogGroup(name: "foo").redactedDescription,
+            "traceLogGroup(name: \"foo\")"
+        )
+    }
+
     func testAtomicAdd() async throws {
         let fdb = Self.fdb!
         let key = Self.subspace.subspace("atomic_incr")

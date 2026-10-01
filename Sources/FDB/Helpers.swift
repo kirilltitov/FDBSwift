@@ -10,18 +10,6 @@ internal extension String {
         Bytes(self.utf8)
     }
 
-    @usableFromInline
-    var safe: String {
-        self
-            .unicodeScalars
-            .lazy
-            .map { scalar in
-                scalar == "\n"
-                    ? "\n"
-                    : scalar.escaped(asASCII: true)
-            }
-            .joined(separator: "")
-    }
 }
 
 internal extension Bool {
@@ -43,7 +31,7 @@ internal extension Bytes {
             )
         }
         return self.withUnsafeBytes {
-            $0.baseAddress!.assumingMemoryBound(to: R.self).pointee
+            $0.loadUnaligned(as: R.self)
         }
     }
 
@@ -52,9 +40,27 @@ internal extension Bytes {
         numericCast(self.count)
     }
 
+    /// Lossy UTF-8 decoding of current bytes (invalid sequences are repaired, never traps)
     @usableFromInline
     var string: String {
-        String(bytes: self, encoding: .ascii)!
+        String(decoding: self, as: UTF8.self)
+    }
+
+    /// Printable representation of arbitrary bytes for logging purposes: printable ASCII is kept as is,
+    /// everything else is rendered as `\xNN`. Never traps.
+    @usableFromInline
+    var printable: String {
+        var result = ""
+        result.reserveCapacity(self.count)
+        for byte in self {
+            if byte >= 0x20 && byte < 0x7F && byte != UInt8(ascii: "\\") {
+                result.unicodeScalars.append(Unicode.Scalar(byte))
+            } else {
+                let hex = String(byte, radix: 16, uppercase: true)
+                result += byte < 0x10 ? "\\x0\(hex)" : "\\x\(hex)"
+            }
+        }
+        return result
     }
 }
 
@@ -82,25 +88,10 @@ internal func debugOnly(_ body: () -> Void) {
     assert({ body(); return true }())
 }
 
-internal extension UnsafePointer {
-    @usableFromInline
-    func unwrapPointee(count: Int32) -> [Pointee] {
-        let items = Int(count)
-        let buffer = self.withMemoryRebound(to: Pointee.self, capacity: items) {
-            UnsafeBufferPointer(start: $0, count: items)
-        }
-        return Array(buffer)
-    }
-}
-
 internal extension UnsafePointer where Pointee == Byte {
     @usableFromInline
     func getBytes(count: Int32) -> Bytes {
-        let items = Int(count) / MemoryLayout<Byte>.stride
-        let buffer = self.withMemoryRebound(to: Byte.self, capacity: items) {
-            UnsafeBufferPointer(start: $0, count: items)
-        }
-        return Array(buffer)
+        Array(UnsafeBufferPointer(start: self, count: Int(count)))
     }
 }
 

@@ -27,6 +27,11 @@ public protocol AnyFDB {
     /// unexpected behaviour.
     func withTransaction<T>(_ block: @escaping (AnyFDBTransaction) async throws -> T) async throws -> T
 
+    func withTransaction<T>(
+        retryLimit: Int,
+        _ block: @escaping (AnyFDBTransaction) async throws -> T
+    ) async throws -> T
+
     /// Sets bytes to given key in FDB cluster
     ///
     /// - parameters:

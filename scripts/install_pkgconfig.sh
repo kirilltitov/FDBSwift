@@ -31,6 +31,7 @@ if [ "$(uname)" == "Darwin" ]; then
     LIBPATH="${PREFIX}/lib/libfdb_c.dylib"
     install_name_tool -id $LIBPATH $LIBPATH
 elif [ "$(expr substr $(uname -s) 1 5)" == "Linux" ]; then
+    mkdir -p "/usr/${SUFFIX_DIR}"
     TARGET_FILE="/usr/${SUFFIX_FILE}"
     echo "Creating pkgconfig ${TARGET_FILE}"
     cp "${PKGCONFIG}.linux" $TARGET_FILE
