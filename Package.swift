@@ -1,10 +1,10 @@
-// swift-tools-version:5.7
+// swift-tools-version:6.0
 
 import PackageDescription
 
 let package = Package(
     name: "FDBSwift",
-    platforms: [.macOS(.v12)],
+    platforms: [.macOS(.v15)],
     products: [
         .library(name: "FDB", targets: ["FDB"]),
     ],
@@ -24,5 +24,6 @@ let package = Package(
             name: "FDBTests",
             dependencies: ["FDB"]
         ),
-    ]
+    ],
+    swiftLanguageModes: [.v5]
 )

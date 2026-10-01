@@ -1,5 +1,5 @@
 import CFDB
-import Foundation
+import Synchronization
 import LGNLog
 
 public extension FDB {
@@ -9,8 +9,7 @@ public extension FDB {
         internal let pointer: Pointer
         internal private(set) var retries: Int = 0
 
-        private let destroyLock = NSLock()
-        private var isDestroyed = false
+        private let isDestroyed = Atomic<Bool>(false)
 
         /// Creates a new instance of a previously started FDB transaction
         internal init(_ pointer: Pointer) {
@@ -28,13 +27,13 @@ public extension FDB {
         /// It is safe to call this method more than once (and it's called automatically on `deinit`),
         /// only the first call actually destroys the transaction. Transaction must not be used after this call.
         public func destroy() {
-            self.destroyLock.lock()
-            defer { self.destroyLock.unlock() }
-
-            guard !self.isDestroyed else {
+            guard self.isDestroyed.compareExchange(
+                expected: false,
+                desired: true,
+                ordering: .acquiringAndReleasing
+            ).exchanged else {
                 return
             }
-            self.isDestroyed = true
 
             self.log("Destroying transaction")
 
