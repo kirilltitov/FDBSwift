@@ -99,11 +99,26 @@ public extension FDB {
             return self.TLSVerifyPeers(string: bytes.string)
         }
 
-        @inlinable
+        /// Description of current option which is safe to put into logs: secrets (private keys, passwords)
+        /// are never included, and raw certificate bytes are replaced with their length.
+        internal var redactedDescription: String {
+            switch self {
+            case .TLSKeyBytes:
+                return "TLSKeyBytes(<private>)"
+            case .TLSPassword:
+                return "TLSPassword(<private>)"
+            case let .TLSCertBytes(bytes):
+                return "TLSCertBytes(<\(bytes.count) bytes>)"
+            case let .TLSCABytes(bytes):
+                return "TLSCABytes(<\(bytes.count) bytes>)"
+            default:
+                return "\(self)"
+            }
+        }
+
         internal func setOption() throws {
             let internalOption: FDBNetworkOption
             var value: Bytes = []
-            var logSelf: NetworkOption? = nil
 
             switch self {
             case let .traceEnable(directory):
@@ -145,7 +160,6 @@ public extension FDB {
             case let .TLSPassword(password):
                 internalOption = FDB_NET_OPTION_TLS_PASSWORD
                 value = password.bytes
-                logSelf = .TLSPassword(password: "<private>")
             case .buggifyEnable:
                 internalOption = FDB_NET_OPTION_BUGGIFY_ENABLE
             case .buggifyDisable:
@@ -174,16 +188,16 @@ public extension FDB {
                 internalOption = FDB_NET_OPTION_ENABLE_SLOW_TASK_PROFILING
             }
 
-            Logger.current.debug("Trying to set network option \(logSelf ?? self)")
+            Logger.current.debug("Trying to set network option \(self.redactedDescription)")
 
             if case let .failure(error) = fdb_network_set_option(internalOption, value, value.length).toResult() {
                 Logger.current.error(
-                    "Network option '\(logSelf ?? self)' setting failed: [\(error.errno)] \(error.getDescription())"
+                    "Network option '\(self.redactedDescription)' setting failed: [\(error.errno)] \(error.getDescription())"
                 )
                 throw error
             }
 
-            Logger.current.debug("Network option '\(logSelf ?? self)' successfully set")
+            Logger.current.debug("Network option '\(self.redactedDescription)' successfully set")
         }
     }
 

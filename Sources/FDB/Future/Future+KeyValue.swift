@@ -12,14 +12,25 @@ extension FDB.Future {
 
         try fdb_future_get_keyvalue_array(self.pointer, &outRawValues, &outCount, &outMore).orThrow()
 
-        return FDB.KeyValuesResult(
-            records: outCount == 0 ? [] : outRawValues.unwrapPointee(count: outCount).map {
-                FDB.KeyValue(
-                    key: $0.key.getBytes(count: $0.key_length),
-                    value: $0.value.getBytes(count: $0.value_length)
+        var records: [FDB.KeyValue] = []
+        if outCount > 0 {
+            // `FDBKeyValue` is declared with `#pragma pack(4)` in `fdb_c.h`, so its array is not guaranteed
+            // to be aligned the way Swift expects. Each element is read with an unaligned load instead of
+            // rebinding/dereferencing the typed pointer (which traps on recent toolchains, see issue #86).
+            let raw = UnsafeRawPointer(outRawValues!)
+            let stride = MemoryLayout<FDBKeyValue>.stride
+            records.reserveCapacity(Int(outCount))
+            for i in 0 ..< Int(outCount) {
+                let kv = raw.loadUnaligned(fromByteOffset: i * stride, as: FDBKeyValue.self)
+                records.append(
+                    FDB.KeyValue(
+                        key: kv.key.getBytes(count: kv.key_length),
+                        value: kv.value.getBytes(count: kv.value_length)
+                    )
                 )
-            },
-            hasMore: outMore > 0
-        )
+            }
+        }
+
+        return FDB.KeyValuesResult(records: records, hasMore: outMore > 0)
     }
 }

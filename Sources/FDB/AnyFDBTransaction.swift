@@ -87,6 +87,9 @@ public protocol AnyFDBTransaction: Sendable {
     /// - returns: Bytes result or `nil` if no key
     func get(key: AnyFDBKey, snapshot: Bool) async throws -> Bytes?
 
+    /// Returns all key-value pairs in given range (`begin` inclusive, `end` exclusive), fetching all batches
+    func get(range: FDB.RangeKey, snapshot: Bool) async throws -> FDB.KeyValuesResult
+
     /// Returns a range of keys and their respective values in given key range
     ///
     /// - parameters:

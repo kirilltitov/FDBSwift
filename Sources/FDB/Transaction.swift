@@ -1,4 +1,5 @@
 import CFDB
+import Foundation
 import LGNLog
 
 public extension FDB {
@@ -7,6 +8,9 @@ public extension FDB {
 
         internal let pointer: Pointer
         internal private(set) var retries: Int = 0
+
+        private let destroyLock = NSLock()
+        private var isDestroyed = false
 
         /// Creates a new instance of a previously started FDB transaction
         internal init(_ pointer: Pointer) {
@@ -19,7 +23,19 @@ public extension FDB {
             self.destroy()
         }
 
+        /// Destroys current transaction and releases its underlying FDB resources.
+        ///
+        /// It is safe to call this method more than once (and it's called automatically on `deinit`),
+        /// only the first call actually destroys the transaction. Transaction must not be used after this call.
         public func destroy() {
+            self.destroyLock.lock()
+            defer { self.destroyLock.unlock() }
+
+            guard !self.isDestroyed else {
+                return
+            }
+            self.isDestroyed = true
+
             self.log("Destroying transaction")
 
             fdb_transaction_destroy(self.pointer)
@@ -30,15 +46,20 @@ public extension FDB {
             self.log("Retry #\(self.retries)", level: .info)
         }
 
-        /// Logs message to Logger (if `FDB.verbose` is `true`)
-        @inlinable
-        internal func log(_ message: String, level: Logger.Level = .debug) {
+        /// Logs message to `Logger.current`.
+        ///
+        /// Message is evaluated lazily: nothing is computed if given level is disabled.
+        internal func log(_ message: @autoclosure () -> String, level: Logger.Level = .debug) {
+            guard Logger.current.logLevel <= level else {
+                return
+            }
+
             var logger = Logger.current
             logger[metadataKey: "trid"] = "\(ObjectIdentifier(self).hashValue)"
 
             logger.log(
                 level: level,
-                "[FDB.Transaction] \(message)"
+                "[FDB.Transaction] \(message())"
             )
         }
 
@@ -59,7 +80,7 @@ public extension FDB {
         public func set(key: AnyFDBKey, value: Bytes) {
             let keyBytes = key.asFDBKey()
 
-            self.log("Setting \(value.count) bytes to key '\(keyBytes.string.safe)'")
+            self.log("Setting \(value.count) bytes to key '\(keyBytes.printable)'")
 
             fdb_transaction_set(self.pointer, keyBytes, keyBytes.length, value, value.length)
         }
@@ -79,7 +100,7 @@ public extension FDB {
         public func clear(key: AnyFDBKey) {
             let keyBytes = key.asFDBKey()
 
-            self.log("Clearing key '\(keyBytes.string.safe)'")
+            self.log("Clearing key '\(keyBytes.printable)'")
 
             fdb_transaction_clear(self.pointer, keyBytes, keyBytes.length)
         }
@@ -88,7 +109,7 @@ public extension FDB {
             let beginBytes = begin.asFDBKey()
             let endBytes = end.asFDBKey()
 
-            self.log("Clearing range from key '\(beginBytes.string.safe)' to '\(endBytes.string.safe)'")
+            self.log("Clearing range from key '\(beginBytes.printable)' to '\(endBytes.printable)'")
 
             fdb_transaction_clear_range(self.pointer, beginBytes, beginBytes.length, endBytes, endBytes.length)
         }
@@ -100,7 +121,7 @@ public extension FDB {
         public func atomic(_ op: FDB.MutationType, key: AnyFDBKey, value: Bytes) {
             let keyBytes = key.asFDBKey()
 
-            self.log("[Atomic] [\(op)] Setting '\(value.string.safe)' to key '\(keyBytes.string.safe)'")
+            self.log("[Atomic] [\(op)] Applying \(value.count) bytes to key '\(keyBytes.printable)'")
 
             fdb_transaction_atomic_op(
                 self.pointer,

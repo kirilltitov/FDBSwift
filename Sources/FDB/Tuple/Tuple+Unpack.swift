@@ -84,7 +84,7 @@ extension FDB.Tuple {
             try sanityCheck(begin: pos + 1, end: end)
             let bytes = input[(pos + 1) ..< end].replaceEscapes()
             guard let string = String(bytes: bytes, encoding: .utf8) else {
-                Logger.current.error("Could not convert bytes \(bytes) to string (ascii form: '\(String(bytes: bytes, encoding: .ascii)!)')")
+                Logger.current.error("Could not convert bytes \(bytes) to string (printable form: '\(bytes.printable)')")
                 throw FDB.Error.unpackInvalidString
             }
             return (string, end + 1)
