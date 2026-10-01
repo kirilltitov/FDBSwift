@@ -10,7 +10,7 @@ extension FDB {
     ///
     /// Elements are packed into a single buffer as soon as they're added, so a tuple is as cheap to use as a key
     /// as raw bytes.
-    public struct Tuple: Sendable, FDBKey, CustomStringConvertible {
+    public struct Tuple: Sendable, FDB.Key, CustomStringConvertible {
         /// Encoded tuple
         public let packed: Bytes
 
@@ -24,14 +24,14 @@ extension FDB {
         }
 
         /// Creates a tuple of given elements
-        public init<each T: FDBTuplePackable>(_ element: repeat each T) {
+        public init<each T: FDB.TuplePackable>(_ element: repeat each T) {
             var encoder = TupleEncoder()
             repeat (each element).pack(into: &encoder)
             self.init(encoder: encoder)
         }
 
         /// Creates a tuple of dynamically typed elements
-        public init(elements: some Sequence<any FDBTuplePackable>) {
+        public init(elements: some Sequence<any FDB.TuplePackable>) {
             var encoder = TupleEncoder()
             for element in elements {
                 element.pack(into: &encoder)
@@ -80,7 +80,7 @@ extension FDB {
         /// ```
         ///
         /// Throws ``FDB/Error/unpackTypeMismatch`` if the number of elements or their types don't match.
-        public func unpack<each T: FDBTupleUnpackable>(as type: repeat (each T).Type) throws(FDB.Error) -> (repeat each T) {
+        public func unpack<each T: FDB.TupleUnpackable>(as type: repeat (each T).Type) throws(FDB.Error) -> (repeat each T) {
             var decoder = TupleDecoder(self.packed)
             let result = (repeat try decoder.next((each type)))
             guard decoder.isAtEnd else {
@@ -90,7 +90,7 @@ extension FDB {
         }
 
         /// Returns a new tuple with given elements appended
-        public func appending<each T: FDBTuplePackable>(_ element: repeat each T) -> Tuple {
+        public func appending<each T: FDB.TuplePackable>(_ element: repeat each T) -> Tuple {
             var encoder = TupleEncoder()
             encoder.bytes = self.packed
             encoder.versionstampOffset = self.versionstampOffset
@@ -99,7 +99,7 @@ extension FDB {
             return Tuple(encoder: encoder)
         }
 
-        // MARK: FDBKey
+        // MARK: FDB.Key
 
         public var fdbKey: Bytes {
             self.packed

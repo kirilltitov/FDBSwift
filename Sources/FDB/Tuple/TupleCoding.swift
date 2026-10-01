@@ -23,7 +23,7 @@ enum TupleCode {
 }
 
 extension FDB {
-    /// Encodes tuple elements into a single buffer, see ``FDBTuplePackable``
+    /// Encodes tuple elements into a single buffer, see ``FDB.TuplePackable``
     public struct TupleEncoder: Sendable {
         var bytes: Bytes = []
         var versionstampOffset: Int?
@@ -174,7 +174,7 @@ extension FDB {
             self.position >= self.bytes.count
         }
 
-        mutating func next<T: FDBTupleUnpackable>(_ type: T.Type) throws(FDB.Error) -> T {
+        mutating func next<T: FDB.TupleUnpackable>(_ type: T.Type) throws(FDB.Error) -> T {
             guard !self.isAtEnd else {
                 throw .unpackTypeMismatch
             }

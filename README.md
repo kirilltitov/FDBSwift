@@ -1,4 +1,4 @@
-# FDBSwift v6 <img src="https://img.shields.io/badge/Swift-6.2+-brightgreen.svg" alt="Swift: 6.2+" /> <img src="https://img.shields.io/badge/FoundationDB-7.4-blue.svg" alt="FoundationDB: 7.4" />
+# FDBSwift v6 <img src="https://img.shields.io/badge/Swift-6.4+-brightgreen.svg" alt="Swift: 6.4+" /> <img src="https://img.shields.io/badge/FoundationDB-7.4-blue.svg" alt="FoundationDB: 7.4" />
 > _Episode VI: These Aren't the Copies You're Looking For_
 
 This is FoundationDB client for Swift. It's quite low-level, `Foundation`less (well, `FoundationEssentials`-only,
@@ -8,7 +8,7 @@ doesn't compile anymore.
 
 ## Requirements
 
-* Swift 6.2+ (tested with 6.4)
+* Swift 6.4+
 * macOS 15+ or Linux
 * FoundationDB client library (`libfdb_c`) **7.4+**. The cluster itself may be older: `libfdb_c` 7.4 can talk to
   older clusters via the [multi-version client](https://apple.github.io/foundationdb/api-general.html#multi-version-client-api)
@@ -64,7 +64,7 @@ Secrets (`tlsKeyBytes`, `tlsPassword`) are never logged.
 
 ### Keys, tuples and subspaces
 
-Keys and values are bytes (`typealias Bytes = [UInt8]`). Anything conforming to `FDBKey` can be used as a key:
+Keys and values are bytes (`typealias Bytes = [UInt8]`). Anything conforming to `FDB.Key` can be used as a key:
 `Bytes`, `String`, `StaticString`, `FDB.Tuple` and `FDB.Subspace`.
 
 Tuples (see [tuple layer](https://github.com/apple/foundationdb/blob/main/design/tuple.md)) are built with parameter
@@ -82,7 +82,7 @@ let elements: [FDB.TupleElement] = try FDB.Tuple(packed: bytes).elements // [.st
 
 Supported elements: `String`, `Bytes`, all integers up to 64 bits (full `Int64` and `UInt64` range), `Float`, `Double`,
 `Bool`, `UUID`, `FDB.Versionstamp`, `FDB.Null`, nested `FDB.Tuple` and `Optional` of any of them (`nil` is `null`).
-Conform your own types to `FDBTuplePackable`/`FDBTupleUnpackable` if you like.
+Conform your own types to `FDB.TuplePackable`/`FDB.TupleUnpackable` if you like.
 
 Subspaces are key prefixes, the usual way of namespacing keys:
 
@@ -103,7 +103,7 @@ closure on retryable errors (conflicts and such), following FoundationDB semanti
 let name: String? = try await db.withTransaction { tr in
     tr.set(key: users[42, "visits"], value: someBytes)
 
-    guard let bytes = try await tr.get(key: users[42, "name"]).value() else {
+    guard let bytes = try await tr.get(key: users[42, "name"]).value else {
         return nil
     }
     return String(decoding: bytes, as: UTF8.self)
@@ -122,7 +122,7 @@ Errors thrown by the closure that are not `FDB.Error`s are rethrown immediately,
 #### Futures and parallel reads
 
 Reads return `FDB.Future`s: the request goes to the cluster immediately, the result is awaited later. Futures are
-non-copyable too: awaited at most once (`value()` consumes it), released exactly once. To read several keys in
+non-copyable too: awaited at most once (`value` consumes it), released exactly once. To read several keys in
 parallel, just issue all requests first:
 
 ```swift
@@ -130,7 +130,7 @@ try await db.withTransaction { tr in
     let a = tr.get(key: keyA)
     let b = tr.get(key: keyB)
     let c = tr.getReadVersion()
-    return try await (a.value(), b.value(), c.value())
+    return try await (a.value, b.value, c.value)
 }
 ```
 
@@ -157,7 +157,7 @@ let result: FDB.RangeResult = try await tr.getRange(
     end: .firstGreaterOrEqual(users.range.end),
     limit: 100,
     mode: .exact
-).value()
+).value
 ```
 
 #### Writes, atomics, options
@@ -230,10 +230,10 @@ v6 is a rewrite, the API is new. In short:
 | `fdb.setOption(.TLSCertPath(path:))` | `FDB.Network.setOption(.tlsCertPath(_:))` |
 | `AnyFDB`, `AnyFDBTransaction` protocols | concrete `FDB.Database` and `~Copyable` `FDB.Transaction` |
 | `fdb.begin()` + `commit()` | `db.withTransaction { tr in ... }` (commits automatically) or `db.makeTransaction()` |
-| `try await tr.get(key:)` | `try await tr.get(key:).value()` |
+| `try await tr.get(key:)` | `try await tr.get(key:).value` |
 | `get(range:)`, `get(subspace:)` (first batch only) | `getAll(_:)` (all batches), `forEachBatch(in:)`, `getRange(begin:end:...)` |
 | `FDB.Error` enum, `transactionRetry` | `FDB.Error` struct with raw `code`, retries via `fdb_transaction_on_error` |
-| `AnyFDBKey.asFDBKey()` | `FDBKey.fdbKey` |
+| `AnyFDBKey.asFDBKey()` | `FDB.Key.fdbKey` |
 | `FDB.Tuple([...])`, `tuple.tuple[0] as? Int`, `getPackedFDBTupleValue()` | `FDB.Tuple(...)`, `unpack(as:)` / `elements`, `packed` |
 | `FDB.Tuple(from:)` | `FDB.Tuple(packed:)` |
 | `Versionstamp.userData` | `Versionstamp.userVersion` |

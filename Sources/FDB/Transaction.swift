@@ -40,10 +40,10 @@ extension FDB {
         ///
         /// - parameters:
         ///   - snapshot: Snapshot read, i.e. it doesn't add a read conflict range
-        public func get(key: some FDBKey, snapshot: Bool = false) -> Future<Bytes?> {
+        public func get(key: some FDB.Key, snapshot: Bool = false) -> Future<Bytes?> {
             let key = key.fdbKey
             self.trace { "Getting key \(key.printable)" }
-            return .value(fdb_transaction_get(self.pointer, key, Int32(key.count), snapshot.fdb))
+            return .optionalBytes(fdb_transaction_get(self.pointer, key, Int32(key.count), snapshot.fdb))
         }
 
         /// Resolves a key selector to a key
@@ -219,7 +219,7 @@ extension FDB {
         // MARK: - Writes
 
         /// Sets the value of given key
-        public func set(key: some FDBKey, value: Bytes) {
+        public func set(key: some FDB.Key, value: Bytes) {
             let key = key.fdbKey
             self.trace { "Setting \(value.count) bytes to key \(key.printable)" }
             fdb_transaction_set(self.pointer, key, Int32(key.count), value, Int32(value.count))
@@ -229,7 +229,7 @@ extension FDB {
         ///
         /// The versionstamp is filled in by the cluster on commit. Use
         /// ``FDB/Database/withVersionstampedTransaction(_:)`` to learn it.
-        public func set(versionstampedKey key: some FDBKey, value: Bytes) throws(FDB.Error) {
+        public func set(versionstampedKey key: some FDB.Key, value: Bytes) throws(FDB.Error) {
             guard let offset = try key.incompleteVersionstampOffset() else {
                 throw FDB.Error.missingIncompleteVersionstamp
             }
@@ -239,7 +239,7 @@ extension FDB {
         }
 
         /// Clears given key
-        public func clear(key: some FDBKey) {
+        public func clear(key: some FDB.Key) {
             let key = key.fdbKey
             self.trace { "Clearing key \(key.printable)" }
             fdb_transaction_clear(self.pointer, key, Int32(key.count))
@@ -254,7 +254,7 @@ extension FDB {
         }
 
         /// Performs an atomic operation
-        public func atomic(_ op: MutationType, key: some FDBKey, value: Bytes) {
+        public func atomic(_ op: MutationType, key: some FDB.Key, value: Bytes) {
             let key = key.fdbKey
             self.trace { "Atomic \(op) on key \(key.printable)" }
             fdb_transaction_atomic_op(
@@ -263,7 +263,7 @@ extension FDB {
         }
 
         /// Performs an atomic operation with an integer parameter (encoded as little-endian)
-        public func atomic(_ op: MutationType, key: some FDBKey, value: some FixedWidthInteger) {
+        public func atomic(_ op: MutationType, key: some FDB.Key, value: some FixedWidthInteger) {
             self.atomic(op, key: key, value: withUnsafeBytes(of: value.littleEndian) { Bytes($0) })
         }
 
@@ -361,24 +361,26 @@ extension FDB {
 
     /// Error of ``FDB/Transaction/forEachBatch(in:limit:mode:snapshot:reverse:_:)``:
     /// either a FoundationDB error or an error thrown by the closure
-    public enum RangeError<Body: Swift.Error>: Swift.Error, FDBErrorWrapper {
+    public enum RangeError<Body: Swift.Error>: Swift.Error, FDB.ErrorWrapper {
         case fdb(FDB.Error)
         case body(Body)
 
         public var underlyingFDBError: FDB.Error? {
             switch self {
             case let .fdb(error): error
-            case let .body(error): (error as? FDB.Error) ?? (error as? any FDBErrorWrapper)?.underlyingFDBError
+            case let .body(error): (error as? FDB.Error) ?? (error as? any FDB.ErrorWrapper)?.underlyingFDBError
             }
         }
     }
 }
 
-/// An error which may wrap an ``FDB/Error``.
-///
-/// ``FDB/Database/withTransaction(_:)`` unwraps such errors to decide whether to retry the transaction.
-public protocol FDBErrorWrapper: Swift.Error {
-    var underlyingFDBError: FDB.Error? { get }
+extension FDB {
+    /// An error which may wrap an ``FDB/Error``.
+    ///
+    /// ``FDB/Database/withTransaction(_:)`` unwraps such errors to decide whether to retry the transaction.
+    public protocol ErrorWrapper: Swift.Error {
+        var underlyingFDBError: FDB.Error? { get }
+}
 }
 
 extension Bool {

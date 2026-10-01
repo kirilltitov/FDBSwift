@@ -51,7 +51,7 @@ struct DatabaseTests {
             let a = tr.get(key: self.subspace[1])
             let b = tr.get(key: self.subspace[2])
             let c = tr.get(key: self.subspace[42])
-            return try await (a.value(), b.value(), c.value())
+            return try await (a.value, b.value, c.value)
         }
         #expect(values.0 == [1])
         #expect(values.1 == [2])
@@ -86,7 +86,7 @@ struct DatabaseTests {
                 end: .firstGreaterOrEqual(self.subspace.range.end),
                 limit: 5,
                 mode: .exact
-            ).value()
+            ).value
         }
         #expect(single.records.count == 5)
         #expect(single.hasMore)
@@ -138,7 +138,7 @@ struct DatabaseTests {
         let attempts = Atomic<Int>(0)
         try await self.db.withTransaction { tr in
             let attempt = attempts.add(1, ordering: .relaxed).newValue
-            let value = try await tr.get(key: key).value()!
+            let value = try await tr.get(key: key).value!
             if attempt == 1 {
                 // Concurrent write to the key we've just read makes our commit conflict
                 try await self.db.set(key: key, value: [42])
@@ -169,7 +169,7 @@ struct DatabaseTests {
         await #expect(throws: FDB.Error.notCommitted) {
             try await db.withTransaction { tr in
                 attempts.add(1, ordering: .relaxed)
-                _ = try await tr.get(key: key).value()
+                _ = try await tr.get(key: key).value
                 try await db.set(key: key, value: [UInt8(attempts.load(ordering: .relaxed))])
                 tr.set(key: key, value: [0])
             }
@@ -199,12 +199,12 @@ struct DatabaseTests {
     }
 
     @Test func cancellation() async throws {
-        let version = try await self.db.withTransaction { tr in try await tr.getReadVersion().value() }
+        let version = try await self.db.withTransaction { tr in try await tr.getReadVersion().value }
         let task = Task {
             try await self.db.withTransaction { tr in
                 // Reading at a version far in the future blocks until FDB gives up with `futureVersion`
                 tr.setReadVersion(version + 1_000_000_000)
-                return try await tr.get(key: self.subspace["cancel"]).value()
+                return try await tr.get(key: self.subspace["cancel"]).value
             }
         }
         try await Task.sleep(for: .milliseconds(200))
@@ -264,8 +264,8 @@ struct DatabaseTests {
             try tr.setOption(.timeout(milliseconds: 5000))
             try tr.setOption(.priorityBatch)
             try tr.setOption(.tag("fdbswift"))
-            _ = try await tr.getReadVersion().value()
-            #expect(try await tr.getApproximateSize().value() >= 0)
+            _ = try await tr.getReadVersion().value
+            #expect(try await tr.getApproximateSize().value >= 0)
         }
     }
 

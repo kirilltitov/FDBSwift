@@ -6,7 +6,7 @@ extension FDB {
     /// tr.set(key: users[userID, "email"], value: ...)
     /// let all = try await tr.getAll(users.range)
     /// ```
-    public struct Subspace: Hashable, Sendable, FDBKey {
+    public struct Subspace: Hashable, Sendable, FDB.Key {
         /// Raw prefix of all keys in this subspace
         public let prefix: Bytes
 
@@ -28,7 +28,7 @@ extension FDB {
         }
 
         /// Creates a subspace with a prefix from given tuple elements
-        public init<each T: FDBTuplePackable>(_ element: repeat each T) {
+        public init<each T: FDB.TuplePackable>(_ element: repeat each T) {
             self.init(Tuple(repeat each element))
         }
 
@@ -40,7 +40,7 @@ extension FDB {
         }
 
         /// Returns a nested subspace with given tuple elements appended to the prefix
-        public subscript<each T: FDBTuplePackable>(_ element: repeat each T) -> Subspace {
+        public subscript<each T: FDB.TuplePackable>(_ element: repeat each T) -> Subspace {
             Subspace(prefix: self.prefix, appending: Tuple(repeat each element), base: self)
         }
 
@@ -55,12 +55,12 @@ extension FDB {
         }
 
         /// Whether given key belongs to this subspace
-        public func contains(_ key: some FDBKey) -> Bool {
+        public func contains(_ key: some FDB.Key) -> Bool {
             key.fdbKey.starts(with: self.prefix)
         }
 
         /// Decodes the tuple following the prefix of this subspace in given key
-        public func unpack(_ key: some FDBKey) throws(FDB.Error) -> Tuple {
+        public func unpack(_ key: some FDB.Key) throws(FDB.Error) -> Tuple {
             let key = key.fdbKey
             guard key.starts(with: self.prefix) else {
                 throw .unpackInvalidInput
@@ -68,7 +68,7 @@ extension FDB {
             return try Tuple(packed: Bytes(key[self.prefix.count...]))
         }
 
-        // MARK: FDBKey
+        // MARK: FDB.Key
 
         public var fdbKey: Bytes {
             self.prefix

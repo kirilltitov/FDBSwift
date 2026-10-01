@@ -9,14 +9,14 @@ extension FDB {
     /// ```swift
     /// let a = tr.get(key: keyA)
     /// let b = tr.get(key: keyB)
-    /// let (valueA, valueB) = try await (a.value(), b.value())
+    /// let (valueA, valueB) = try await (a.value, b.value)
     /// ```
     ///
-    /// A future is a non-copyable value with a single owner: it's awaited at most once (``value()`` consumes it), and
+    /// A future is a non-copyable value with a single owner: it's awaited at most once (``value`` consumes it), and
     /// its underlying resources are released exactly once, when it's consumed or goes out of scope.
     /// Dropping a future without awaiting it is fine: the request result is simply discarded.
     ///
-    /// If the awaiting task is cancelled, the future is cancelled too and ``value()`` throws
+    /// If the awaiting task is cancelled, the future is cancelled too and ``value`` throws
     /// ``FDB/Error/operationCancelled``.
     public struct Future<Value>: ~Copyable {
         @usableFromInline
@@ -48,9 +48,11 @@ extension FDB {
         /// Waits for the result.
         ///
         /// Consumes the future: its memory is released right after the value is extracted.
-        public consuming func value() async throws(FDB.Error) -> Value {
-            try await self.waitUntilReady()
-            return try self.extractValue()
+        public var value: Value {
+            consuming get async throws(FDB.Error) {
+                try await self.waitUntilReady()
+                return try self.extractValue()
+            }
         }
 
         /// Error of a ready future (if any) without extracting the value
@@ -121,7 +123,7 @@ extension FDB.Future where Value == Void {
 
 extension FDB.Future where Value == Bytes? {
     /// Future of `fdb_transaction_get`
-    static func value(_ pointer: OpaquePointer) -> Self {
+    static func optionalBytes(_ pointer: OpaquePointer) -> Self {
         Self(pointer) { (pointer) throws(FDB.Error) -> Bytes? in
             var present: fdb_bool_t = 0
             var value: UnsafePointer<UInt8>?

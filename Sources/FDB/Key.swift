@@ -1,34 +1,36 @@
-/// A type which can be used as a FoundationDB key
-public protocol FDBKey: Sendable {
-    /// Raw key bytes
-    var fdbKey: Bytes { get }
+extension FDB {
+    /// A type which can be used as a FoundationDB key
+    public protocol Key: Sendable {
+        /// Raw key bytes
+        var fdbKey: Bytes { get }
 
-    /// Position of the first incomplete versionstamp within ``fdbKey`` (if any),
-    /// used by ``FDB/Transaction/set(versionstampedKey:value:)``.
-    ///
-    /// Throws if the key contains more than one incomplete versionstamp.
-    func incompleteVersionstampOffset() throws(FDB.Error) -> Int?
+        /// Position of the first incomplete versionstamp within ``fdbKey`` (if any),
+        /// used by ``FDB/Transaction/set(versionstampedKey:value:)``.
+        ///
+        /// Throws if the key contains more than one incomplete versionstamp.
+        func incompleteVersionstampOffset() throws(FDB.Error) -> Int?
+    }
 }
 
-public extension FDBKey {
+public extension FDB.Key {
     func incompleteVersionstampOffset() throws(FDB.Error) -> Int? {
         nil
     }
 }
 
-extension Array: FDBKey where Element == UInt8 {
+extension Array: FDB.Key where Element == UInt8 {
     public var fdbKey: Bytes {
         self
     }
 }
 
-extension String: FDBKey {
+extension String: FDB.Key {
     public var fdbKey: Bytes {
         Bytes(self.utf8)
     }
 }
 
-extension StaticString: FDBKey {
+extension StaticString: FDB.Key {
     public var fdbKey: Bytes {
         self.withUTF8Buffer { Bytes($0) }
     }
@@ -40,7 +42,7 @@ extension FDB {
         public let begin: Bytes
         public let end: Bytes
 
-        public init(begin: some FDBKey, end: some FDBKey) {
+        public init(begin: some FDB.Key, end: some FDB.Key) {
             self.begin = begin.fdbKey
             self.end = end.fdbKey
         }
@@ -50,14 +52,15 @@ extension FDB {
         /// Note: for tuple-encoded keys use ``FDB/Subspace/range`` instead.
         ///
         /// - precondition: prefix must contain at least one byte other than `0xFF`
-        public init(prefix: some FDBKey) {
+        public init(prefix: some FDB.Key) {
             let prefix = prefix.fdbKey
             self.begin = prefix
-            self.end = Self.strinc(prefix)
+            self.end = Self.upperBound(ofPrefix: prefix)
         }
 
         /// Returns the first key which is greater than all keys starting with given prefix
-        static func strinc(_ key: Bytes) -> Bytes {
+        /// (known as `strinc` in other FoundationDB bindings)
+        static func upperBound(ofPrefix key: Bytes) -> Bytes {
             var key = key
             while let last = key.last, last == 0xFF {
                 key.removeLast()
@@ -75,29 +78,29 @@ extension FDB {
         public let orEqual: Bool
         public let offset: Int32
 
-        public init(key: some FDBKey, orEqual: Bool, offset: Int32) {
+        public init(key: some FDB.Key, orEqual: Bool, offset: Int32) {
             self.key = key.fdbKey
             self.orEqual = orEqual
             self.offset = offset
         }
 
         /// The last key less than given one
-        public static func lastLessThan(_ key: some FDBKey) -> Self {
+        public static func lastLessThan(_ key: some FDB.Key) -> Self {
             Self(key: key, orEqual: false, offset: 0)
         }
 
         /// The last key less than or equal to given one
-        public static func lastLessOrEqual(_ key: some FDBKey) -> Self {
+        public static func lastLessOrEqual(_ key: some FDB.Key) -> Self {
             Self(key: key, orEqual: true, offset: 0)
         }
 
         /// The first key greater than given one
-        public static func firstGreaterThan(_ key: some FDBKey) -> Self {
+        public static func firstGreaterThan(_ key: some FDB.Key) -> Self {
             Self(key: key, orEqual: true, offset: 1)
         }
 
         /// The first key greater than or equal to given one
-        public static func firstGreaterOrEqual(_ key: some FDBKey) -> Self {
+        public static func firstGreaterOrEqual(_ key: some FDB.Key) -> Self {
             Self(key: key, orEqual: false, offset: 1)
         }
     }

@@ -9,7 +9,7 @@ extension FDB.Database {
     /// (see `transactionRetryLimit` in ``init(clusterFile:transactionRetryLimit:transactionTimeout:logger:)``).
     ///
     /// The closure may be executed several times, so it must be idempotent (apart from the transaction itself).
-    /// Errors thrown by the closure which are not ``FDB/Error``s (or ``FDBErrorWrapper``s wrapping them, like
+    /// Errors thrown by the closure which are not ``FDB/Error``s (or ``FDB.ErrorWrapper``s wrapping them, like
     /// ``FDB/RangeError``) are rethrown as is, without retrying.
     ///
     /// The transaction is lent to the closure and can't escape it.
@@ -39,11 +39,11 @@ extension FDB.Database {
             do {
                 let result = try await body(transaction)
                 let versionstampFuture = versionstamp ? transaction.getVersionstamp() : nil
-                try await transaction.commit().value()
-                return (result, try await versionstampFuture?.value())
+                try await transaction.commit().value
+                return (result, try await versionstampFuture?.value)
             } catch {
                 guard
-                    let error = (error as? FDB.Error) ?? (error as? any FDBErrorWrapper)?.underlyingFDBError,
+                    let error = (error as? FDB.Error) ?? (error as? any FDB.ErrorWrapper)?.underlyingFDBError,
                     error.isNative
                 else {
                     throw error
@@ -51,7 +51,7 @@ extension FDB.Database {
                 attempt += 1
                 self.logger.debug("Transaction failed with \(error), attempt \(attempt)")
                 // Throws if the error is not retryable or the retry limit is reached
-                try await transaction.onError(error).value()
+                try await transaction.onError(error).value
             }
         }
     }
@@ -59,9 +59,9 @@ extension FDB.Database {
     // MARK: - Single-operation helpers
 
     /// Reads a value of given key in a separate transaction
-    public func get(key: some FDBKey, snapshot: Bool = false) async throws -> Bytes? {
+    public func get(key: some FDB.Key, snapshot: Bool = false) async throws -> Bytes? {
         try await self.withTransaction { tr in
-            try await tr.get(key: key, snapshot: snapshot).value()
+            try await tr.get(key: key, snapshot: snapshot).value
         }
     }
 
@@ -78,14 +78,14 @@ extension FDB.Database {
     }
 
     /// Sets the value of given key in a separate transaction
-    public func set(key: some FDBKey, value: Bytes) async throws {
+    public func set(key: some FDB.Key, value: Bytes) async throws {
         try await self.withTransaction { tr in
             tr.set(key: key, value: value)
         }
     }
 
     /// Clears given key in a separate transaction
-    public func clear(key: some FDBKey) async throws {
+    public func clear(key: some FDB.Key) async throws {
         try await self.withTransaction { tr in
             tr.clear(key: key)
         }
@@ -99,7 +99,7 @@ extension FDB.Database {
     }
 
     /// Performs an atomic operation in a separate transaction
-    public func atomic(_ op: FDB.MutationType, key: some FDBKey, value: Bytes) async throws {
+    public func atomic(_ op: FDB.MutationType, key: some FDB.Key, value: Bytes) async throws {
         try await self.withTransaction { tr in
             tr.atomic(op, key: key, value: value)
         }
@@ -108,7 +108,7 @@ extension FDB.Database {
     /// Atomically adds given number to the little-endian 64-bit integer stored at given key.
     ///
     /// Doesn't read the key, so it never conflicts with other increments.
-    public func increment(key: some FDBKey, by value: Int64 = 1) async throws {
+    public func increment(key: some FDB.Key, by value: Int64 = 1) async throws {
         try await self.atomic(.add, key: key, value: withUnsafeBytes(of: value.littleEndian) { Bytes($0) })
     }
 }
