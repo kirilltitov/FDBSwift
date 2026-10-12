@@ -70,7 +70,7 @@ struct WatchTests {
     }
 
     @Test func tooManyWatches() async throws {
-        let db = try FDB.Database()
+        let db = try TestEnvironment.makeDatabase()
         try db.setOption(.maxWatches(1))
         let key = self.subspace["too-many"]
 

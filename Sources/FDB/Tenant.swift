@@ -19,6 +19,8 @@ extension FDB {
     /// (`configure tenant_mode=optional_experimental` or `required_experimental`), otherwise transactions fail
     /// with ``FDB/Error/tenantsDisabled``. Opening a tenant doesn't check that it exists: transactions of
     /// a missing tenant fail with ``FDB/Error/tenantNotFound``.
+    ///
+    /// Requires API version 710 (see ``FDB/Network/selectAPIVersion(_:)``).
     public final class Tenant: Transactor {
         nonisolated(unsafe) let pointer: OpaquePointer
         /// Name of the tenant
@@ -27,6 +29,7 @@ extension FDB {
         public let database: Database
 
         init(database: Database, name: Bytes) throws(FDB.Error) {
+            try FDB.requireAPIVersion(710)
             var pointer: OpaquePointer?
             try fdb_database_open_tenant(database.pointer, name, Int32(name.count), &pointer).check()
             self.pointer = pointer!
@@ -45,8 +48,11 @@ extension FDB {
         }
 
         /// Returns the internal ID of the tenant (fails with ``FDB/Error/tenantNotFound`` if it doesn't exist)
-        public func getID() -> Future<Int64> {
-            .int64(fdb_tenant_get_id(self.pointer))
+        ///
+        /// Requires API version 730.
+        public func getID() throws(FDB.Error) -> Future<Int64> {
+            try FDB.requireAPIVersion(730)
+            return .int64(fdb_tenant_get_id(self.pointer))
         }
     }
 

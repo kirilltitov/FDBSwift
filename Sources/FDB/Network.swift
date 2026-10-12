@@ -29,6 +29,43 @@ extension FDB {
         }
 
         private static let state = Mutex<State>(.initial)
+        private static let selectedAPIVersion = Atomic<Int32>(FDB.latestAPIVersion)
+
+        /// API version in use, see ``selectAPIVersion(_:)``
+        public static var apiVersion: Int32 {
+            self.selectedAPIVersion.load(ordering: .relaxed)
+        }
+
+        /// Selects the FoundationDB API version, ``FDB/latestAPIVersion`` by default.
+        ///
+        /// Must be called before anything else (setting network options, opening databases), at most once per
+        /// process. An older version is needed to work with an older cluster: `libfdb_c` 7.4 can't talk to
+        /// FoundationDB 6.3 itself, but can load the 6.3 client library as an external client (see
+        /// ``FDB/NetworkOption/externalClientDirectory(path:)``), which only works if the API version is not newer
+        /// than the external library supports (630 for 6.3):
+        ///
+        /// ```swift
+        /// try FDB.Network.selectAPIVersion(630)
+        /// try FDB.Network.setOption(.externalClientDirectory(path: "/usr/lib/fdb-clients"))
+        /// let db = try FDB.Database()
+        /// ```
+        ///
+        /// Features newer than the selected version throw ``FDB/Error/unsupportedOperation``
+        /// (tenants require 710, for example).
+        ///
+        /// - parameters:
+        ///   - version: API version between ``FDB/minimumAPIVersion`` and ``FDB/latestAPIVersion``
+        public static func selectAPIVersion(_ version: Int32) throws(FDB.Error) {
+            guard FDB.minimumAPIVersion ... FDB.latestAPIVersion ~= version else {
+                throw FDB.Error.apiVersionNotSupported
+            }
+            try self.state.withLock { (state: inout State) throws(FDB.Error) in
+                guard case .initial = state else {
+                    throw FDB.Error.apiVersionAlreadySet
+                }
+                try self.select(version, &state)
+            }
+        }
         private static let logger = Logger(label: "FDB.Network")
 
         /// Sets a network option. Must be called before the network is started (i.e. before opening any database).
@@ -118,7 +155,12 @@ extension FDB {
             guard case .initial = state else {
                 return
             }
-            try fdb_select_api_version_impl(FDB.apiVersion, FDB_API_VERSION).check()
+            try self.select(FDB.latestAPIVersion, &state)
+        }
+
+        private static func select(_ version: Int32, _ state: inout State) throws(FDB.Error) {
+            try fdb_select_api_version_impl(version, FDB_API_VERSION).check()
+            self.selectedAPIVersion.store(version, ordering: .relaxed)
             state = .apiVersionSelected
         }
     }

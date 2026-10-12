@@ -10,9 +10,8 @@ doesn't compile anymore.
 
 * Swift 6.4+
 * macOS 15+ or Linux
-* FoundationDB client library (`libfdb_c`) **7.4+**. The cluster itself may be older: `libfdb_c` 7.4 can talk to
-  older clusters via the [multi-version client](https://apple.github.io/foundationdb/api-general.html#multi-version-client-api)
-  (see `FDB.NetworkOption.externalClientDirectory(path:)`).
+* FoundationDB client library (`libfdb_c`) **7.4+**. The cluster itself may be as old as **6.3**, see
+  [Older clusters](#older-clusters).
 
 ## Installation
 
@@ -343,6 +342,32 @@ do {
 
 Most of the API uses typed throws (`throws(FDB.Error)`).
 
+### Older clusters
+
+`libfdb_c` 7.4 can't talk to older clusters by itself, but its
+[multi-version client](https://apple.github.io/foundationdb/api-general.html#multi-version-client-api) can load the
+client library of the cluster's version and use it instead. An external client only works with an API version it
+supports, so select the API version of the cluster (630 for FoundationDB 6.3) before anything else:
+
+```swift
+try FDB.Network.selectAPIVersion(630)
+// A directory with libfdb_c of the cluster's version (e.g. libfdb_c_6.3.23.so), or set
+// FDB_NETWORK_OPTION_EXTERNAL_CLIENT_DIRECTORY instead
+try FDB.Network.setOption(.externalClientDirectory(path: "/usr/lib/fdb-external"))
+let db = try FDB.Database()
+```
+
+With an older API version, features introduced later throw `FDB.Error.unsupportedOperation`, like in other bindings:
+range split points, `mainThreadBusyness`, `getServerProtocol` and management calls need 700, tenants 710,
+`Database(connectionString:)` 720, `getTotalCost`, `getTagThrottledDuration`, `getClientStatus` and tenant IDs 730.
+
+While connecting, the multi-version client may report `FDB.Error.clusterVersionChanged`: it's retryable, so
+`withTransaction` handles it, and manually managed transactions should pass it to `onError` like any other error.
+
+This setup (FoundationDB 6.3.23 cluster, `libfdb_c` 7.4, API 630) is tested on CI with the full test suite and the
+binding tester, see `scripts/start_fdb63.sh`. When the cluster is upgraded, keep the old library around until all
+servers are upgraded, then switch to the new API version.
+
 ### Logging
 
 [swift-log](https://github.com/apple/swift-log). Pass your `Logger` to `FDB.Database.init(logger:)`; every operation is
@@ -397,7 +422,12 @@ Shoutout to [@dimitribouniol](https://github.com/dimitribouniol) and his
 ### `api_version_not_supported` on start
 
 Your `libfdb_c` is older than 7.4. Upgrade the client library (the cluster may stay older, see
-[Requirements](#requirements)).
+[Older clusters](#older-clusters)).
+
+### `Failed to load a required FDB API function` (2204)
+
+The multi-version client loaded an external client library which doesn't support the selected API version, e.g. 6.3
+with API 740. Select the cluster's API version, see [Older clusters](#older-clusters).
 
 ## TODOs
 

@@ -6,7 +6,7 @@ import Testing
 /// Integration tests, require a running FoundationDB cluster (default cluster file)
 @Suite("Database")
 struct DatabaseTests {
-    static let db: FDB.Database = try! FDB.Database()
+    static let db: FDB.Database = try! TestEnvironment.makeDatabase()
 
     static var defaultClusterFile: String {
         if let path = ProcessInfo.processInfo.environment["FDB_CLUSTER_FILE"] {
@@ -172,7 +172,7 @@ struct DatabaseTests {
     }
 
     @Test func retryLimit() async throws {
-        let db = try FDB.Database(transactionRetryLimit: 2)
+        let db = try TestEnvironment.makeDatabase(transactionRetryLimit: 2)
         let key = self.subspace["retry-limit"]
         try await db.set(key: key, value: [0])
 
@@ -189,6 +189,10 @@ struct DatabaseTests {
     }
 
     @Test func nonRetryableErrors() async throws {
+        // Make sure the database is connected: while connecting, the multi-version client (used with older clusters)
+        // may fail transactions with retryable `clusterVersionChanged`, which would add an attempt
+        _ = try await self.db.get(key: self.subspace["warm-up"])
+
         let attempts = Atomic<Int>(0)
         await #expect(throws: FDB.Error.keyTooLarge) {
             try await self.db.withTransaction { tr in
@@ -200,13 +204,14 @@ struct DatabaseTests {
         #expect(attempts.load(ordering: .relaxed) == 1)
 
         struct Custom: Error {}
+        let customAttempts = Atomic<Int>(0)
         await #expect(throws: Custom.self) {
             try await self.db.withTransaction { _ in
-                attempts.add(1, ordering: .relaxed)
+                customAttempts.add(1, ordering: .relaxed)
                 throw Custom()
             }
         }
-        #expect(attempts.load(ordering: .relaxed) == 2)
+        #expect(customAttempts.load(ordering: .relaxed) == 1)
     }
 
     @Test func cancellation() async throws {
@@ -281,13 +286,22 @@ struct DatabaseTests {
     }
 
     @Test func network() throws {
+        _ = Self.db
         #expect(FDB.Network.isRunning)
+        #expect(FDB.apiVersion == TestEnvironment.apiVersion)
         #expect(throws: FDB.Error.networkAlreadySetup) {
             try FDB.Network.setOption(.traceLogGroup("too late"))
         }
         // Network is started once, any number of databases can be opened
         _ = try FDB.Database()
-        _ = try FDB.Database(connectionString: String(contentsOfFile: Self.defaultClusterFile, encoding: .utf8))
+        let connectionString = try String(contentsOfFile: Self.defaultClusterFile, encoding: .utf8)
+        if FDB.apiVersion >= 720 {
+            _ = try FDB.Database(connectionString: connectionString)
+        } else {
+            #expect(throws: FDB.Error.unsupportedOperation) {
+                try FDB.Database(connectionString: connectionString)
+            }
+        }
     }
 
     @Test func errors() {

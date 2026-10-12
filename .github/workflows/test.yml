@@ -52,6 +52,31 @@ jobs:
     - name: Run binding tester against the reference Python binding
       run: ./scripts/run_bindingtester.sh
 
+  # FoundationDB 6.3 cluster via the multi-version client: libfdb_c 7.4 with the 6.3 library as an external client,
+  # API version 630
+  fdb63:
+    runs-on: ubuntu-latest
+    container: swift:6.4.0-noble
+    env:
+      FDB_TEST_API_VERSION: 630
+      FDB_NETWORK_OPTION_EXTERNAL_CLIENT_DIRECTORY: /tmp/fdb63/ext
+      FDB_CLUSTER_FILE: /tmp/fdb63/fdb.cluster
+
+    steps:
+    - uses: actions/checkout@v5
+    - name: Install FoundationDB 7.4 client and a 6.3 cluster
+      run: |
+        apt-get update -qq
+        apt-get install -y -qq curl git python3 python3-pip
+        curl -sSfLO https://github.com/apple/foundationdb/releases/download/${FDB_VERSION}/foundationdb-clients_${FDB_VERSION}-1_amd64.deb
+        dpkg -i foundationdb-clients_${FDB_VERSION}-1_amd64.deb
+        ./scripts/install_pkgconfig.sh
+        ./scripts/start_fdb63.sh /tmp/fdb63
+    - name: Test
+      run: swift test
+    - name: Run binding tester against the reference Python binding
+      run: API_VERSION=630 CLUSTER_FILE=/tmp/fdb63/fdb.cluster SEEDS=5 ./scripts/run_bindingtester.sh
+
   macos:
     runs-on: macos-15
 
@@ -79,12 +104,13 @@ jobs:
   # Single required status check for branch protection: passes only if all platform jobs pass
   build:
     if: always()
-    needs: [linux, macos, bindingtester]
+    needs: [linux, macos, bindingtester, fdb63]
     runs-on: ubuntu-latest
 
     steps:
     - name: Check results
       run: |
-        echo "linux: ${{ needs.linux.result }}, macos: ${{ needs.macos.result }}, bindingtester: ${{ needs.bindingtester.result }}"
+        echo "linux: ${{ needs.linux.result }}, macos: ${{ needs.macos.result }}," \
+            "bindingtester: ${{ needs.bindingtester.result }}, fdb63: ${{ needs.fdb63.result }}"
         [ "${{ needs.linux.result }}" = "success" ] && [ "${{ needs.macos.result }}" = "success" ] \
-            && [ "${{ needs.bindingtester.result }}" = "success" ]
+            && [ "${{ needs.bindingtester.result }}" = "success" ] && [ "${{ needs.fdb63.result }}" = "success" ]

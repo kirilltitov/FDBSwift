@@ -44,7 +44,9 @@ extension FDB {
             try self.configure(transactionRetryLimit: transactionRetryLimit, transactionTimeout: transactionTimeout)
         }
 
-        /// Opens a database using a connection string (the contents of a cluster file) instead of a cluster file
+        /// Opens a database using a connection string (the contents of a cluster file) instead of a cluster file.
+        ///
+        /// Requires API version 720.
         public init(
             connectionString: String,
             transactionRetryLimit: Int64? = Database.defaultTransactionRetryLimit,
@@ -52,6 +54,7 @@ extension FDB {
             logger: Logger = Logger(label: "FDB")
         ) throws(FDB.Error) {
             try Network.start()
+            try FDB.requireAPIVersion(720)
 
             var pointer: OpaquePointer?
             try fdb_create_database_from_connection_string(connectionString, &pointer).check()

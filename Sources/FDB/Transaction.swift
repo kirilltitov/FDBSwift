@@ -262,8 +262,11 @@ extension FDB {
 
         /// Returns keys which split given range into chunks of roughly `chunkSize` bytes (the first and the last
         /// keys are the boundaries of the range itself)
-        public func getRangeSplitPoints(_ range: KeyRange, chunkSize: Int64) -> Future<[Bytes]> {
-            Future(
+        ///
+        /// Requires API version 700.
+        public func getRangeSplitPoints(_ range: KeyRange, chunkSize: Int64) throws(FDB.Error) -> Future<[Bytes]> {
+            try FDB.requireAPIVersion(700)
+            return Future(
                 fdb_transaction_get_range_split_points(
                     self.pointer, range.begin, Int32(range.begin.count), range.end, Int32(range.end.count), chunkSize
                 )
@@ -328,14 +331,20 @@ extension FDB {
             .int64(fdb_transaction_get_approximate_size(self.pointer))
         }
 
-        /// Returns the estimated cost of the transaction so far (used by tag throttling), in bytes-equivalent units
-        public func getTotalCost() -> Future<Int64> {
-            .int64(fdb_transaction_get_total_cost(self.pointer))
+        /// Returns the estimated cost of the transaction so far (used by tag throttling), in bytes-equivalent units.
+        ///
+        /// Requires API version 730.
+        public func getTotalCost() throws(FDB.Error) -> Future<Int64> {
+            try FDB.requireAPIVersion(730)
+            return .int64(fdb_transaction_get_total_cost(self.pointer))
         }
 
-        /// Returns the time in seconds this transaction was delayed by tag throttling
-        public func getTagThrottledDuration() -> Future<Double> {
-            Future(fdb_transaction_get_tag_throttled_duration(self.pointer)) { (pointer) throws(FDB.Error) -> Double in
+        /// Returns the time in seconds this transaction was delayed by tag throttling.
+        ///
+        /// Requires API version 730.
+        public func getTagThrottledDuration() throws(FDB.Error) -> Future<Double> {
+            try FDB.requireAPIVersion(730)
+            return Future(fdb_transaction_get_tag_throttled_duration(self.pointer)) { (pointer) throws(FDB.Error) -> Double in
                 var value: Double = 0
                 try fdb_future_get_double(pointer, &value).check()
                 return value
