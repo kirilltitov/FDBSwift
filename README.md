@@ -283,6 +283,35 @@ try await db.deleteTenant("acme") // the tenant must be empty
 `createTenant`, `deleteTenant` and `tenantExists` are also available on a transaction, to manage tenants together
 with other changes.
 
+### Locality, conflicts and diagnostics
+
+```swift
+// Shard boundaries, e.g. to split a large scan into parallel chunks
+let boundaries = try await db.getBoundaryKeys(in: FDB.KeyRange(prefix: myPrefix))
+
+try await db.withTransaction { tr in
+    let servers = try await tr.getAddresses(for: key).value // ["10.0.0.1:4500", ...]
+    let cost = try await tr.getTotalCost().value
+}
+
+// Which keys made a commit fail (for manually managed transactions)
+let tr = try db.makeTransaction()
+try tr.setOption(.reportConflictingKeys)
+...
+do {
+    try await tr.commit().value
+} catch .notCommitted {
+    print(try await tr.getConflictingKeys()) // [KeyRange]
+}
+
+db.mainThreadBusyness                      // 0...1, is this client overloaded?
+try await db.getClientStatus().value       // JSON with connection details
+try await db.getServerProtocol().value
+```
+
+Cluster management calls are there too: `rebootWorker(address:check:duration:)`,
+`forceRecoveryWithDataLoss(datacenterID:)`, `createSnapshot(uid:command:)`.
+
 ### One-shot helpers
 
 Each runs in its own transaction (available on both `FDB.Database` and `FDB.Tenant`):
@@ -386,6 +415,7 @@ Your `libfdb_c` is older than 7.4. Upgrade the client library (the cluster may s
 * ✅ Watches
 * ✅ Directories
 * ✅ Tenants
-* The rest of C API (locality, mapped ranges, ...)
+* ✅ The rest of C API (locality, conflicting keys, diagnostics and management)
+* Mapped ranges (experimental in FoundationDB)
 * `~Escapable` everything (as soon as lifetime annotations are out of experimental)
 * Drop VR support
