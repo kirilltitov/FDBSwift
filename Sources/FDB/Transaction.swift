@@ -328,6 +328,20 @@ extension FDB {
             .int64(fdb_transaction_get_approximate_size(self.pointer))
         }
 
+        /// Returns the estimated cost of the transaction so far (used by tag throttling), in bytes-equivalent units
+        public func getTotalCost() -> Future<Int64> {
+            .int64(fdb_transaction_get_total_cost(self.pointer))
+        }
+
+        /// Returns the time in seconds this transaction was delayed by tag throttling
+        public func getTagThrottledDuration() -> Future<Double> {
+            Future(fdb_transaction_get_tag_throttled_duration(self.pointer)) { (pointer) throws(FDB.Error) -> Double in
+                var value: Double = 0
+                try fdb_future_get_double(pointer, &value).check()
+                return value
+            }
+        }
+
         // MARK: - Writes
 
         /// Sets the value of given key
