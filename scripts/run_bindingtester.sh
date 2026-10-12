@@ -60,8 +60,13 @@ run --compare python --test-name scripted
 for _ in $(seq 1 "${SEEDS}"); do
     run --compare python --test-name api --num-ops "${OPS}" --api-version 740
 done
+for _ in $(seq 1 "${SEEDS}"); do
+    run --compare python --test-name directory --num-ops "${OPS}" --api-version 740
+done
 # Concurrent tests can't be compared with another binding, they are checked for consistency instead
 run --test-name api --num-ops "${OPS}" --concurrency 3 --api-version 740
+run --test-name directory --num-ops "${OPS}" --concurrency 3 --api-version 740
+run --test-name directory_hca --num-ops "${OPS}" --concurrency 4 --api-version 740
 
 if [ "${failures}" -ne 0 ]; then
     echo "${failures} binding tester run(s) failed" >&2

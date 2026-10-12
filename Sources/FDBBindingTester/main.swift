@@ -198,6 +198,7 @@ final class StackMachine: @unchecked Sendable {
     var transactionName: Bytes
     var lastVersion: Int64 = 0
     var threads: [Task<Void, any Error>] = []
+    let directories = DirectoryState()
 
     init(db: FDB.Database, prefix: Bytes) {
         self.db = db
@@ -593,6 +594,9 @@ final class StackMachine: @unchecked Sendable {
 
         case "UNIT_TESTS":
             try await runUnitTests(db: self.db)
+
+        case _ where op.hasPrefix("DIRECTORY_"):
+            await self.executeDirectory(op: op, index: index, isDatabase: isDatabase, isSnapshot: isSnapshot)
 
         default:
             throw TesterError(description: "Unknown op \(op)")

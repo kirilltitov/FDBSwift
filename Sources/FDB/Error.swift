@@ -58,6 +58,26 @@ extension FDB {
             case Self.missingIncompleteVersionstamp.code: "No incomplete versionstamp found in the key"
             case Self.multipleIncompleteVersionstamps.code: "More than one incomplete versionstamp in the key"
             case Self.invalidVersionstamp.code: "Invalid versionstamp"
+            case Self.directoryRootOperation.code: "The root directory cannot be opened, moved or removed"
+            case Self.directoryAlreadyExists.code: "The directory already exists"
+            case Self.directoryDoesNotExist.code: "The directory does not exist"
+            case Self.directoryParentDoesNotExist.code: "The parent directory does not exist"
+            case Self.directoryIncompatibleLayer.code: "The directory was created with an incompatible layer"
+            case Self.directoryManualPrefixesDisabled.code:
+                "Cannot specify a prefix unless manual prefixes are enabled (and never in a partition)"
+            case Self.directoryPrefixInUse.code: "The given directory prefix is already in use"
+            case Self.directoryPrefixNotEmpty.code:
+                "The database has keys stored at the prefix chosen by the automatic prefix allocator"
+            case Self.directoryPrefixConflict.code:
+                "The directory layer has manually allocated prefixes that conflict with the automatic prefix allocator"
+            case Self.directoryInvalidPrefix.code: "Invalid directory prefix"
+            case Self.directoryMoveIntoSubdirectory.code:
+                "The destination directory cannot be a subdirectory of the source directory"
+            case Self.directoryMoveBetweenPartitions.code: "Cannot move directories between partitions"
+            case Self.directoryIncompatibleVersion.code: "The directory layer metadata has an incompatible version"
+            case Self.directoryReadOnlyVersion.code:
+                "The directory layer metadata has a newer version and is read-only for this directory layer"
+            case Self.directoryPartitionRoot.code: "Cannot use the root of a directory partition as a subspace"
             case Self.networkNotStarted.code: "Network is not started"
             case Self.networkStopped.code: "Network has been stopped and can't be restarted within the process"
             default: String(cString: fdb_get_error(self.code))
@@ -135,6 +155,21 @@ public extension FDB.Error {
     static let unpackInvalidString = Self(code: 9705)
     static let unpackTooDeep = Self(code: 9706)
     static let unpackTypeMismatch = Self(code: 9707)
+    static let directoryRootOperation = Self(code: 9600)
+    static let directoryAlreadyExists = Self(code: 9601)
+    static let directoryDoesNotExist = Self(code: 9602)
+    static let directoryParentDoesNotExist = Self(code: 9603)
+    static let directoryIncompatibleLayer = Self(code: 9604)
+    static let directoryManualPrefixesDisabled = Self(code: 9605)
+    static let directoryPrefixInUse = Self(code: 9606)
+    static let directoryPrefixNotEmpty = Self(code: 9607)
+    static let directoryPrefixConflict = Self(code: 9608)
+    static let directoryInvalidPrefix = Self(code: 9609)
+    static let directoryMoveIntoSubdirectory = Self(code: 9610)
+    static let directoryMoveBetweenPartitions = Self(code: 9611)
+    static let directoryIncompatibleVersion = Self(code: 9612)
+    static let directoryReadOnlyVersion = Self(code: 9613)
+    static let directoryPartitionRoot = Self(code: 9614)
     static let missingIncompleteVersionstamp = Self(code: 9800)
     static let invalidVersionstamp = Self(code: 9801)
     static let multipleIncompleteVersionstamps = Self(code: 9802)
