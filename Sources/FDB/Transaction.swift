@@ -211,6 +211,27 @@ extension FDB {
             fdb_transaction_set_read_version(self.pointer, version)
         }
 
+        /// Watches given key for changes.
+        ///
+        /// The watch becomes active only after the transaction is committed, and it outlives the transaction:
+        /// return the future from ``FDB/Database/withTransaction(_:)`` and await it afterwards. It completes when the
+        /// value of the key differs from the one this transaction has seen (or written).
+        ///
+        /// Keep in mind that:
+        /// - a completed watch means that the value has *probably* changed: intermediate changes may be missed
+        ///   (`A → B → A` may not trigger it), so re-read the value afterwards;
+        /// - if the transaction isn't committed (or fails), the watch fails too;
+        /// - the number of outstanding watches is limited per database (``FDB/DatabaseOption/maxWatches(_:)``,
+        ///   10 000 by default), exceeding it fails with ``FDB/Error/tooManyWatches``;
+        /// - a watch which is no longer needed should be dropped (or cancelled), which cancels it in the cluster.
+        ///
+        /// Prefer ``FDB/Database/changes(of:)`` or ``FDB/Database/waitForChange(of:)``, which handle all of that.
+        public func watch(key: some FDB.Key) -> Future<Void> {
+            let key = key.fdbKey
+            self.trace { "Watching key \(key.printable)" }
+            return Future(fdb_transaction_watch(self.pointer, key, Int32(key.count)))
+        }
+
         /// Returns an estimation of the transaction size in bytes so far
         public func getApproximateSize() -> Future<Int64> {
             .int64(fdb_transaction_get_approximate_size(self.pointer))

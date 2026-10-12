@@ -15,7 +15,7 @@ jobs:
     container: swift:6.4.0-noble
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
     - name: Install FoundationDB
       run: |
         apt-get update -qq
@@ -37,7 +37,7 @@ jobs:
     runs-on: macos-15
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
     - name: Install Swift toolchain
       run: |
         curl -sSfLO https://download.swift.org/swift-${SWIFT_VERSION}-release/xcode/swift-${SWIFT_VERSION}-RELEASE/swift-${SWIFT_VERSION}-RELEASE-osx.pkg
