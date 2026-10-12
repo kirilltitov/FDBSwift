@@ -225,6 +225,40 @@ Things to keep in mind when using raw watches (`changes(of:)` handles all of the
 * the number of outstanding watches per database is limited (`FDB.DatabaseOption.maxWatches`, 10 000 by default);
 * drop (or `cancel()`) watches you don't need anymore, this cancels them in the cluster too.
 
+### Directories
+
+The directory layer maps readable paths like `["app", "users"]` to short, automatically allocated key prefixes.
+Directories can be listed, moved (renamed) and removed without touching their contents, and the format is shared with
+other bindings, so directories created by Python, Go or Java code can be opened here and vice versa.
+
+```swift
+let directories = FDB.DirectoryLayer.default
+
+// Separate transactions
+let users = try await directories.createOrOpen(["app", "users"], in: db)
+let names = try await directories.list(["app"], in: db) // ["users"]
+
+// Or within your transaction
+try await db.withTransaction { tr in
+    let orders = try await directories.createOrOpen(["app", "orders"], in: tr)
+    tr.set(key: try orders.subspace[orderID, "total"], value: ...)
+
+    let archived = try await orders.move(to: ["archive", "orders"], in: tr) // parent must exist
+    try await directories.removeIfExists(["app", "tmp"], in: tr) // removes contents and subdirectories too
+}
+```
+
+Notes:
+
+* `layer:` is an optional tag (bytes) recorded with a directory and checked on open
+  (`FDB.Error.directoryIncompatibleLayer` on mismatch);
+* `create`/`open` throw `FDB.Error.directoryAlreadyExists`/`directoryDoesNotExist`, `createOrOpen` never does;
+* a directory created with `layer: FDB.DirectoryLayer.partitionLayer` is a partition: all its subdirectories share
+  its prefix (handy to keep related data together, e.g. per tenant). The partition root itself is not a subspace;
+* paths passed to a `DirectorySubspace` are relative to it;
+* custom layouts: `FDB.DirectoryLayer(nodeSubspace:contentSubspace:allowManualPrefixes:)`, the latter allows
+  `create(_:prefix:in:)` with an explicit prefix.
+
 ### One-shot helpers
 
 Each runs in its own transaction:
@@ -266,7 +300,7 @@ logged at `trace` level (lazily, nothing is computed unless enabled).
 Besides its own tests, every change is checked by the official FoundationDB
 [binding tester](https://github.com/apple/foundationdb/tree/main/bindings/bindingtester): it generates random sequences
 of operations (reads, writes, range reads with key selectors, atomics, conflict ranges, versionstamps, tuples,
-concurrent transactions, errors and retries), runs them through this binding (`FDBBindingTester` target) and through
+concurrent transactions, errors and retries, directories), runs them through this binding (`FDBBindingTester` target) and through
 the reference Python binding, and compares the results byte by byte. Run it locally against a local cluster with:
 
 ```bash
@@ -326,7 +360,7 @@ Your `libfdb_c` is older than 7.4. Upgrade the client library (the cluster may s
 * ✅ Task cancellation
 * ✅ Zero-copy range reads
 * ✅ Watches
+* ✅ Directories
 * The rest of C API (tenants, mapped ranges, ...)
-* Directories
 * `~Escapable` everything (as soon as lifetime annotations are out of experimental)
 * Drop VR support
