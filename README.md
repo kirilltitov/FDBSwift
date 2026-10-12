@@ -258,6 +258,50 @@ Notes:
 * custom layouts: `FDB.DirectoryLayer(nodeSubspace:contentSubspace:allowManualPrefixes:)`, the latter allows
   `create(_:prefix:in:)` with an explicit prefix.
 
+### Entities
+
+`FDBEntity` (a separate product, `.product(name: "FDBEntity", package: "FDBSwift")`) stores `Codable` entities by ID,
+with optional indices. It's the successor of Entita2/Entita2FDB with the same key layout, so existing data keeps working.
+
+```swift
+import FDBEntity
+
+struct User: FDB.IndexedEntity {
+    enum IndexKey: String, FDB.EntityIndexKey {
+        case email, country
+    }
+
+    static var storage: any FDB.Transactor { database } // a database or a tenant
+    static var subspace: FDB.Subspace { FDB.Subspace("app") }
+    static var IDKey: KeyPath<User, FDB.UUID> { \.ID }
+    static let indices: [IndexKey: FDB.EntityIndex<User>] = [
+        .email: FDB.EntityIndex(\.email, unique: true),
+        .country: FDB.EntityIndex(\.country, unique: false),
+    ]
+
+    let ID: FDB.UUID
+    var email: String
+    var country: String
+}
+
+try await User(ID: FDB.UUID(), email: "kirill@example.com", country: "RU").insert()
+let user = try await User.loadByIndex(key: .email, value: "kirill@example.com")
+
+// Several operations atomically
+try await database.withTransaction { tr in
+    guard var user = try await User.load(by: id, within: tr) else { return }
+    user.country = "AM"
+    try await user.save(within: tr) // indices are updated in the same transaction
+}
+```
+
+* `insert` fails if the entity exists, `save` inserts or overwrites, `delete` removes the entity and its index entries;
+* unique indices are enforced (`FDB.EntityError.uniqueIndexViolation`), also between concurrent transactions;
+* hooks (`beforeSave`, `afterLoad`, ...) run within the operation's transaction, which may be retried, so they must not
+  have side effects outside of the database;
+* JSON by default, `static let format: FDB.EntityFormat = .MsgPack` per entity type;
+* `FDB.UUID` keys are byte strings with the 16 bytes of the UUID (like in Entita2), not tuple UUIDs.
+
 ### Tenants
 
 A tenant is a named, isolated key space within a cluster: transactions of a tenant see only its keys (FoundationDB
@@ -446,6 +490,7 @@ with API 740. Select the cluster's API version, see [Older clusters](#older-clus
 * ✅ Directories
 * ✅ Tenants
 * ✅ The rest of C API (locality, conflicting keys, diagnostics and management)
+* ✅ Entities (`FDBEntity`)
 * Mapped ranges (experimental in FoundationDB)
 * `~Escapable` everything (as soon as lifetime annotations are out of experimental)
 * Drop VR support
