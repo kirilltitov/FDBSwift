@@ -5,13 +5,14 @@ on:
     branches:
     - master
 
+env:
+  FDB_VERSION: 7.4.8
+  SWIFT_VERSION: 6.4.0
+
 jobs:
-  build:
+  linux:
     runs-on: ubuntu-latest
     container: swift:6.4.0-noble
-
-    env:
-      FDB_VERSION: 7.4.8
 
     steps:
     - uses: actions/checkout@v4
@@ -24,14 +25,46 @@ jobs:
         dpkg -i foundationdb-clients_${FDB_VERSION}-1_amd64.deb foundationdb-server_${FDB_VERSION}-1_amd64.deb
         service foundationdb start
         ./scripts/install_pkgconfig.sh
-        for i in $(seq 1 30); do
-          fdbcli --exec status --timeout 5 | grep -q "Healthy" && break
-          sleep 2
-        done
-        fdbcli --exec status --timeout 5
+        ./scripts/wait_for_fdb.sh
     - name: Build
       run: swift build --build-tests -Xswiftc -warnings-as-errors
     - name: Test
       run: swift test
     - name: Test (Thread Sanitizer)
       run: swift test --sanitize=thread
+
+  macos:
+    runs-on: macos-15
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Install Swift toolchain
+      run: |
+        curl -sSfLO https://download.swift.org/swift-${SWIFT_VERSION}-release/xcode/swift-${SWIFT_VERSION}-RELEASE/swift-${SWIFT_VERSION}-RELEASE-osx.pkg
+        sudo installer -pkg swift-${SWIFT_VERSION}-RELEASE-osx.pkg -target /
+        TOOLCHAIN=/Library/Developer/Toolchains/swift-${SWIFT_VERSION}-RELEASE.xctoolchain
+        echo "TOOLCHAINS=$(plutil -extract CFBundleIdentifier raw ${TOOLCHAIN}/Info.plist)" >> "$GITHUB_ENV"
+    - name: Install FoundationDB
+      run: |
+        curl -sSfLO https://github.com/apple/foundationdb/releases/download/${FDB_VERSION}/FoundationDB-${FDB_VERSION}_$(uname -m).pkg
+        sudo installer -pkg FoundationDB-${FDB_VERSION}_$(uname -m).pkg -target /
+        sudo ./scripts/install_pkgconfig.sh
+        ./scripts/wait_for_fdb.sh
+    - name: Build
+      run: |
+        swift --version
+        swift build --build-tests -Xswiftc -warnings-as-errors
+    - name: Test
+      run: swift test
+
+  # Single required status check for branch protection: passes only if all platform jobs pass
+  build:
+    if: always()
+    needs: [linux, macos]
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Check results
+      run: |
+        echo "linux: ${{ needs.linux.result }}, macos: ${{ needs.macos.result }}"
+        [ "${{ needs.linux.result }}" = "success" ] && [ "${{ needs.macos.result }}" = "success" ]

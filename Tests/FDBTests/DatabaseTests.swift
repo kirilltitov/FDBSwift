@@ -8,6 +8,17 @@ import Testing
 struct DatabaseTests {
     static let db: FDB.Database = try! FDB.Database()
 
+    static var defaultClusterFile: String {
+        if let path = ProcessInfo.processInfo.environment["FDB_CLUSTER_FILE"] {
+            return path
+        }
+        #if os(macOS)
+        return "/usr/local/etc/foundationdb/fdb.cluster"
+        #else
+        return "/etc/foundationdb/fdb.cluster"
+        #endif
+    }
+
     let db = Self.db
     /// Every test works in its own subspace, so tests can run in parallel
     let subspace = FDB.Subspace("fdbswift-tests", UUID())
@@ -276,7 +287,7 @@ struct DatabaseTests {
         }
         // Network is started once, any number of databases can be opened
         _ = try FDB.Database()
-        _ = try FDB.Database(connectionString: String(contentsOfFile: "/etc/foundationdb/fdb.cluster", encoding: .utf8))
+        _ = try FDB.Database(connectionString: String(contentsOfFile: Self.defaultClusterFile, encoding: .utf8))
     }
 
     @Test func errors() {

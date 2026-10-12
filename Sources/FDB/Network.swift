@@ -24,7 +24,7 @@ extension FDB {
         private enum State {
             case initial
             case apiVersionSelected
-            case running(pthread_t)
+            case running(NetworkThread)
             case stopped
         }
 
@@ -85,9 +85,9 @@ extension FDB {
                 }
 
                 #if canImport(Darwin)
-                state = .running(thread!)
+                state = .running(NetworkThread(handle: thread!))
                 #else
-                state = .running(thread)
+                state = .running(NetworkThread(handle: thread))
                 #endif
                 self.logger.debug("Network started (API version \(FDB.apiVersion))")
             }
@@ -97,7 +97,7 @@ extension FDB {
         ///
         /// All databases must be released before calling this. Network can't be started again within the same process.
         public static func stop() throws(FDB.Error) {
-            let thread: pthread_t? = try self.state.withLock { (state: inout State) throws(FDB.Error) in
+            let thread: NetworkThread? = try self.state.withLock { (state: inout State) throws(FDB.Error) in
                 guard case let .running(thread) = state else {
                     if case .stopped = state {
                         return nil
@@ -109,7 +109,7 @@ extension FDB {
                 return thread
             }
             if let thread {
-                pthread_join(thread, nil)
+                pthread_join(thread.handle, nil)
                 self.logger.debug("Network stopped")
             }
         }
@@ -122,4 +122,12 @@ extension FDB {
             state = .apiVersionSelected
         }
     }
+}
+
+/// Handle of the network thread.
+///
+/// `pthread_t` is an integer on Linux, but a pointer on Darwin, which is not `Sendable`. The handle is only used to join
+/// the thread, under `FDB.Network`'s lock, so it's safe to pass around.
+private struct NetworkThread: @unchecked Sendable {
+    let handle: pthread_t
 }
