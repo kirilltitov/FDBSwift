@@ -33,6 +33,25 @@ jobs:
     - name: Test (Thread Sanitizer)
       run: swift test --sanitize=thread
 
+  bindingtester:
+    runs-on: ubuntu-latest
+    container: swift:6.4.0-noble
+
+    steps:
+    - uses: actions/checkout@v5
+    - name: Install FoundationDB and tools
+      run: |
+        apt-get update -qq
+        apt-get install -y -qq curl git python3 python3-pip
+        curl -sSfLO https://github.com/apple/foundationdb/releases/download/${FDB_VERSION}/foundationdb-clients_${FDB_VERSION}-1_amd64.deb
+        curl -sSfLO https://github.com/apple/foundationdb/releases/download/${FDB_VERSION}/foundationdb-server_${FDB_VERSION}-1_amd64.deb
+        dpkg -i foundationdb-clients_${FDB_VERSION}-1_amd64.deb foundationdb-server_${FDB_VERSION}-1_amd64.deb
+        service foundationdb start
+        ./scripts/install_pkgconfig.sh
+        ./scripts/wait_for_fdb.sh
+    - name: Run binding tester against the reference Python binding
+      run: ./scripts/run_bindingtester.sh
+
   macos:
     runs-on: macos-15
 
@@ -60,11 +79,12 @@ jobs:
   # Single required status check for branch protection: passes only if all platform jobs pass
   build:
     if: always()
-    needs: [linux, macos]
+    needs: [linux, macos, bindingtester]
     runs-on: ubuntu-latest
 
     steps:
     - name: Check results
       run: |
-        echo "linux: ${{ needs.linux.result }}, macos: ${{ needs.macos.result }}"
-        [ "${{ needs.linux.result }}" = "success" ] && [ "${{ needs.macos.result }}" = "success" ]
+        echo "linux: ${{ needs.linux.result }}, macos: ${{ needs.macos.result }}, bindingtester: ${{ needs.bindingtester.result }}"
+        [ "${{ needs.linux.result }}" = "success" ] && [ "${{ needs.macos.result }}" = "success" ] \
+            && [ "${{ needs.bindingtester.result }}" = "success" ]

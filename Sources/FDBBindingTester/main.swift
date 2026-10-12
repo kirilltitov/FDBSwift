@@ -609,6 +609,7 @@ func runUnitTests(db: FDB.Database) async throws {
         try tr.setOption(.logTransaction)
         try tr.setOption(.readLockAware)
         try tr.setOption(.lockAware)
+        try tr.setOption(.readSystemKeys)
         _ = try await tr.get(key: Bytes([0xFF])).value
     }
 }
