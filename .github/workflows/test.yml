@@ -56,3 +56,15 @@ jobs:
         swift build --build-tests -Xswiftc -warnings-as-errors
     - name: Test
       run: swift test
+
+  # Single required status check for branch protection: passes only if all platform jobs pass
+  build:
+    if: always()
+    needs: [linux, macos]
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Check results
+      run: |
+        echo "linux: ${{ needs.linux.result }}, macos: ${{ needs.macos.result }}"
+        [ "${{ needs.linux.result }}" = "success" ] && [ "${{ needs.macos.result }}" = "success" ]
