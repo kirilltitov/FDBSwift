@@ -184,6 +184,45 @@ let actualKey = log[versionstamp.with(userVersion: 0), "event"]
 The position of the incomplete versionstamp is tracked while the tuple is packed, no re-parsing involved. More than one
 incomplete versionstamp in a key is an error.
 
+### Watches
+
+A watch is a subscription to changes of a key: instead of polling, you get notified as soon as a new value is
+committed. Typical uses are job queues (workers sleep until there's work), configuration and feature flags,
+leader election and other coordination.
+
+The easiest way is an asynchronous sequence of values, the current one first:
+
+```swift
+for try await config in db.changes(of: configKey) {
+    reload(config) // `nil` if the key doesn't exist
+}
+```
+
+Or just wait for the next change:
+
+```swift
+try await db.waitForChange(of: jobsCounter)
+```
+
+Under the hood, `tr.watch(key:)` returns a future which is created within a transaction, becomes active when the
+transaction is committed and completes after the transaction is long gone. `withTransaction` can return non-copyable
+values, so the watch can be taken out of it:
+
+```swift
+let watch = try await db.withTransaction { tr in
+    tr.set(key: myKey, value: newValue)
+    return tr.watch(key: otherKey)
+}
+try await watch.value
+```
+
+Things to keep in mind when using raw watches (`changes(of:)` handles all of them):
+* a fired watch means that the value has *probably* changed, intermediate changes may be missed (`A → B → A`),
+  so always re-read the value;
+* if the transaction is not committed, the watch fails;
+* the number of outstanding watches per database is limited (`FDB.DatabaseOption.maxWatches`, 10 000 by default);
+* drop (or `cancel()`) watches you don't need anymore, this cancels them in the cluster too.
+
 ### One-shot helpers
 
 Each runs in its own transaction:
@@ -272,7 +311,8 @@ Your `libfdb_c` is older than 7.4. Upgrade the client library (the cluster may s
 * ✅ More than one database per process
 * ✅ Task cancellation
 * ✅ Zero-copy range reads
-* The rest of C API (watches, tenants, mapped ranges, ...)
+* ✅ Watches
+* The rest of C API (tenants, mapped ranges, ...)
 * Directories
 * `~Escapable` everything (as soon as lifetime annotations are out of experimental)
 * Drop VR support

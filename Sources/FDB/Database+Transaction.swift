@@ -13,8 +13,11 @@ extension FDB.Database {
     /// ``FDB/RangeError``) are rethrown as is, without retrying.
     ///
     /// The transaction is lent to the closure and can't escape it.
-    public func withTransaction<T>(_ body: (borrowing FDB.Transaction) async throws -> T) async throws -> T {
-        try await self.run(versionstamp: false, body).result
+    public func withTransaction<T: ~Copyable>(
+        _ body: (borrowing FDB.Transaction) async throws -> T
+    ) async throws -> T {
+        var versionstamp: FDB.Versionstamp?
+        return try await self.run(versionstamp: &versionstamp, requestVersionstamp: false, body)
     }
 
     /// Same as ``withTransaction(_:)``, but also returns the versionstamp of the committed transaction.
@@ -24,23 +27,26 @@ extension FDB.Database {
     public func withVersionstampedTransaction<T>(
         _ body: (borrowing FDB.Transaction) async throws -> T
     ) async throws -> (result: T, versionstamp: FDB.Versionstamp) {
-        let (result, versionstamp) = try await self.run(versionstamp: true, body)
+        var versionstamp: FDB.Versionstamp?
+        let result = try await self.run(versionstamp: &versionstamp, requestVersionstamp: true, body)
         return (result, versionstamp!)
     }
 
-    private func run<T>(
-        versionstamp: Bool,
+    private func run<T: ~Copyable>(
+        versionstamp: inout FDB.Versionstamp?,
+        requestVersionstamp: Bool,
         _ body: (borrowing FDB.Transaction) async throws -> T
-    ) async throws -> (result: T, versionstamp: FDB.Versionstamp?) {
+    ) async throws -> T {
         let transaction = try self.makeTransaction()
         var attempt = 0
 
         while true {
             do {
                 let result = try await body(transaction)
-                let versionstampFuture = versionstamp ? transaction.getVersionstamp() : nil
+                let versionstampFuture = requestVersionstamp ? transaction.getVersionstamp() : nil
                 try await transaction.commit().value
-                return (result, try await versionstampFuture?.value)
+                versionstamp = try await versionstampFuture?.value
+                return result
             } catch {
                 guard
                     let error = (error as? FDB.Error) ?? (error as? any FDB.ErrorWrapper)?.underlyingFDBError,
