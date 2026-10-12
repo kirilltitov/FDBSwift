@@ -9,8 +9,8 @@ set -euo pipefail
 FDB_VERSION="${FDB_VERSION:-7.4.8}"
 SEEDS="${SEEDS:-10}"
 OPS="${OPS:-1000}"
-# Ints wider than 64 bits (and negative ints below Int64.min) aren't supported by the tuple layer yet
-MAX_INT_BITS=63
+# The full range of tuple integers, like the reference Python binding
+MAX_INT_BITS=2040
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 WORK="$(mktemp -d)"
@@ -32,13 +32,22 @@ fdbcli --exec "configure tenant_mode=optional_experimental" --timeout 30
 swift build -c release --product FDBBindingTester --package-path "${ROOT}"
 TESTER="$(swift build -c release --show-bin-path --package-path "${ROOT}")/FDBBindingTester"
 
+# Register the tester like the official ones are, so that it's tested with all tuple types and 2040-bit integers
+# (unknown testers are limited to 64-bit integers and common types only)
+cat >> "${WORK}/foundationdb/bindings/bindingtester/known_testers.py" <<PYTHON
+
+testers["swift"] = Tester(
+    "swift", "${TESTER}", ${MAX_INT_BITS}, 740, MAX_API_VERSION, types=ALL_TYPES
+)
+PYTHON
+
 export PYTHONPATH="${WORK}/foundationdb/bindings/python"
 cd "${WORK}/foundationdb/bindings/bindingtester"
 
 failures=0
 run() {
     local output
-    output="$(python3 bindingtester.py "${TESTER}" --no-tenants --max-int-bits "${MAX_INT_BITS}" "$@" 2>&1)" || true
+    output="$(python3 bindingtester.py swift --no-tenants "$@" 2>&1)" || true
     if grep -q "had 0 incorrect result(s) and 0 error(s)" <<< "${output}"; then
         grep "^Test with" <<< "${output}"
     else

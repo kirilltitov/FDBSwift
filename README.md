@@ -80,8 +80,10 @@ let (kind, id) = try FDB.Tuple(packed: bytes).unpack(as: String.self, Int.self)
 let elements: [FDB.TupleElement] = try FDB.Tuple(packed: bytes).elements // [.string("users"), .int(42), ...]
 ```
 
-Supported elements: `String`, `Bytes`, all integers up to 64 bits (full `Int64` and `UInt64` range), `Float`, `Double`,
-`Bool`, `UUID`, `FDB.Versionstamp`, `FDB.Null`, nested `FDB.Tuple` and `Optional` of any of them (`nil` is `null`).
+Supported elements: `String`, `Bytes`, integers of any size the tuple layer allows (up to 2040 bits: all fixed-width
+integers including `Int128` and `UInt128`, plus `FDB.BigInt` for anything wider, so keys written by other bindings with
+big integers are read losslessly), `Float`, `Double`, `Bool`, `UUID`, `FDB.Versionstamp`, `FDB.Null`, nested `FDB.Tuple`
+and `Optional` of any of them (`nil` is `null`).
 Conform your own types to `FDB.TuplePackable`/`FDB.TupleUnpackable` if you like.
 
 Subspaces are key prefixes, the usual way of namespacing keys:
