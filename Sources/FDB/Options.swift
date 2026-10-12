@@ -285,6 +285,12 @@ extension FDB {
         case autoThrottleTag(String)
         /// The transaction will report conflicting keys
         case reportConflictingKeys
+        /// Allows this transaction to access the raw key-space when tenant mode is on
+        case rawAccess
+        /// Allows writes to the special key space (`\xFF\xFF/...`), e.g. for management operations
+        case specialKeySpaceEnableWrites
+        /// Reads from the special key space may span several modules
+        case specialKeySpaceRelaxed
 
         var code: FDBTransactionOption {
             switch self {
@@ -310,6 +316,9 @@ extension FDB {
             case .tag: FDB_TR_OPTION_TAG
             case .autoThrottleTag: FDB_TR_OPTION_AUTO_THROTTLE_TAG
             case .reportConflictingKeys: FDB_TR_OPTION_REPORT_CONFLICTING_KEYS
+            case .rawAccess: FDB_TR_OPTION_RAW_ACCESS
+            case .specialKeySpaceEnableWrites: FDB_TR_OPTION_SPECIAL_KEY_SPACE_ENABLE_WRITES
+            case .specialKeySpaceRelaxed: FDB_TR_OPTION_SPECIAL_KEY_SPACE_RELAXED
             }
         }
 
@@ -322,7 +331,7 @@ extension FDB {
             case .causalWriteRisky, .causalReadRisky, .nextWriteNoWriteConflictRange, .readYourWritesDisable,
                  .prioritySystemImmediate, .priorityBatch, .accessSystemKeys, .readSystemKeys, .snapshotRYWEnable,
                  .snapshotRYWDisable, .lockAware, .readLockAware, .logTransaction, .automaticIdempotency,
-                 .reportConflictingKeys:
+                 .reportConflictingKeys, .rawAccess, .specialKeySpaceEnableWrites, .specialKeySpaceRelaxed:
                 .none
             }
         }

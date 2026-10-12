@@ -555,12 +555,12 @@ extension FDB.DirectoryLayer {
 
 extension FDB.DirectoryLayer {
     /// Same as ``createOrOpen(_:layer:in:)-(_,_,FDB.Transaction)``, in a separate transaction
-    public func createOrOpen(_ path: [String], layer: Bytes? = nil, in db: FDB.Database) async throws -> FDB.DirectorySubspace {
+    public func createOrOpen(_ path: [String], layer: Bytes? = nil, in db: some FDB.Transactor) async throws -> FDB.DirectorySubspace {
         try await db.withTransaction { tr in try await self.createOrOpen(path, layer: layer, in: tr) }
     }
 
     /// Same as ``open(_:layer:snapshot:in:)-(_,_,_,FDB.Transaction)``, in a separate transaction
-    public func open(_ path: [String], layer: Bytes? = nil, in db: FDB.Database) async throws -> FDB.DirectorySubspace {
+    public func open(_ path: [String], layer: Bytes? = nil, in db: some FDB.Transactor) async throws -> FDB.DirectorySubspace {
         try await db.withTransaction { tr in try await self.open(path, layer: layer, in: tr) }
     }
 
@@ -569,34 +569,34 @@ extension FDB.DirectoryLayer {
         _ path: [String],
         layer: Bytes? = nil,
         prefix: Bytes? = nil,
-        in db: FDB.Database
+        in db: some FDB.Transactor
     ) async throws -> FDB.DirectorySubspace {
         try await db.withTransaction { tr in try await self.create(path, layer: layer, prefix: prefix, in: tr) }
     }
 
     /// Same as ``move(_:to:in:)-(_,_,FDB.Transaction)``, in a separate transaction
-    public func move(_ oldPath: [String], to newPath: [String], in db: FDB.Database) async throws -> FDB.DirectorySubspace {
+    public func move(_ oldPath: [String], to newPath: [String], in db: some FDB.Transactor) async throws -> FDB.DirectorySubspace {
         try await db.withTransaction { tr in try await self.move(oldPath, to: newPath, in: tr) }
     }
 
     /// Same as ``remove(_:in:)-(_,FDB.Transaction)``, in a separate transaction
-    public func remove(_ path: [String], in db: FDB.Database) async throws {
+    public func remove(_ path: [String], in db: some FDB.Transactor) async throws {
         try await db.withTransaction { tr in try await self.remove(path, in: tr) }
     }
 
     /// Same as ``removeIfExists(_:in:)-(_,FDB.Transaction)``, in a separate transaction
     @discardableResult
-    public func removeIfExists(_ path: [String], in db: FDB.Database) async throws -> Bool {
+    public func removeIfExists(_ path: [String], in db: some FDB.Transactor) async throws -> Bool {
         try await db.withTransaction { tr in try await self.removeIfExists(path, in: tr) }
     }
 
     /// Same as ``list(_:snapshot:in:)-(_,_,FDB.Transaction)``, in a separate transaction
-    public func list(_ path: [String] = [], in db: FDB.Database) async throws -> [String] {
+    public func list(_ path: [String] = [], in db: some FDB.Transactor) async throws -> [String] {
         try await db.withTransaction { tr in try await self.list(path, in: tr) }
     }
 
     /// Same as ``exists(_:snapshot:in:)-(_,_,FDB.Transaction)``, in a separate transaction
-    public func exists(_ path: [String] = [], in db: FDB.Database) async throws -> Bool {
+    public func exists(_ path: [String] = [], in db: some FDB.Transactor) async throws -> Bool {
         try await db.withTransaction { tr in try await self.exists(path, in: tr) }
     }
 }

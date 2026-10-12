@@ -8,7 +8,7 @@ extension FDB {
     /// Any number of databases (including ones pointing to different clusters) can be opened within a process.
     ///
     /// The network (see ``FDB/Network``) is started automatically on first database creation.
-    public final class Database: Sendable {
+    public final class Database: Transactor {
         /// Default transaction retry limit, see ``init(clusterFile:transactionRetryLimit:transactionTimeout:logger:)``
         public static let defaultTransactionRetryLimit: Int64 = 100
 
@@ -88,7 +88,7 @@ extension FDB {
         public func makeTransaction() throws(FDB.Error) -> Transaction {
             var pointer: OpaquePointer?
             try fdb_database_create_transaction(self.pointer, &pointer).check()
-            return Transaction(pointer!, database: self)
+            return Transaction(pointer!, owner: self, logger: self.logger)
         }
     }
 }

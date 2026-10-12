@@ -259,9 +259,33 @@ Notes:
 * custom layouts: `FDB.DirectoryLayer(nodeSubspace:contentSubspace:allowManualPrefixes:)`, the latter allows
   `create(_:prefix:in:)` with an explicit prefix.
 
+### Tenants
+
+A tenant is a named, isolated key space within a cluster: transactions of a tenant see only its keys (FoundationDB
+prefixes them transparently) and can't reach anything outside, so it's a server-enforced boundary, e.g. between
+customers of a multi-tenant service. Tenants require the cluster to be configured with
+`configure tenant_mode=optional_experimental` (or `required_experimental`).
+
+```swift
+try await db.createTenant("acme")
+let acme = try db.openTenant("acme")
+
+// Everything that works with a database works with a tenant: transactions, helpers, watches, directories
+try await acme.withTransaction { tr in
+    tr.set(key: FDB.Tuple("users", 1), value: ...)
+}
+let users = try await FDB.DirectoryLayer.default.createOrOpen(["users"], in: acme)
+
+let tenants = try await db.listTenants() // names and JSON metadata
+try await db.deleteTenant("acme") // the tenant must be empty
+```
+
+`createTenant`, `deleteTenant` and `tenantExists` are also available on a transaction, to manage tenants together
+with other changes.
+
 ### One-shot helpers
 
-Each runs in its own transaction:
+Each runs in its own transaction (available on both `FDB.Database` and `FDB.Tenant`):
 
 ```swift
 try await db.set(key: key, value: bytes)
@@ -300,7 +324,7 @@ logged at `trace` level (lazily, nothing is computed unless enabled).
 Besides its own tests, every change is checked by the official FoundationDB
 [binding tester](https://github.com/apple/foundationdb/tree/main/bindings/bindingtester): it generates random sequences
 of operations (reads, writes, range reads with key selectors, atomics, conflict ranges, versionstamps, tuples,
-concurrent transactions, errors and retries, directories), runs them through this binding (`FDBBindingTester` target) and through
+concurrent transactions, errors and retries, directories, tenants), runs them through this binding (`FDBBindingTester` target) and through
 the reference Python binding, and compares the results byte by byte. Run it locally against a local cluster with:
 
 ```bash
@@ -361,6 +385,7 @@ Your `libfdb_c` is older than 7.4. Upgrade the client library (the cluster may s
 * ✅ Zero-copy range reads
 * ✅ Watches
 * ✅ Directories
-* The rest of C API (tenants, mapped ranges, ...)
+* ✅ Tenants
+* The rest of C API (locality, mapped ranges, ...)
 * `~Escapable` everything (as soon as lifetime annotations are out of experimental)
 * Drop VR support

@@ -26,7 +26,7 @@ pip download -q "foundationdb==${FDB_VERSION}" --no-deps -d "${WORK}/wheel"
 python3 -I -m zipfile -e "${WORK}"/wheel/*.whl "${WORK}/wheel/extracted"
 cp "${WORK}"/wheel/extracted/fdb/{fdboptions,apiversion}.py "${WORK}/foundationdb/bindings/python/fdb/"
 
-# The binding tester touches tenant metadata on start
+# Tenants are tested too, so they must be enabled in the cluster
 fdbcli --exec "configure tenant_mode=optional_experimental" --timeout 30
 
 swift build -c release --product FDBBindingTester --package-path "${ROOT}"
@@ -37,7 +37,7 @@ TESTER="$(swift build -c release --show-bin-path --package-path "${ROOT}")/FDBBi
 cat >> "${WORK}/foundationdb/bindings/bindingtester/known_testers.py" <<PYTHON
 
 testers["swift"] = Tester(
-    "swift", "${TESTER}", ${MAX_INT_BITS}, 740, MAX_API_VERSION, types=ALL_TYPES
+    "swift", "${TESTER}", ${MAX_INT_BITS}, 740, MAX_API_VERSION, types=ALL_TYPES, tenants_enabled=True
 )
 PYTHON
 
@@ -47,7 +47,7 @@ cd "${WORK}/foundationdb/bindings/bindingtester"
 failures=0
 run() {
     local output
-    output="$(python3 bindingtester.py swift --no-tenants "$@" 2>&1)" || true
+    output="$(python3 bindingtester.py swift "$@" 2>&1)" || true
     if grep -q "had 0 incorrect result(s) and 0 error(s)" <<< "${output}"; then
         grep "^Test with" <<< "${output}"
     else

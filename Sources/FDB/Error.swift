@@ -142,6 +142,11 @@ public extension FDB.Error {
     static let apiVersionInvalid = Self(code: 2202)
     static let apiVersionNotSupported = Self(code: 2203)
     static let exactModeWithoutLimits = Self(code: 2210)
+    static let tenantNotFound = Self(code: 2131)
+    static let tenantAlreadyExists = Self(code: 2132)
+    static let tenantNotEmpty = Self(code: 2133)
+    static let tenantsDisabled = Self(code: 2136)
+    static let invalidTenantName = Self(code: 2134)
     static let unknownError = Self(code: 4000)
     static let internalError = Self(code: 4100)
 }
