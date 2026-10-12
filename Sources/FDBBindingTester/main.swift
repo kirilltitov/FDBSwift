@@ -178,6 +178,24 @@ extension FDB.TupleElement {
         }
     }
 
+    /// Low 32 bits of an integer of any size (two's complement), like a ctypes `c_int` conversion
+    var asTruncatedInt32: Int32 {
+        get throws {
+            let value: FDB.BigInt
+            switch self {
+            case let .int(int): value = FDB.BigInt(int)
+            case let .uint(uint): value = FDB.BigInt(uint)
+            case let .bigInt(bigInt): value = bigInt
+            default: throw TesterError(description: "Expected int, got \(self)")
+            }
+            var low: UInt32 = 0
+            for byte in value.magnitude.suffix(4) {
+                low = low << 8 | UInt32(byte)
+            }
+            return Int32(bitPattern: value.isNegative ? 0 &- low : low)
+        }
+    }
+
     var asBool: Bool {
         get throws {
             switch self {
@@ -199,11 +217,16 @@ final class StackMachine: @unchecked Sendable {
     var lastVersion: Int64 = 0
     var threads: [Task<Void, any Error>] = []
     let directories = DirectoryState()
+    /// Active tenant, transactions are created from it if set
+    var tenant: FDB.Tenant?
+    /// Target of `_DATABASE` and `_TENANT` operations
+    var target: any FDB.Transactor
 
     init(db: FDB.Database, prefix: Bytes) {
         self.db = db
         self.prefix = prefix
         self.transactionName = prefix
+        self.target = db
     }
 
     // MARK: Stack operations
@@ -242,7 +265,8 @@ final class StackMachine: @unchecked Sendable {
     // MARK: Transactions
 
     func newTransaction() throws {
-        let box = TransactionBox(try self.db.makeTransaction())
+        let source: any FDB.Transactor = self.tenant ?? self.db
+        let box = TransactionBox(try source.makeTransaction())
         transactions.withLock { $0[self.transactionName] = box }
     }
 
@@ -260,7 +284,7 @@ final class StackMachine: @unchecked Sendable {
         _ body: (borrowing FDB.Transaction) async throws -> T
     ) async throws -> T {
         if database {
-            return try await self.db.withTransaction(body)
+            return try await self.target.withTransaction(body)
         }
         let box = try self.currentTransaction()
         return try await body(box.transaction)
@@ -279,9 +303,17 @@ final class StackMachine: @unchecked Sendable {
 
             var isDatabase = false
             var isSnapshot = false
+            self.target = self.db
             if op.hasSuffix("_DATABASE") {
                 isDatabase = true
                 op.removeLast("_DATABASE".count)
+            } else if op.hasSuffix("_TENANT") {
+                // Same as _DATABASE, but on the active tenant (if any)
+                isDatabase = true
+                if let tenant = self.tenant {
+                    self.target = tenant
+                }
+                op.removeLast("_TENANT".count)
             } else if op.hasSuffix("_SNAPSHOT") {
                 isSnapshot = true
                 op.removeLast("_SNAPSHOT".count)
@@ -301,6 +333,8 @@ final class StackMachine: @unchecked Sendable {
                 switch error {
                 case let .fdb(error): self.push(index, errorElement(error))
                 }
+            } catch {
+                throw TesterError(description: "\(op) (instruction \(index)) failed: \(error)")
             }
         }
 
@@ -403,7 +437,7 @@ final class StackMachine: @unchecked Sendable {
         case "GET":
             let key = try await self.pop().asBytes
             if isDatabase {
-                let value = try await self.db.get(key: key)
+                let value = try await self.target.get(key: key)
                 self.push(index, value.map(FDB.TupleElement.bytes) ?? resultNotPresent)
             } else {
                 let future = try self.currentTransaction().transaction.get(key: key, snapshot: isSnapshot)
@@ -591,6 +625,38 @@ final class StackMachine: @unchecked Sendable {
                 }
             }
             self.push(index, bytes("WAITED_FOR_EMPTY"))
+
+        // Tenants
+
+        case "TENANT_CREATE":
+            try await self.db.createTenant(try await self.pop().asBytes)
+            self.push(index, resultNotPresent)
+        case "TENANT_DELETE":
+            try await self.db.deleteTenant(try await self.pop().asBytes)
+            self.push(index, resultNotPresent)
+        case "TENANT_SET_ACTIVE":
+            let tenant = try self.db.openTenant(try await self.pop().asBytes)
+            self.tenant = tenant
+            _ = try await tenant.getID().value
+            self.push(index, bytes("SET_ACTIVE_TENANT"))
+        case "TENANT_CLEAR_ACTIVE":
+            self.tenant = nil
+        case "TENANT_LIST":
+            let params = try await self.pop(3)
+            let tenants = try await self.db.listTenants(
+                from: try params[0].asBytes,
+                to: try params[1].asBytes,
+                // Python passes the limit to C via ctypes, which silently truncates it to 32 bits
+                limit: Int(try params[2].asTruncatedInt32)
+            )
+            self.push(index, .bytes(FDB.Tuple(elements: tenants.map { FDB.TupleElement.bytes($0.name) }).packed))
+        case "TENANT_GET_ID":
+            if let tenant = self.tenant {
+                _ = try await tenant.getID().value
+                self.push(index, bytes("GOT_TENANT_ID"))
+            } else {
+                self.push(index, bytes("NO_ACTIVE_TENANT"))
+            }
 
         case "UNIT_TESTS":
             try await runUnitTests(db: self.db)

@@ -1,4 +1,4 @@
-extension FDB.Database {
+extension FDB.Transactor {
     /// Waits until the value of given key changes (relative to its value at the moment of the call).
     ///
     /// A completed wait means that the value has *probably* changed: intermediate changes may be missed
@@ -26,29 +26,29 @@ extension FDB.Database {
     ///
     /// The sequence ends only by throwing an error or when the iterating task is cancelled.
     public func changes(of key: some FDB.Key) -> FDB.Changes {
-        FDB.Changes(database: self, key: key.fdbKey)
+        FDB.Changes(transactor: self, key: key.fdbKey)
     }
 }
 
 extension FDB {
-    /// Values of a key as they change, see ``FDB/Database/changes(of:)``
+    /// Values of a key as they change, see ``FDB/Transactor/changes(of:)``
     public struct Changes: AsyncSequence, Sendable {
         public typealias Element = Bytes?
 
-        let database: Database
+        let transactor: any Transactor
         let key: Bytes
 
         public func makeAsyncIterator() -> AsyncIterator {
-            AsyncIterator(database: self.database, key: self.key)
+            AsyncIterator(transactor: self.transactor, key: self.key)
         }
 
         public struct AsyncIterator: AsyncIteratorProtocol {
-            let database: Database
+            let transactor: any Transactor
             let key: Bytes
             private let state = State()
 
-            init(database: Database, key: Bytes) {
-                self.database = database
+            init(transactor: any Transactor, key: Bytes) {
+                self.transactor = transactor
                 self.key = key
             }
 
@@ -70,7 +70,7 @@ extension FDB {
                     }
 
                     var value: Bytes?
-                    self.state.watch = try await self.database.withTransaction { tr in
+                    self.state.watch = try await self.transactor.withTransaction { tr in
                         value = try await tr.get(key: self.key).value
                         return tr.watch(key: self.key)
                     }

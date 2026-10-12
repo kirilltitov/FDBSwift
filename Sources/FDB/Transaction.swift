@@ -6,7 +6,7 @@ extension FDB {
     ///
     /// Transaction is a non-copyable value with a single owner and a well-defined lifetime: its resources are
     /// released exactly once, when it goes out of scope. Usually it's obtained via
-    /// ``FDB/Database/withTransaction(_:)``, which lends it to the closure (it can't escape it) and handles commit
+    /// ``FDB/Transactor/withTransaction(_:)``, which lends it to the closure (it can't escape it) and handles commit
     /// and retries.
     ///
     /// Read operations return ``FDB/Future``s: the request is sent immediately, and the result is awaited later,
@@ -14,13 +14,13 @@ extension FDB {
     public struct Transaction: ~Copyable {
         let pointer: OpaquePointer
         let logger: Logger
-        /// Keeps the database alive for as long as the transaction exists
-        let database: Database
+        /// Keeps the database (or tenant) alive for as long as the transaction exists
+        let owner: AnyObject
 
-        init(_ pointer: OpaquePointer, database: Database) {
+        init(_ pointer: OpaquePointer, owner: AnyObject, logger: Logger) {
             self.pointer = pointer
-            self.database = database
-            self.logger = database.logger
+            self.owner = owner
+            self.logger = logger
         }
 
         deinit {
@@ -305,7 +305,7 @@ extension FDB {
         /// Watches given key for changes.
         ///
         /// The watch becomes active only after the transaction is committed, and it outlives the transaction:
-        /// return the future from ``FDB/Database/withTransaction(_:)`` and await it afterwards. It completes when the
+        /// return the future from ``FDB/Transactor/withTransaction(_:)`` and await it afterwards. It completes when the
         /// value of the key differs from the one this transaction has seen (or written).
         ///
         /// Keep in mind that:
@@ -316,7 +316,7 @@ extension FDB {
         ///   10 000 by default), exceeding it fails with ``FDB/Error/tooManyWatches``;
         /// - a watch which is no longer needed should be dropped (or cancelled), which cancels it in the cluster.
         ///
-        /// Prefer ``FDB/Database/changes(of:)`` or ``FDB/Database/waitForChange(of:)``, which handle all of that.
+        /// Prefer ``FDB/Transactor/changes(of:)`` or ``FDB/Transactor/waitForChange(of:)``, which handle all of that.
         public func watch(key: some FDB.Key) -> Future<Void> {
             let key = key.fdbKey
             self.trace { "Watching key \(key.printable)" }
@@ -340,7 +340,7 @@ extension FDB {
         /// Sets the value of a key which contains an incomplete versionstamp (see ``FDB/Versionstamp``).
         ///
         /// The versionstamp is filled in by the cluster on commit. Use
-        /// ``FDB/Database/withVersionstampedTransaction(_:)`` to learn it.
+        /// ``FDB/Transactor/withVersionstampedTransaction(_:)`` to learn it.
         public func set(versionstampedKey key: some FDB.Key, value: Bytes) throws(FDB.Error) {
             guard let offset = try key.incompleteVersionstampOffset() else {
                 throw FDB.Error.missingIncompleteVersionstamp
@@ -405,7 +405,7 @@ extension FDB {
 
         /// Commits the transaction.
         ///
-        /// Not needed with ``FDB/Database/withTransaction(_:)``, which commits automatically.
+        /// Not needed with ``FDB/Transactor/withTransaction(_:)``, which commits automatically.
         public func commit() -> Future<Void> {
             self.trace { "Committing" }
             return Future(fdb_transaction_commit(self.pointer))
@@ -501,7 +501,7 @@ extension FDB {
 extension FDB {
     /// An error which may wrap an ``FDB/Error``.
     ///
-    /// ``FDB/Database/withTransaction(_:)`` unwraps such errors to decide whether to retry the transaction.
+    /// ``FDB/Transactor/withTransaction(_:)`` unwraps such errors to decide whether to retry the transaction.
     public protocol ErrorWrapper: Swift.Error {
         var underlyingFDBError: FDB.Error? { get }
 }

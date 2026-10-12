@@ -1,6 +1,18 @@
 import Logging
 
-extension FDB.Database {
+extension FDB {
+    /// Something transactions can be created from: a ``FDB/Database`` or a ``FDB/Tenant``.
+    ///
+    /// Provides ``withTransaction(_:)`` with retries and single-operation helpers.
+    public protocol Transactor: AnyObject, Sendable {
+        /// Creates a new transaction.
+        ///
+        /// Prefer ``withTransaction(_:)``, which handles commit and retries.
+        func makeTransaction() throws(FDB.Error) -> FDB.Transaction
+    }
+}
+
+extension FDB.Transactor {
     /// Runs given closure within a transaction and commits it, retrying on retryable errors.
     ///
     /// Retries follow FoundationDB semantics: on an error the transaction is passed to
@@ -55,7 +67,7 @@ extension FDB.Database {
                     throw error
                 }
                 attempt += 1
-                self.logger.debug("Transaction failed with \(error), attempt \(attempt)")
+                transaction.logger.debug("Transaction failed with \(error), attempt \(attempt)")
                 // Throws if the error is not retryable or the retry limit is reached
                 try await transaction.onError(error).value
             }
