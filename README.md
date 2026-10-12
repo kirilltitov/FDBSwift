@@ -259,6 +259,18 @@ Most of the API uses typed throws (`throws(FDB.Error)`).
 [swift-log](https://github.com/apple/swift-log). Pass your `Logger` to `FDB.Database.init(logger:)`; every operation is
 logged at `trace` level (lazily, nothing is computed unless enabled).
 
+## Compatibility testing
+
+Besides its own tests, every change is checked by the official FoundationDB
+[binding tester](https://github.com/apple/foundationdb/tree/main/bindings/bindingtester): it generates random sequences
+of operations (reads, writes, range reads with key selectors, atomics, conflict ranges, versionstamps, tuples,
+concurrent transactions, errors and retries), runs them through this binding (`FDBBindingTester` target) and through
+the reference Python binding, and compares the results byte by byte. Run it locally against a local cluster with:
+
+```bash
+./scripts/run_bindingtester.sh
+```
+
 ## Migration from v5 to v6
 
 v6 is a rewrite, the API is new. In short:

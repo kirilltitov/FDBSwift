@@ -26,6 +26,13 @@ let package = Package(
                 .enableUpcomingFeature("MemberImportVisibility"),
             ]
         ),
+        .executableTarget(
+            name: "FDBBindingTester",
+            dependencies: ["FDB"],
+            swiftSettings: [
+                .enableUpcomingFeature("NonisolatedNonsendingByDefault"),
+            ]
+        ),
         .testTarget(
             name: "FDBTests",
             dependencies: ["FDB"],
