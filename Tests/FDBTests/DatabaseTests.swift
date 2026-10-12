@@ -189,6 +189,10 @@ struct DatabaseTests {
     }
 
     @Test func nonRetryableErrors() async throws {
+        // Make sure the database is connected: while connecting, the multi-version client (used with older clusters)
+        // may fail transactions with retryable `clusterVersionChanged`, which would add an attempt
+        _ = try await self.db.get(key: self.subspace["warm-up"])
+
         let attempts = Atomic<Int>(0)
         await #expect(throws: FDB.Error.keyTooLarge) {
             try await self.db.withTransaction { tr in
@@ -200,13 +204,14 @@ struct DatabaseTests {
         #expect(attempts.load(ordering: .relaxed) == 1)
 
         struct Custom: Error {}
+        let customAttempts = Atomic<Int>(0)
         await #expect(throws: Custom.self) {
             try await self.db.withTransaction { _ in
-                attempts.add(1, ordering: .relaxed)
+                customAttempts.add(1, ordering: .relaxed)
                 throw Custom()
             }
         }
-        #expect(attempts.load(ordering: .relaxed) == 2)
+        #expect(customAttempts.load(ordering: .relaxed) == 1)
     }
 
     @Test func cancellation() async throws {
