@@ -18,6 +18,8 @@ extension FDB {
         case int(Int64)
         /// Integer in `Int64.max + 1 ... UInt64.max` range
         case uint(UInt64)
+        /// Integer outside of `Int64.min ... UInt64.max` range (up to 2040 bits)
+        case bigInt(FDB.BigInt)
         case float(Float)
         case double(Double)
         case bool(Bool)
@@ -56,6 +58,7 @@ extension FDB.TupleElement: FDB.TupleCodable {
         case let .tuple(value): encoder.appendNested(value)
         case let .int(value): encoder.appendInt(value)
         case let .uint(value): encoder.appendUInt(value)
+        case let .bigInt(value): encoder.appendBigInt(value)
         case let .float(value): encoder.appendFloat(value)
         case let .double(value): encoder.appendDouble(value)
         case let .bool(value): encoder.appendBool(value)
@@ -214,6 +217,7 @@ public extension FDB.TupleInteger {
         switch tupleElement {
         case let .int(value): result = Self(exactly: value)
         case let .uint(value): result = Self(exactly: value)
+        case let .bigInt(value): result = value.exactly(Self.self)
         default: throw .unpackTypeMismatch
         }
         guard let result else { throw .unpackTooLargeInt }

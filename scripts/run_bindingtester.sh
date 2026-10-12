@@ -9,8 +9,8 @@ set -euo pipefail
 FDB_VERSION="${FDB_VERSION:-7.4.8}"
 SEEDS="${SEEDS:-10}"
 OPS="${OPS:-1000}"
-# Ints wider than 64 bits (and negative ints below Int64.min) aren't supported by the tuple layer yet
-MAX_INT_BITS=63
+# The full range of tuple integers, like the reference Python binding
+MAX_INT_BITS=2040
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 WORK="$(mktemp -d)"

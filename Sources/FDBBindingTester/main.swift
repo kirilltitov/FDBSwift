@@ -94,6 +94,67 @@ struct TesterError: Error, CustomStringConvertible {
     let description: String
 }
 
+// MARK: - Big integer arithmetic (the tester needs `SUB` on integers up to 2040 bits)
+
+/// `a - b` as a canonical tuple element
+func subtract(_ a: FDB.BigInt, _ b: FDB.BigInt) -> FDB.TupleElement {
+    // a - b = a + (-b)
+    let bIsNegative = !b.isNegative && !b.magnitude.isEmpty
+    let isNegative: Bool
+    let magnitude: Bytes
+    if a.isNegative == bIsNegative {
+        isNegative = a.isNegative
+        magnitude = addMagnitudes(a.magnitude, b.magnitude)
+    } else if compareMagnitudes(a.magnitude, b.magnitude) >= 0 {
+        isNegative = a.isNegative
+        magnitude = subtractMagnitudes(a.magnitude, b.magnitude)
+    } else {
+        isNegative = bIsNegative
+        magnitude = subtractMagnitudes(b.magnitude, a.magnitude)
+    }
+    return FDB.BigInt(isNegative: isNegative, magnitude: magnitude)!.tupleElement
+}
+
+func compareMagnitudes(_ a: Bytes, _ b: Bytes) -> Int {
+    if a.count != b.count {
+        return a.count < b.count ? -1 : 1
+    }
+    for (x, y) in zip(a, b) where x != y {
+        return x < y ? -1 : 1
+    }
+    return 0
+}
+
+/// Sum of two big-endian magnitudes
+func addMagnitudes(_ a: Bytes, _ b: Bytes) -> Bytes {
+    var result = Bytes()
+    var carry = 0
+    var i = a.count - 1, j = b.count - 1
+    while i >= 0 || j >= 0 || carry > 0 {
+        let sum = (i >= 0 ? Int(a[i]) : 0) + (j >= 0 ? Int(b[j]) : 0) + carry
+        result.append(UInt8(sum & 0xFF))
+        carry = sum >> 8
+        i -= 1
+        j -= 1
+    }
+    return result.reversed()
+}
+
+/// Difference of two big-endian magnitudes, `a >= b`
+func subtractMagnitudes(_ a: Bytes, _ b: Bytes) -> Bytes {
+    var result = Bytes()
+    var borrow = 0
+    var j = b.count - 1
+    for i in stride(from: a.count - 1, through: 0, by: -1) {
+        var difference = Int(a[i]) - (j >= 0 ? Int(b[j]) : 0) - borrow
+        borrow = difference < 0 ? 1 : 0
+        difference += borrow << 8
+        result.append(UInt8(difference))
+        j -= 1
+    }
+    return result.reversed()
+}
+
 // MARK: - Element accessors
 
 extension FDB.TupleElement {
@@ -270,7 +331,7 @@ final class StackMachine: @unchecked Sendable {
             _ = try await self.pop()
         case "SUB":
             let values = try await self.pop(2)
-            self.push(index, .int(try values[0].asInt - values[1].asInt))
+            self.push(index, subtract(try FDB.BigInt(tupleElement: values[0]), try FDB.BigInt(tupleElement: values[1])))
         case "CONCAT":
             let values = try await self.pop(2)
             switch (values[0], values[1]) {

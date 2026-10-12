@@ -10,9 +10,11 @@ enum TupleCode {
     static let bytes: UInt8 = 0x01
     static let string: UInt8 = 0x02
     static let nested: UInt8 = 0x05
+    static let negativeArbitrary: UInt8 = 0x0B // negative integer of 9-255 bytes
     static let negativeInt8: UInt8 = 0x0C // 8-byte negative integer
     static let intZero: UInt8 = 0x14
     static let positiveInt8: UInt8 = 0x1C // 8-byte positive integer
+    static let positiveArbitrary: UInt8 = 0x1D // positive integer of 9-255 bytes
     static let float: UInt8 = 0x20
     static let double: UInt8 = 0x21
     static let `false`: UInt8 = 0x26
@@ -62,9 +64,53 @@ extension FDB {
         }
 
         public mutating func appendUInt(_ value: UInt64) {
+            guard value != .max else {
+                // Like the reference Python binding, 2^64-1 itself is encoded as an arbitrary-length integer
+                self.appendArbitrary(isNegative: false, magnitude: Bytes(repeating: 0xFF, count: 8))
+                return
+            }
             let length = Self.byteLength(value)
             self.bytes.append(TupleCode.intZero + UInt8(length))
             self.appendBigEndian(value, length: length)
+        }
+
+        /// Appends an integer of any size (up to 2040 bits)
+        public mutating func appendBigInt(_ value: FDB.BigInt) {
+            if let int = value.exactly(Int64.self) {
+                self.appendInt(int)
+                return
+            }
+            if let uint = value.exactly(UInt64.self) {
+                self.appendUInt(uint)
+                return
+            }
+            if value.isNegative, value.magnitude.count <= 8 {
+                // Negative 8-byte integers below Int64.min, except for -(2^64-1), which is arbitrary-length
+                var magnitude: UInt64 = 0
+                for byte in value.magnitude {
+                    magnitude = magnitude << 8 | UInt64(byte)
+                }
+                if magnitude != .max {
+                    self.bytes.append(TupleCode.negativeInt8)
+                    self.appendBigEndian(~magnitude, length: 8)
+                    return
+                }
+            }
+            self.appendArbitrary(isNegative: value.isNegative, magnitude: value.magnitude)
+        }
+
+        /// Integers of 9-255 bytes (and ±(2^64-1)): type code, length, big-endian magnitude.
+        /// Negative ones have the length and the magnitude in one's complement, so that they sort correctly.
+        private mutating func appendArbitrary(isNegative: Bool, magnitude: Bytes) {
+            if isNegative {
+                self.bytes.append(TupleCode.negativeArbitrary)
+                self.bytes.append(UInt8(magnitude.count) ^ 0xFF)
+                self.bytes.append(contentsOf: magnitude.lazy.map { ~$0 })
+            } else {
+                self.bytes.append(TupleCode.positiveArbitrary)
+                self.bytes.append(UInt8(magnitude.count))
+                self.bytes.append(contentsOf: magnitude)
+            }
         }
 
         public mutating func appendFloat(_ value: Float) {
@@ -215,6 +261,10 @@ extension FDB {
                 _ = try self.read(count: Int(TupleCode.intZero - code))
             case TupleCode.intZero ... TupleCode.positiveInt8:
                 _ = try self.read(count: Int(code - TupleCode.intZero))
+            case TupleCode.negativeArbitrary:
+                _ = try self.read(count: Int(try self.readByte() ^ 0xFF))
+            case TupleCode.positiveArbitrary:
+                _ = try self.read(count: Int(try self.readByte()))
             case TupleCode.float:
                 _ = try self.read(count: 4)
             case TupleCode.double:
@@ -253,13 +303,20 @@ extension FDB {
             case TupleCode.negativeInt8 ..< TupleCode.intZero:
                 let length = Int(TupleCode.intZero - code)
                 let magnitude = ~(try self.readBigEndian(length: length)) & Self.mask(length: length)
-                guard magnitude <= UInt64(Int64.max) + 1 else {
-                    throw .unpackTooLargeInt
+                if magnitude <= UInt64(Int64.max) + 1 {
+                    return .int(magnitude == UInt64(Int64.max) + 1 ? .min : -Int64(magnitude))
                 }
-                return .int(magnitude == UInt64(Int64.max) + 1 ? .min : -Int64(magnitude))
+                return FDB.BigInt(magnitude: magnitude, isNegative: true).tupleElement
             case TupleCode.intZero ... TupleCode.positiveInt8:
                 let value = try self.readBigEndian(length: Int(code - TupleCode.intZero))
                 return value <= UInt64(Int64.max) ? .int(Int64(value)) : .uint(value)
+            case TupleCode.negativeArbitrary:
+                let length = Int(try self.readByte() ^ 0xFF)
+                let magnitude = try self.read(count: length).map { ~$0 }
+                return FDB.BigInt(isNegative: true, magnitude: magnitude)!.tupleElement
+            case TupleCode.positiveArbitrary:
+                let length = Int(try self.readByte())
+                return FDB.BigInt(isNegative: false, magnitude: try self.read(count: length))!.tupleElement
             case TupleCode.float:
                 let bits = UInt32(try self.readBigEndian(length: 4))
                 return .float(Float(bitPattern: bits & 0x8000_0000 != 0 ? bits ^ 0x8000_0000 : ~bits))

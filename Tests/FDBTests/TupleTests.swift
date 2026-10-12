@@ -78,6 +78,95 @@ struct TupleTests {
         #expect(try FDB.Tuple(Int8(-5)).unpack(as: Int64.self) == -5)
     }
 
+    /// Byte vectors produced by the reference Python binding
+    @Test(arguments: [
+        ("7fffffffffffffff", false, [28, 127, 255, 255, 255, 255, 255, 255, 255]),
+        ("8000000000000000", false, [28, 128, 0, 0, 0, 0, 0, 0, 0]),
+        ("fffffffffffffffe", false, [28, 255, 255, 255, 255, 255, 255, 255, 254]),
+        ("ffffffffffffffff", false, [29, 8, 255, 255, 255, 255, 255, 255, 255, 255]),
+        ("010000000000000000", false, [29, 9, 1, 0, 0, 0, 0, 0, 0, 0, 0]),
+        ("10000000000000000000000000", false, [29, 13, 16, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
+        ("8000000000000000", true, [12, 127, 255, 255, 255, 255, 255, 255, 255]),
+        ("8000000000000001", true, [12, 127, 255, 255, 255, 255, 255, 255, 254]),
+        ("fffffffffffffffe", true, [12, 0, 0, 0, 0, 0, 0, 0, 1]),
+        ("ffffffffffffffff", true, [11, 247, 0, 0, 0, 0, 0, 0, 0, 0]),
+        ("010000000000000000", true, [11, 246, 254, 255, 255, 255, 255, 255, 255, 255, 255]),
+        ("10000000000000000000000000", true, [11, 242, 239, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255]),
+        ("7fffffffffffffffffffffffffffffff", false, [29, 16, 127] + Bytes(repeating: 255, count: 15)),
+        ("80000000000000000000000000000000", true, [11, 239, 127] + Bytes(repeating: 255, count: 15)),
+    ] as [(String, Bool, Bytes)])
+    func bigIntegers(magnitudeHex: String, isNegative: Bool, expected: Bytes) throws {
+        let magnitude = stride(from: 0, to: magnitudeHex.count, by: 2).map { offset in
+            let start = magnitudeHex.index(magnitudeHex.startIndex, offsetBy: offset)
+            return UInt8(magnitudeHex[start ..< magnitudeHex.index(start, offsetBy: 2)], radix: 16)!
+        }
+        let value = try #require(FDB.BigInt(isNegative: isNegative, magnitude: magnitude))
+
+        #expect(FDB.Tuple(value).packed == expected)
+        #expect(FDB.Tuple(value.tupleElement).packed == expected)
+
+        let decoded = try FDB.Tuple(packed: expected)
+        #expect(decoded.elements == [value.tupleElement])
+        #expect(try decoded.unpack(as: FDB.BigInt.self) == value)
+        #expect(FDB.Tuple(elements: decoded.elements).packed == expected)
+
+        // Every value here fits into 128 bits
+        let int128 = try #require(value.exactly(Int128.self))
+        #expect(FDB.Tuple(int128).packed == expected)
+        #expect(try decoded.unpack(as: Int128.self) == int128)
+    }
+
+    @Test func maximumIntegers() throws {
+        let maxMagnitude = Bytes(repeating: 0xFF, count: 255) // 2^2040 - 1
+        for isNegative in [false, true] {
+            let value = try #require(FDB.BigInt(isNegative: isNegative, magnitude: maxMagnitude))
+            let packed = FDB.Tuple(value).packed
+            #expect(packed.count == 257)
+            #expect(Array(packed.prefix(2)) == (isNegative ? [11, 0] : [29, 255]))
+            #expect(try FDB.Tuple(packed: packed).unpack(as: FDB.BigInt.self) == value)
+        }
+        #expect(FDB.BigInt(isNegative: false, magnitude: Bytes(repeating: 1, count: 256)) == nil)
+    }
+
+    @Test func bigIntConversions() throws {
+        #expect(FDB.BigInt(0).tupleElement == .int(0))
+        #expect(FDB.BigInt(-0).isNegative == false)
+        #expect(FDB.BigInt(Int64.min).tupleElement == .int(.min))
+        #expect(FDB.BigInt(UInt64.max).tupleElement == .uint(.max))
+        #expect(FDB.BigInt(Int128(Int64.min) - 1).exactly(Int64.self) == nil)
+        #expect(FDB.BigInt(Int128.min).exactly(Int128.self) == .min)
+        #expect(FDB.BigInt(UInt128.max).exactly(UInt128.self) == .max)
+        #expect(FDB.BigInt(-1).exactly(UInt8.self) == nil)
+        for value: Int128 in [-1, 7, Int128(-1234567890123456789) * 1_000_000_007, .min, .max] {
+            #expect(FDB.BigInt(value).description == value.description)
+        }
+        #expect(FDB.BigInt(UInt128.max).description == UInt128.max.description)
+        #expect(FDB.BigInt(0).description == "0")
+        #expect(throws: FDB.Error.unpackTooLargeInt) {
+            try FDB.Tuple(FDB.BigInt(UInt128.max)).unpack(as: Int64.self)
+        }
+    }
+
+    @Test func bigIntegerOrdering() {
+        let sorted: [FDB.Tuple] = [
+            FDB.Tuple(FDB.BigInt(isNegative: true, magnitude: Bytes(repeating: 0xFF, count: 255))!),
+            FDB.Tuple(Int128.min),
+            FDB.Tuple(-Int128(UInt64.max)),
+            FDB.Tuple(-Int128(UInt64.max) + 1),
+            FDB.Tuple(Int128(Int64.min) - 1),
+            FDB.Tuple(Int64.min),
+            FDB.Tuple(-1),
+            FDB.Tuple(0),
+            FDB.Tuple(Int64.max),
+            FDB.Tuple(UInt64.max - 1),
+            FDB.Tuple(UInt64.max),
+            FDB.Tuple(UInt128(UInt64.max) + 1),
+            FDB.Tuple(UInt128.max),
+            FDB.Tuple(FDB.BigInt(isNegative: false, magnitude: Bytes(repeating: 0xFF, count: 255))!),
+        ]
+        #expect(sorted.shuffled().sorted() == sorted)
+    }
+
     @Test func unofficialCases() {
         let expected: Bytes = [0x13, 0xFE, 0x14, 0x15, 0x05, 0x05, 0x02] + Bytes("foo".utf8) + [0x00, 0x00, 0x00]
         #expect(FDB.Tuple(-1, 0, 5, FDB.Tuple("foo"), FDB.Null()).packed == expected)
@@ -147,7 +236,8 @@ struct TupleTests {
         #expect(throws: FDB.Error.unpackInvalidInput) { try FDB.Tuple(packed: [0x05, 0x14]) } // unterminated nested
         #expect(throws: FDB.Error.unpackInvalidInput) { try FDB.Tuple(packed: [0x21, 0x00]) } // truncated double
         #expect(throws: FDB.Error.unpackInvalidString) { try FDB.Tuple(packed: [0x02, 0xFF, 0x00]) }
-        #expect(throws: FDB.Error.unpackUnknownCode) { try FDB.Tuple(packed: [0x1D, 0x01]) }
+        #expect(throws: FDB.Error.unpackInvalidInput) { try FDB.Tuple(packed: [0x1D, 0x02, 0x01]) } // truncated big int
+        #expect(throws: FDB.Error.unpackUnknownCode) { try FDB.Tuple(packed: [0x0A]) }
     }
 
     @Test(arguments: [
