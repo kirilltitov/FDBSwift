@@ -4,7 +4,7 @@ import Testing
 
 /// Integration tests of tenants, require a running FoundationDB cluster with tenants enabled
 /// (`configure tenant_mode=optional_experimental`)
-@Suite("Tenants")
+@Suite("Tenants", .enabled(if: TestEnvironment.apiVersion >= 730, "Tenants require API 730"))
 struct TenantTests {
     let db = DatabaseTests.db
     let name = Bytes("fdbswift-tests-\(UUID())".utf8)

@@ -6,7 +6,7 @@ import Testing
 /// Integration tests, require a running FoundationDB cluster (default cluster file)
 @Suite("Database")
 struct DatabaseTests {
-    static let db: FDB.Database = try! FDB.Database()
+    static let db: FDB.Database = try! TestEnvironment.makeDatabase()
 
     static var defaultClusterFile: String {
         if let path = ProcessInfo.processInfo.environment["FDB_CLUSTER_FILE"] {
@@ -172,7 +172,7 @@ struct DatabaseTests {
     }
 
     @Test func retryLimit() async throws {
-        let db = try FDB.Database(transactionRetryLimit: 2)
+        let db = try TestEnvironment.makeDatabase(transactionRetryLimit: 2)
         let key = self.subspace["retry-limit"]
         try await db.set(key: key, value: [0])
 
@@ -281,13 +281,22 @@ struct DatabaseTests {
     }
 
     @Test func network() throws {
+        _ = Self.db
         #expect(FDB.Network.isRunning)
+        #expect(FDB.apiVersion == TestEnvironment.apiVersion)
         #expect(throws: FDB.Error.networkAlreadySetup) {
             try FDB.Network.setOption(.traceLogGroup("too late"))
         }
         // Network is started once, any number of databases can be opened
         _ = try FDB.Database()
-        _ = try FDB.Database(connectionString: String(contentsOfFile: Self.defaultClusterFile, encoding: .utf8))
+        let connectionString = try String(contentsOfFile: Self.defaultClusterFile, encoding: .utf8)
+        if FDB.apiVersion >= 720 {
+            _ = try FDB.Database(connectionString: connectionString)
+        } else {
+            #expect(throws: FDB.Error.unsupportedOperation) {
+                try FDB.Database(connectionString: connectionString)
+            }
+        }
     }
 
     @Test func errors() {

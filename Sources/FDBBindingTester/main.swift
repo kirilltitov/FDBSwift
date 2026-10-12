@@ -752,8 +752,13 @@ guard arguments.count >= 3 else {
     FileHandle.standardError.write(Data("Usage: \(arguments[0]) <prefix> <api version> [cluster file]\n".utf8))
     exit(2)
 }
-guard Int32(arguments[2]) == FDB.apiVersion else {
-    FileHandle.standardError.write(Data("Only API version \(FDB.apiVersion) is supported, got \(arguments[2])\n".utf8))
+do {
+    guard let version = Int32(arguments[2]) else {
+        throw FDB.Error.apiVersionInvalid
+    }
+    try FDB.Network.selectAPIVersion(version)
+} catch {
+    FileHandle.standardError.write(Data("Unsupported API version \(arguments[2]): \(error)\n".utf8))
     exit(2)
 }
 

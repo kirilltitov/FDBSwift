@@ -147,6 +147,9 @@ public extension FDB.Error {
     static let tenantNotEmpty = Self(code: 2133)
     static let tenantsDisabled = Self(code: 2136)
     static let invalidTenantName = Self(code: 2134)
+    /// The operation is not supported, e.g. requires a newer API version than the selected one
+    /// (see ``FDB/Network/selectAPIVersion(_:)``)
+    static let unsupportedOperation = Self(code: 2108)
     static let unknownError = Self(code: 4000)
     static let internalError = Self(code: 4100)
 }
