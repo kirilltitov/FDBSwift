@@ -104,16 +104,42 @@ extension FDB {
         ///
         /// - parameters:
         ///   - limit: Maximum number of key-value pairs to return, 0 means no limit
+        ///   - mode: Streaming mode, ``FDB/StreamingMode/wantAll`` by default
         public func getAll(
             _ range: KeyRange,
             limit: Int = 0,
+            mode: StreamingMode = .wantAll,
+            snapshot: Bool = false,
+            reverse: Bool = false
+        ) async throws(FDB.Error) -> [KeyValue] {
+            try await self.getAll(
+                begin: .firstGreaterOrEqual(range.begin),
+                end: .firstGreaterOrEqual(range.end),
+                limit: limit,
+                mode: mode,
+                snapshot: snapshot,
+                reverse: reverse
+            )
+        }
+
+        /// Reads all key-value pairs between two key selectors, fetching as many batches as needed
+        ///
+        /// - parameters:
+        ///   - limit: Maximum number of key-value pairs to return, 0 means no limit
+        ///   - mode: Streaming mode, ``FDB/StreamingMode/wantAll`` by default
+        public func getAll(
+            begin: KeySelector,
+            end: KeySelector,
+            limit: Int = 0,
+            mode: StreamingMode = .wantAll,
             snapshot: Bool = false,
             reverse: Bool = false
         ) async throws(FDB.Error) -> [KeyValue] {
             var result: [KeyValue] = []
             do {
-                try await self.forEachBatch(in: range, limit: limit, mode: .wantAll, snapshot: snapshot, reverse: reverse) {
-                    (batch: borrowing KeyValueBatch) throws(Never) in
+                try await self.forEachBatch(
+                    begin: begin, end: end, limit: limit, mode: mode, snapshot: snapshot, reverse: reverse
+                ) { (batch: borrowing KeyValueBatch) throws(Never) in
                     result.append(contentsOf: batch.copyAll())
                 }
             } catch {
@@ -143,8 +169,31 @@ extension FDB {
             reverse: Bool = false,
             _ body: (borrowing KeyValueBatch) throws(E) -> Void
         ) async throws(RangeError<E>) {
-            var begin = KeySelector.firstGreaterOrEqual(range.begin)
-            var end = KeySelector.firstGreaterOrEqual(range.end)
+            try await self.forEachBatch(
+                begin: .firstGreaterOrEqual(range.begin),
+                end: .firstGreaterOrEqual(range.end),
+                limit: limit,
+                mode: mode,
+                snapshot: snapshot,
+                reverse: reverse,
+                body
+            )
+        }
+
+        /// Reads all key-value pairs between two key selectors batch by batch, without copying them.
+        ///
+        /// See ``forEachBatch(in:limit:mode:snapshot:reverse:_:)``.
+        public func forEachBatch<E: Swift.Error>(
+            begin: KeySelector,
+            end: KeySelector,
+            limit: Int = 0,
+            mode: StreamingMode = .iterator,
+            snapshot: Bool = false,
+            reverse: Bool = false,
+            _ body: (borrowing KeyValueBatch) throws(E) -> Void
+        ) async throws(RangeError<E>) {
+            var begin = begin
+            var end = end
             var remaining = limit
             var iteration = 1
 
@@ -199,6 +248,48 @@ extension FDB {
                 _ = consume batch
                 _ = consume current
             }
+        }
+
+        /// Returns an estimation of the size of given range in bytes (based on storage server samples, so it's
+        /// approximate and is meant for things like work splitting, not for exact accounting)
+        public func getEstimatedRangeSizeBytes(_ range: KeyRange) -> Future<Int64> {
+            .int64(
+                fdb_transaction_get_estimated_range_size_bytes(
+                    self.pointer, range.begin, Int32(range.begin.count), range.end, Int32(range.end.count)
+                )
+            )
+        }
+
+        /// Returns keys which split given range into chunks of roughly `chunkSize` bytes (the first and the last
+        /// keys are the boundaries of the range itself)
+        public func getRangeSplitPoints(_ range: KeyRange, chunkSize: Int64) -> Future<[Bytes]> {
+            Future(
+                fdb_transaction_get_range_split_points(
+                    self.pointer, range.begin, Int32(range.begin.count), range.end, Int32(range.end.count), chunkSize
+                )
+            ) { (pointer) throws(FDB.Error) -> [Bytes] in
+                var keys: UnsafePointer<FDBKey>?
+                var count: Int32 = 0
+                try fdb_future_get_key_array(pointer, &keys, &count).check()
+                guard count > 0, let keys else {
+                    return []
+                }
+                // `FDBKey` is declared with `#pragma pack(4)`, so elements may be misaligned for Swift
+                let raw = UnsafeRawPointer(keys)
+                return (0 ..< Int(count)).map { index in
+                    let key = raw.loadUnaligned(fromByteOffset: index * MemoryLayout<FDBKey>.stride, as: FDBKey.self)
+                    return Bytes(UnsafeBufferPointer(start: key.key, count: Int(key.key_length)))
+                }
+            }
+        }
+
+        /// Returns the version at which the transaction was committed.
+        ///
+        /// Only valid after a successful commit; a read-only transaction returns `-1`.
+        public func getCommittedVersion() throws(FDB.Error) -> Int64 {
+            var version: Int64 = 0
+            try fdb_transaction_get_committed_version(self.pointer, &version).check()
+            return version
         }
 
         /// Returns the read version of this transaction
@@ -291,6 +382,18 @@ extension FDB {
         /// Adds a read conflict range, as if given range was read
         public func addReadConflict(range: KeyRange) throws(FDB.Error) {
             try self.addConflict(range: range, type: FDB_CONFLICT_RANGE_TYPE_READ)
+        }
+
+        /// Adds a read conflict range for a single key, as if it was read
+        public func addReadConflict(key: some FDB.Key) throws(FDB.Error) {
+            let key = key.fdbKey
+            try self.addReadConflict(range: KeyRange(begin: key, end: key + [0x00]))
+        }
+
+        /// Adds a write conflict range for a single key, as if it was written
+        public func addWriteConflict(key: some FDB.Key) throws(FDB.Error) {
+            let key = key.fdbKey
+            try self.addWriteConflict(range: KeyRange(begin: key, end: key + [0x00]))
         }
 
         /// Adds a write conflict range, as if given range was written
