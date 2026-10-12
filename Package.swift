@@ -1,4 +1,4 @@
-// swift-tools-version:6.0
+// swift-tools-version:6.4
 
 import PackageDescription
 
@@ -9,7 +9,7 @@ let package = Package(
         .library(name: "FDB", targets: ["FDB"]),
     ],
     dependencies: [
-        .package(url: "https://github.com/1711-Games/LGN-Log.git", .upToNextMinor(from: "0.4.0")),
+        .package(url: "https://github.com/apple/swift-log.git", from: "1.6.0"),
     ],
     targets: [
         .systemLibrary(name: "CFDB", pkgConfig: "libfdb"),
@@ -17,13 +17,22 @@ let package = Package(
             name: "FDB",
             dependencies: [
                 "CFDB",
-                .product(name: "LGNLog", package: "LGN-Log"),
+                .product(name: "Logging", package: "swift-log"),
+            ],
+            swiftSettings: [
+                .enableUpcomingFeature("NonisolatedNonsendingByDefault"),
+                .enableUpcomingFeature("InferIsolatedConformances"),
+                .enableUpcomingFeature("ExistentialAny"),
+                .enableUpcomingFeature("MemberImportVisibility"),
             ]
         ),
         .testTarget(
             name: "FDBTests",
-            dependencies: ["FDB"]
+            dependencies: ["FDB"],
+            swiftSettings: [
+                .enableUpcomingFeature("NonisolatedNonsendingByDefault"),
+            ]
         ),
     ],
-    swiftLanguageModes: [.v5]
+    swiftLanguageModes: [.v6]
 )
